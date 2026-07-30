@@ -1,0 +1,36 @@
+# Dependencies
+node_modules/
+.pnp/
+.pnp.cjs
+
+# Build outputs
+dist/
+build/
+.next/
+out/
+coverage/
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+
+# OS/editor
+.DS_Store
+.idea/
+.vscode/
+
+# Playwright generated artifacts can be large.
+# Keep report directories in git with .gitkeep files, and commit selected evidence explicitly when needed.
+test-results/playwright/**/*.webm
+test-results/playwright/**/*.zip
+test-results/playwright/**/*.png
+test-results/playwright/**/*.html
+!test-results/playwright/**/.gitkeep
+
