@@ -18,7 +18,7 @@ Lv1의 목표는 외부 인쇄 주문 연동 이전 단계의 콘텐츠 서비�
 
 - 회원 프로필 조회/수정
 - 로그아웃 확인 흐름
-- 설정 화면의 비밀번호 변경 UI/API 초안
+- 설정 화면의 비밀번호 변경 UI/API
 - 전체/개별 알림 설정
 - 참여 중인 방 목록
 - 방 생성
@@ -213,6 +213,8 @@ MVP authentication strategy:
 - API 요청에는 `X-Member-Id` header를 허용한다.
 - client 개발 환경에서는 seed member id를 local config로 고정한다.
 - 인증 미들웨어는 추후 실제 로그인으로 교체 가능하게 얇게 둔다.
+- 회원가입/로그인 화면은 Lv1에서 구현하지 않는다.
+- 이메일과 전화번호는 seed member 식별과 초대 시나리오에만 사용한다.
 
 Default local header:
 
