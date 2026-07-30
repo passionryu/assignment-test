@@ -6,6 +6,10 @@ A full-stack web application prototype built for a timed implementation assignme
 
 Initial workspace setup.
 
+## Project Board
+
+- [Assignment Test Kanban](https://github.com/users/passionryu/projects/6)
+
 ## Project Goals
 
 - Build a browser-based full-stack web application.
@@ -33,4 +37,3 @@ test-results/
 ## Execution
 
 The implementation stack and Docker commands will be documented after the initial planning and architecture stages are approved.
-
