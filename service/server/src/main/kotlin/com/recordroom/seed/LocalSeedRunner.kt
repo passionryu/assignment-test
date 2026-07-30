@@ -27,6 +27,7 @@ class LocalSeedRunner(
             seedRooms()
             seedRoomMembers()
             seedNotificationSettings()
+            syncIdentitySequences()
         }.onSuccess {
             log.info("[시드 데이터] 로컬 시드 생성 완료. who=system, what=LocalSeedRunner.run, requestData=profile:local, reason=completed")
         }.onFailure { exception ->
@@ -118,5 +119,20 @@ class LocalSeedRunner(
                 updated_at = now()
             """.trimIndent(),
         )
+    }
+
+    // 고정 ID 시드 이후 런타임 insert가 다음 ID를 자동 생성하도록 identity sequence를 보정한다.
+    private fun syncIdentitySequences() {
+        listOf("members", "rooms", "room_members", "room_invitations").forEach { tableName ->
+            jdbcTemplate.execute(
+                """
+                select setval(
+                    pg_get_serial_sequence('$tableName', 'id'),
+                    coalesce((select max(id) from $tableName), 0) + 1,
+                    false
+                )
+                """.trimIndent(),
+            )
+        }
     }
 }

@@ -18,8 +18,7 @@ class RequestIdFilter : OncePerRequestFilter() {
         response: HttpServletResponse,
         filterChain: FilterChain,
     ) {
-        val requestId = request.getHeader(REQUEST_ID_HEADER)?.takeIf { it.isNotBlank() }
-            ?: UUID.randomUUID().toString()
+        val requestId = normalizeRequestId(request.getHeader(REQUEST_ID_HEADER))
         val startedAt = System.currentTimeMillis()
 
         MDC.put("requestId", requestId)
@@ -31,7 +30,7 @@ class RequestIdFilter : OncePerRequestFilter() {
             val elapsedMs = System.currentTimeMillis() - startedAt
             log.info(
                 "[HTTP 요청] 요청 처리 완료. who={}, what={} {}, requestData=status:{},elapsedMs:{}, reason=completed",
-                request.getHeader("X-Member-Id")?.let { "memberId:$it" } ?: "anonymous",
+                normalizeMemberId(request.getHeader(MEMBER_ID_HEADER)),
                 request.method,
                 request.requestURI,
                 response.status,
@@ -41,7 +40,24 @@ class RequestIdFilter : OncePerRequestFilter() {
         }
     }
 
+    private fun normalizeRequestId(rawRequestId: String?): String {
+        val value = rawRequestId?.trim()?.takeIf { it.isNotBlank() } ?: return UUID.randomUUID().toString()
+
+        return when {
+            runCatching { UUID.fromString(value) }.isSuccess -> value
+            REQUEST_ID_PATTERN.matches(value) -> value
+            else -> UUID.randomUUID().toString()
+        }
+    }
+
+    private fun normalizeMemberId(rawMemberId: String?): String {
+        val value = rawMemberId?.trim()?.takeIf { it.isNotBlank() } ?: return "anonymous"
+        return value.toLongOrNull()?.takeIf { it > 0 }?.let { "memberId:$it" } ?: "invalid"
+    }
+
     companion object {
         private const val REQUEST_ID_HEADER = "X-Request-Id"
+        private const val MEMBER_ID_HEADER = "X-Member-Id"
+        private val REQUEST_ID_PATTERN = Regex("^[A-Za-z0-9._:-]{1,64}$")
     }
 }
