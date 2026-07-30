@@ -1,0 +1,161 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1180" viewBox="0 0 1600 1180">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#fff8ef"/>
+      <stop offset="55%" stop-color="#f6fbff"/>
+      <stop offset="100%" stop-color="#fff6fb"/>
+    </linearGradient>
+    <linearGradient id="primary" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#ff8b68"/>
+      <stop offset="100%" stop-color="#f06da8"/>
+    </linearGradient>
+    <linearGradient id="blue" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#4f9cf7"/>
+      <stop offset="100%" stop-color="#76c7ff"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="18" stdDeviation="24" flood-color="#405470" flood-opacity="0.13"/>
+    </filter>
+    <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="8" stdDeviation="14" flood-color="#405470" flood-opacity="0.08"/>
+    </filter>
+    <style>
+      .title { font: 800 34px -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif; fill: #243145; }
+      .subtitle { font: 500 18px -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif; fill: #6d7890; }
+      .h2 { font: 800 26px -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif; fill: #243145; }
+      .h3 { font: 800 20px -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif; fill: #243145; }
+      .body { font: 500 17px -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif; fill: #44516a; }
+      .small { font: 500 14px -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif; fill: #778399; }
+      .tiny { font: 700 12px -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif; fill: #778399; }
+      .label { font: 800 14px -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif; fill: #ffffff; }
+      .card { fill: rgba(255,255,255,0.88); stroke: #edf1f7; stroke-width: 1.5; filter: url(#shadow); }
+      .inner { fill: #ffffff; stroke: #edf1f7; stroke-width: 1.2; filter: url(#softShadow); }
+      .soft { fill: #f7f9fd; stroke: #edf1f7; stroke-width: 1.2; }
+      .blueDot { fill: #4f9cf7; }
+      .violetDot { fill: #8b6df1; }
+      .mintDot { fill: #4bbba8; }
+      .pinkDot { fill: #f06da8; }
+      .goldDot { fill: #f6b84f; }
+    </style>
+  </defs>
+
+  <rect width="1600" height="1180" fill="url(#bg)"/>
+  <circle cx="120" cy="90" r="240" fill="#ffc987" opacity="0.22"/>
+  <circle cx="1490" cy="92" r="260" fill="#70c9bc" opacity="0.16"/>
+
+  <text x="80" y="76" class="title">Option C · 프로필 + 최신 알림 + 메인 캘린더</text>
+  <text x="80" y="110" class="subtitle">프로필 정보와 최근 알림을 확인하고, 캘린더에서 날짜별 기록 흐름을 탐색한다.</text>
+
+  <rect x="80" y="140" width="1440" height="930" rx="34" fill="rgba(255,255,255,0.42)" stroke="#ffffff" stroke-width="2"/>
+
+  <!-- Top equal cards -->
+  <rect x="120" y="180" width="660" height="300" rx="28" class="card"/>
+  <rect x="820" y="180" width="660" height="300" rx="28" class="card"/>
+
+  <text x="154" y="232" class="h2">프로필</text>
+  <rect x="154" y="266" width="104" height="104" rx="32" fill="url(#primary)"/>
+  <text x="195" y="330" class="label">나</text>
+  <text x="298" y="286" class="h3">류성열</text>
+  <text x="298" y="322" class="body">아이디  recordryu</text>
+  <text x="298" y="356" class="body">이메일  ryu@example.com</text>
+  <text x="298" y="390" class="body">전화번호  010-1234-5678</text>
+  <rect x="298" y="414" width="160" height="44" rx="16" fill="url(#primary)"/>
+  <text x="334" y="442" class="label">회원 정보 수정</text>
+  <rect x="474" y="414" width="112" height="44" rx="16" fill="#ffffff" stroke="#ffd9ca"/>
+  <text x="504" y="442" class="body" fill="#e46755">로그아웃</text>
+
+  <text x="854" y="232" class="h2">최신 알림</text>
+  <rect x="1322" y="205" width="104" height="38" rx="15" fill="#ffffff" stroke="#e7edf5"/>
+  <text x="1347" y="230" class="small">전체 보기</text>
+  <rect x="854" y="266" width="592" height="58" rx="18" class="inner"/>
+  <rect x="876" y="282" width="58" height="26" rx="13" fill="#eaf4ff"/>
+  <text x="891" y="301" class="tiny" fill="#4f9cf7">채팅</text>
+  <text x="952" y="293" class="h3">우리 둘의 100일 · 민지</text>
+  <text x="952" y="316" class="small">새 채팅이 도착했어요 · 방금 전</text>
+  <text x="1384" y="301" class="body">›</text>
+  <rect x="854" y="336" width="592" height="58" rx="18" class="inner"/>
+  <rect x="876" y="352" width="58" height="26" rx="13" fill="#fff0f6"/>
+  <text x="891" y="371" class="tiny" fill="#f06da8">편지</text>
+  <text x="952" y="363" class="h3">7월 가족 아카이브 · 어머니</text>
+  <text x="952" y="386" class="small">나에게 편지를 보냈어요 · 12분 전</text>
+  <text x="1384" y="371" class="body">›</text>
+  <rect x="854" y="406" width="592" height="58" rx="18" class="inner"/>
+  <rect x="876" y="422" width="58" height="26" rx="13" fill="#f1edff"/>
+  <text x="891" y="441" class="tiny" fill="#8b6df1">미션</text>
+  <text x="952" y="433" class="h3">여름 프로젝트반 · 지훈</text>
+  <text x="952" y="456" class="small">인증 동의 대기 · 동의율 63% (5/8)</text>
+  <text x="1384" y="441" class="body">›</text>
+
+  <!-- Calendar -->
+  <rect x="120" y="514" width="1360" height="506" rx="30" class="card"/>
+  <text x="154" y="566" class="h2">전체 기록 캘린더</text>
+  <text x="154" y="596" class="subtitle">방 필터를 선택해 메인에서 날짜별 기록 흐름을 확인한다.</text>
+
+  <!-- Filter chips -->
+  <rect x="154" y="624" width="72" height="36" rx="18" fill="#ffffff" stroke="#e7edf5"/>
+  <text x="177" y="648" class="small">전체</text>
+  <rect x="238" y="624" width="200" height="36" rx="18" fill="url(#primary)"/>
+  <text x="272" y="648" class="label">우리 둘의 100일</text>
+  <rect x="450" y="624" width="150" height="36" rx="18" fill="#ffffff" stroke="#e7edf5"/>
+  <text x="478" y="648" class="small">7월 가족</text>
+  <rect x="612" y="624" width="174" height="36" rx="18" fill="#ffffff" stroke="#e7edf5"/>
+  <text x="640" y="648" class="small">여름 프로젝트반</text>
+
+  <text x="1118" y="566" class="h3">2026년 7월</text>
+  <rect x="1042" y="537" width="46" height="46" rx="16" fill="#ffffff" stroke="#e7edf5"/>
+  <text x="1059" y="567" class="body">‹</text>
+  <rect x="1292" y="537" width="46" height="46" rx="16" fill="#ffffff" stroke="#e7edf5"/>
+  <text x="1309" y="567" class="body">›</text>
+
+  <circle cx="154" cy="690" r="6" class="blueDot"/><text x="168" y="695" class="small">채팅</text>
+  <circle cx="222" cy="690" r="6" class="violetDot"/><text x="236" y="695" class="small">미션</text>
+  <circle cx="290" cy="690" r="6" class="mintDot"/><text x="304" y="695" class="small">추억</text>
+  <circle cx="358" cy="690" r="6" class="pinkDot"/><text x="372" y="695" class="small">편지</text>
+  <text x="426" y="695" class="small">날짜를 누르면 우측에 요약이 표시돼요.</text>
+
+  <g transform="translate(154 716)">
+    <rect width="884" height="246" rx="22" fill="#ffffff" stroke="#e7edf5"/>
+    <g class="tiny">
+      <text x="48" y="32">일</text><text x="174" y="32">월</text><text x="300" y="32">화</text><text x="426" y="32">수</text><text x="552" y="32">목</text><text x="678" y="32">금</text><text x="804" y="32">토</text>
+    </g>
+    <g stroke="#edf1f7" stroke-width="1">
+      <line x1="0" y1="50" x2="884" y2="50"/>
+      <line x1="126" y1="0" x2="126" y2="246"/>
+      <line x1="252" y1="0" x2="252" y2="246"/>
+      <line x1="378" y1="0" x2="378" y2="246"/>
+      <line x1="504" y1="0" x2="504" y2="246"/>
+      <line x1="630" y1="0" x2="630" y2="246"/>
+      <line x1="756" y1="0" x2="756" y2="246"/>
+      <line x1="0" y1="99" x2="884" y2="99"/>
+      <line x1="0" y1="148" x2="884" y2="148"/>
+      <line x1="0" y1="197" x2="884" y2="197"/>
+    </g>
+    <g class="small">
+      <text x="424" y="80">1</text><text x="550" y="80">2</text><text x="676" y="80">3</text><text x="802" y="80">4</text>
+      <text x="46" y="129">5</text><text x="172" y="129">6</text><text x="298" y="129">7</text><text x="424" y="129">8</text><text x="550" y="129">9</text><text x="672" y="129">10</text><text x="798" y="129">11</text>
+      <text x="42" y="178">12</text><text x="168" y="178">13</text><text x="294" y="178">14</text><text x="420" y="178">15</text><text x="546" y="178">16</text><text x="672" y="178">17</text><text x="798" y="178">18</text>
+      <text x="42" y="227">19</text><text x="168" y="227">20</text><text x="294" y="227">21</text><text x="420" y="227">22</text><text x="546" y="227">23</text><text x="672" y="227">24</text><text x="798" y="227">25</text>
+    </g>
+    <rect x="630" y="150" width="126" height="48" rx="14" fill="#eef7ff" stroke="#76c7ff"/>
+    <text x="672" y="178" class="small">17</text>
+    <circle cx="672" cy="188" r="4" class="blueDot"/>
+    <circle cx="686" cy="188" r="4" class="violetDot"/>
+    <circle cx="700" cy="188" r="4" class="mintDot"/>
+    <circle cx="548" cy="139" r="4" class="blueDot"/>
+    <circle cx="562" cy="139" r="4" class="mintDot"/>
+    <circle cx="420" cy="236" r="4" class="pinkDot"/>
+    <circle cx="434" cy="236" r="4" class="blueDot"/>
+  </g>
+
+  <rect x="1070" y="716" width="360" height="246" rx="22" fill="#ffffff" stroke="#e7edf5" filter="url(#softShadow)"/>
+  <text x="1100" y="758" class="h3">선택 날짜 요약</text>
+  <text x="1100" y="806" class="body">2026년 7월 17일 금요일</text>
+  <text x="1100" y="840" class="small">우리 둘의 100일 프로젝트</text>
+  <text x="1100" y="870" class="tiny">채팅 8개 · 미션 1개 · 추억 1개</text>
+  <text x="1100" y="900" class="tiny">7월 가족 아카이브 · 편지 1개</text>
+  <rect x="1100" y="920" width="150" height="40" rx="14" fill="url(#blue)"/>
+  <text x="1140" y="946" class="label">기록 보기</text>
+
+  <rect x="120" y="1080" width="1360" height="56" rx="20" fill="#ffffff" stroke="#e7edf5"/>
+  <text x="154" y="1115" class="body">UI/UX 검토: 프로필은 회원 식별, 알림은 즉시 확인, 캘린더는 날짜별 기록 탐색으로 역할을 분리한다.</text>
+</svg>

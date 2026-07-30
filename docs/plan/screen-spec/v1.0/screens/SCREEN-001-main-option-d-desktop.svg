@@ -1,0 +1,163 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1180" viewBox="0 0 1600 1180">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#fff8ef"/>
+      <stop offset="55%" stop-color="#f6fbff"/>
+      <stop offset="100%" stop-color="#fff6fb"/>
+    </linearGradient>
+    <linearGradient id="primary" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#ff8b68"/>
+      <stop offset="100%" stop-color="#f06da8"/>
+    </linearGradient>
+    <linearGradient id="green" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#4bbba8"/>
+      <stop offset="100%" stop-color="#76d9c9"/>
+    </linearGradient>
+    <linearGradient id="blue" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#4f9cf7"/>
+      <stop offset="100%" stop-color="#76c7ff"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="18" stdDeviation="24" flood-color="#405470" flood-opacity="0.13"/>
+    </filter>
+    <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="8" stdDeviation="14" flood-color="#405470" flood-opacity="0.08"/>
+    </filter>
+    <style>
+      .title { font: 800 34px -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif; fill: #243145; }
+      .subtitle { font: 500 18px -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif; fill: #6d7890; }
+      .h2 { font: 800 26px -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif; fill: #243145; }
+      .h3 { font: 800 20px -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif; fill: #243145; }
+      .body { font: 500 17px -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif; fill: #44516a; }
+      .small { font: 500 14px -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif; fill: #778399; }
+      .tiny { font: 700 12px -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif; fill: #778399; }
+      .label { font: 800 14px -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif; fill: #ffffff; }
+      .card { fill: rgba(255,255,255,0.88); stroke: #edf1f7; stroke-width: 1.5; filter: url(#shadow); }
+      .inner { fill: #ffffff; stroke: #edf1f7; stroke-width: 1.2; filter: url(#softShadow); }
+      .soft { fill: #f7f9fd; stroke: #edf1f7; stroke-width: 1.2; }
+      .blueDot { fill: #4f9cf7; }
+      .violetDot { fill: #8b6df1; }
+      .mintDot { fill: #4bbba8; }
+      .pinkDot { fill: #f06da8; }
+      .goldDot { fill: #f6b84f; }
+      .arrow { stroke: #9aa7bb; stroke-width: 3; fill: none; marker-end: url(#arrowHead); }
+    </style>
+    <marker id="arrowHead" markerWidth="12" markerHeight="12" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L9,3 z" fill="#9aa7bb"/>
+    </marker>
+  </defs>
+
+  <rect width="1600" height="1180" fill="url(#bg)"/>
+  <circle cx="120" cy="90" r="240" fill="#ffc987" opacity="0.22"/>
+  <circle cx="1490" cy="92" r="260" fill="#70c9bc" opacity="0.16"/>
+
+  <text x="80" y="76" class="title">Option D · 메인은 진입 허브, 캘린더는 방 상세</text>
+  <text x="80" y="110" class="subtitle">메인에서는 방 선택과 최근 활동만 보여주고, 방에 들어간 뒤 해당 방의 캘린더에서 기록과 책 후보를 관리한다.</text>
+
+  <!-- Main page mock -->
+  <rect x="80" y="150" width="690" height="910" rx="34" fill="rgba(255,255,255,0.42)" stroke="#ffffff" stroke-width="2"/>
+  <text x="120" y="204" class="h2">SCREEN-001 메인 페이지</text>
+  <text x="120" y="232" class="small">기록방으로 들어가기 위한 홈. 통합 캘린더는 두지 않는다.</text>
+
+  <rect x="120" y="260" width="280" height="210" rx="26" class="card"/>
+  <text x="150" y="306" class="h3">프로필</text>
+  <rect x="150" y="328" width="74" height="74" rx="24" fill="url(#primary)"/>
+  <text x="179" y="374" class="label">나</text>
+  <text x="242" y="350" class="body">류성열</text>
+  <text x="242" y="376" class="small">참여 방 3개</text>
+  <text x="242" y="400" class="small">책 후보 날짜 12일</text>
+  <rect x="150" y="420" width="154" height="36" rx="14" fill="url(#primary)"/>
+  <text x="183" y="443" class="label">방 만들기</text>
+
+  <rect x="430" y="260" width="300" height="210" rx="26" class="card"/>
+  <text x="460" y="306" class="h3">참여 방 List</text>
+  <rect x="460" y="326" width="238" height="38" rx="14" class="inner"/>
+  <text x="478" y="350" class="small">커플 · 우리 둘의 100일</text>
+  <rect x="460" y="374" width="238" height="38" rx="14" class="inner"/>
+  <text x="478" y="398" class="small">가족 · 7월 가족 아카이브</text>
+  <rect x="460" y="422" width="238" height="38" rx="14" class="inner"/>
+  <text x="478" y="446" class="small">학급·동아리 · 프로젝트반</text>
+
+  <rect x="120" y="500" width="610" height="232" rx="28" class="card"/>
+  <text x="150" y="548" class="h3">최근 활동</text>
+  <text x="150" y="578" class="small">방별 최신 기록을 보여주고, 클릭하면 방 상세로 이동한다.</text>
+  <rect x="150" y="606" width="542" height="46" rx="16" class="inner"/>
+  <circle cx="174" cy="629" r="6" class="blueDot"/>
+  <text x="192" y="634" class="body">우리 둘의 100일 프로젝트 · 오늘 채팅 3개</text>
+  <rect x="150" y="664" width="542" height="46" rx="16" class="inner"/>
+  <circle cx="174" cy="687" r="6" class="pinkDot"/>
+  <text x="192" y="692" class="body">7월 가족 아카이브 · 편지 1개</text>
+
+  <rect x="120" y="760" width="610" height="210" rx="28" class="card"/>
+  <text x="150" y="806" class="h3">방별 기록 요약</text>
+  <rect x="150" y="830" width="170" height="104" rx="20" fill="#fff0e9" stroke="#ffd9ca"/>
+  <text x="174" y="864" class="small">커플</text>
+  <text x="174" y="898" class="h3">책 후보 4일</text>
+  <rect x="340" y="830" width="170" height="104" rx="20" fill="#e8f8f5" stroke="#c4eee7"/>
+  <text x="364" y="864" class="small">가족</text>
+  <text x="364" y="898" class="h3">책 후보 6일</text>
+  <rect x="530" y="830" width="170" height="104" rx="20" fill="#f1edff" stroke="#ded5ff"/>
+  <text x="554" y="864" class="small">학급·동아리</text>
+  <text x="554" y="898" class="h3">책 후보 2일</text>
+
+  <!-- Arrow -->
+  <path d="M790 585 C830 585 830 585 870 585" class="arrow"/>
+  <text x="800" y="552" class="small">방 카드 클릭</text>
+
+  <!-- Room detail mock -->
+  <rect x="900" y="150" width="620" height="910" rx="34" fill="rgba(255,255,255,0.42)" stroke="#ffffff" stroke-width="2"/>
+  <text x="940" y="204" class="h2">SCREEN-002 기록방 상세</text>
+  <text x="940" y="232" class="small">선택한 방 하나의 채팅, 미션, 추억, 편지, 책 후보를 관리한다.</text>
+
+  <rect x="940" y="260" width="540" height="122" rx="28" class="card"/>
+  <rect x="970" y="292" width="72" height="32" rx="16" fill="#fff0e9"/>
+  <text x="988" y="313" class="tiny" fill="#ff8b68">커플</text>
+  <text x="1060" y="312" class="h3">우리 둘의 100일 프로젝트</text>
+  <text x="1060" y="344" class="small">2명 참여 · 책 후보 4일 · 마지막 활동 오늘</text>
+  <rect x="1266" y="300" width="166" height="44" rx="16" fill="url(#primary)"/>
+  <text x="1312" y="328" class="label">채팅 입장</text>
+
+  <rect x="940" y="410" width="540" height="586" rx="30" class="card"/>
+  <text x="970" y="462" class="h2">방 캘린더</text>
+  <text x="970" y="492" class="small">이 방의 기록만 보여준다. 책 후보 보관은 여기서만 가능하다.</text>
+  <text x="1260" y="462" class="h3">2026년 7월</text>
+
+  <circle cx="970" cy="524" r="6" class="blueDot"/><text x="984" y="529" class="small">채팅</text>
+  <circle cx="1038" cy="524" r="6" class="violetDot"/><text x="1052" y="529" class="small">미션</text>
+  <circle cx="1106" cy="524" r="6" class="mintDot"/><text x="1120" y="529" class="small">추억</text>
+  <circle cx="1174" cy="524" r="6" class="pinkDot"/><text x="1188" y="529" class="small">편지</text>
+  <circle cx="1242" cy="524" r="6" class="goldDot"/><text x="1256" y="529" class="small">보관</text>
+
+  <g transform="translate(970 556)">
+    <rect width="350" height="250" rx="22" fill="#ffffff" stroke="#e7edf5"/>
+    <g class="tiny">
+      <text x="20" y="32">일</text><text x="70" y="32">월</text><text x="120" y="32">화</text><text x="170" y="32">수</text><text x="220" y="32">목</text><text x="270" y="32">금</text><text x="320" y="32">토</text>
+    </g>
+    <g stroke="#edf1f7" stroke-width="1">
+      <line x1="0" y1="50" x2="350" y2="50"/>
+      <line x1="50" y1="0" x2="50" y2="250"/><line x1="100" y1="0" x2="100" y2="250"/><line x1="150" y1="0" x2="150" y2="250"/><line x1="200" y1="0" x2="200" y2="250"/><line x1="250" y1="0" x2="250" y2="250"/><line x1="300" y1="0" x2="300" y2="250"/>
+      <line x1="0" y1="100" x2="350" y2="100"/><line x1="0" y1="150" x2="350" y2="150"/><line x1="0" y1="200" x2="350" y2="200"/>
+    </g>
+    <g class="small">
+      <text x="168" y="80">1</text><text x="218" y="80">2</text><text x="268" y="80">3</text><text x="318" y="80">4</text>
+      <text x="18" y="130">5</text><text x="68" y="130">6</text><text x="118" y="130">7</text><text x="168" y="130">8</text><text x="218" y="130">9</text><text x="264" y="130">10</text><text x="314" y="130">11</text>
+      <text x="14" y="180">12</text><text x="64" y="180">13</text><text x="114" y="180">14</text><text x="164" y="180">15</text><text x="214" y="180">16</text><text x="264" y="180">17</text><text x="314" y="180">18</text>
+      <text x="14" y="230">19</text><text x="64" y="230">20</text><text x="114" y="230">21</text><text x="164" y="230">22</text><text x="214" y="230">23</text><text x="264" y="230">24</text><text x="314" y="230">25</text>
+    </g>
+    <rect x="250" y="152" width="50" height="42" rx="12" fill="#fff5db" stroke="#f6b84f"/>
+    <circle cx="266" cy="184" r="4" class="blueDot"/>
+    <circle cx="280" cy="184" r="4" class="violetDot"/>
+    <circle cx="294" cy="184" r="4" class="goldDot"/>
+  </g>
+
+  <rect x="1342" y="556" width="110" height="250" rx="22" fill="#ffffff" stroke="#e7edf5" filter="url(#softShadow)"/>
+  <text x="1364" y="596" class="h3">17일</text>
+  <text x="1364" y="626" class="tiny">채팅 8개</text>
+  <text x="1364" y="650" class="tiny">미션 1개</text>
+  <text x="1364" y="674" class="tiny">보관됨</text>
+  <rect x="1360" y="718" width="76" height="36" rx="14" fill="url(#blue)"/>
+  <text x="1376" y="742" class="label">보기</text>
+
+  <rect x="940" y="1022" width="540" height="56" rx="20" fill="#ffffff" stroke="#e7edf5"/>
+  <text x="970" y="1057" class="body">UI/UX 검토: 책 후보 보관과 기록 맥락이 방 단위로 분리되어 가장 명확하다.</text>
+</svg>
