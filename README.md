@@ -10,6 +10,10 @@ Initial workspace setup.
 
 - [Assignment Test Kanban](https://github.com/users/passionryu/projects/6)
 
+## AI Agent System
+
+![AI Agent System](docs/agents/assets/agent-system-architecture.png)
+
 ## Project Goals
 
 - Build a browser-based full-stack web application.
