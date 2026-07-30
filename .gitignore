@@ -9,6 +9,7 @@ build/
 .next/
 out/
 coverage/
+*.tsbuildinfo
 
 # Environment and secrets
 .env
@@ -33,4 +34,3 @@ test-results/playwright/**/*.zip
 test-results/playwright/**/*.png
 test-results/playwright/**/*.html
 !test-results/playwright/**/.gitkeep
-

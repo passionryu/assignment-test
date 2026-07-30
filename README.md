@@ -4,7 +4,7 @@ A full-stack web application prototype built for a timed implementation assignme
 
 ## Status
 
-Initial workspace setup.
+Lv1 implementation skeleton is in progress.
 
 ## Project Board
 
@@ -40,4 +40,22 @@ test-results/
 
 ## Execution
 
-The implementation stack and Docker commands will be documented after the initial planning and architecture stages are approved.
+Run the local workspace with Docker:
+
+```bash
+docker compose -f service/infra/docker-compose.yml up --build
+```
+
+Local URLs:
+
+- Client: http://localhost:5173
+- Server: http://localhost:8080
+- Health check: http://localhost:8080/api/health
+
+Default local API header:
+
+```text
+X-Member-Id: 1
+```
+
+The Docker setup starts PostgreSQL, runs server migrations, inserts local seed data, and serves the Vite client.
