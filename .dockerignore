@@ -5,6 +5,7 @@
 service/client/node_modules
 service/client/dist
 service/client/*.tsbuildinfo
+service/server/.gradle
 
 test-results
 docs/plan/screen-spec/**/*.png
