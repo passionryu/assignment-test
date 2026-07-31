@@ -34,6 +34,8 @@ PM/PO Agent는 과제 프로젝트의 일정, 요구사항, GitHub Projects 칸�
 - 작업 우선순위를 P0, P1, P2 기준으로 조정한다.
 - 일정 위험도를 LOW, MEDIUM, HIGH, CRITICAL로 판단한다.
 - 사용자 승인 Gate를 관리한다.
+- AI QA 호출 시 `Smoke QA`, `Focused QA`, `Full QA` 중 하나로 검증 강도를 지정한다.
+- `Full QA`는 개발자가 명시적으로 요청하고 승인한 경우에만 실행한다.
 - Discord 보고용 진행 요약을 작성한다.
 - PM Final Check에서 제출 가능 여부를 판단한다.
 
@@ -85,6 +87,48 @@ PM Final Check에서 확인할 항목:
 - QA evidence가 남아 있는가?
 - 알려진 제한사항이 README 또는 문서에 정리되어 있는가?
 - 공개 저장소에 회사명, 채용 전형명, secret이 노출되지 않았는가?
+
+## QA Level Control
+
+PM/PO Agent는 토큰, 시간, evidence 비용을 줄이기 위해 QA Agent를 호출할 때 검증 강도를 반드시 지정한다.
+
+| QA Level | 사용 시점 | 기본 범위 | Evidence |
+| --- | --- | --- | --- |
+| `Smoke QA` | 문서, CSS 미세 수정, 비핵심 UI 수정 | 앱 실행, 변경 화면 1개, 주요 console error 확인 | 짧은 요약, 스크린샷 1~2장 |
+| `Focused QA` | 특정 화면 또는 특정 기능 수정 | 변경된 기능/화면 중심, 관련 회귀 일부, 필요한 화면 정의서 일치 검증 | HTML 보고서 1개, 주요 스크린샷, 실패 시 video/trace |
+| `Full QA` | 제출 직전 또는 핵심 사용자 흐름 전체 검증 | 전체 핵심 사용자 흐름, happy/edge, 화면 정의서, 주요 viewport | HTML 보고서, 영상, 스크린샷, trace |
+
+`Full QA`는 기본적으로 금지한다. 개발자가 명시적으로 요청하고 승인한 경우에만 실행한다.
+
+QA Agent 호출 메시지는 반드시 아래 형식을 포함한다.
+
+```text
+QA Level: Smoke / Focused / Full
+Developer Approval for Full QA: Yes / No / Not Required
+
+QA Scope:
+- 검증할 화면:
+- 검증할 기능:
+- 화면 정의서 일치 검증 여부:
+- 제외할 범위:
+
+Evidence:
+- HTML 보고서 필요 여부:
+- 스크린샷 수준:
+- 영상 저장 조건:
+- trace 저장 조건:
+```
+
+QA Level 선택 기준:
+
+| 변경 유형 | 기본 QA Level |
+| --- | --- |
+| README, 문서, 컨벤션 | QA 생략 또는 `Smoke QA` |
+| CSS 미세 수정 | `Smoke QA` |
+| 특정 화면 레이아웃 수정 | `Focused QA` |
+| 특정 API/폼 수정 | `Focused QA` |
+| Human QA FAIL 수정 | 보통 `Focused QA` |
+| 주문, 인증, 제출 직전 전체 흐름 | 개발자 승인 후 `Full QA` |
 
 ## Evidence
 

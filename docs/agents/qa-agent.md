@@ -33,6 +33,8 @@ QA Agent는 다음을 검토하지 않는다.
 
 ## Inputs
 
+- PM/PO Agent가 지정한 QA Level: `Smoke QA`, `Focused QA`, `Full QA`
+- QA Scope와 제외 범위
 - 구현 대상 commit
 - `docs/plan/screen-spec/v*/screen-spec.md`
 - `docs/plan/screen-spec/v*/user-flow.md`
@@ -45,6 +47,8 @@ QA Agent는 다음을 검토하지 않는다.
 
 ## Responsibilities
 
+- PM/PO Agent가 지정한 QA Level과 QA Scope를 벗어나지 않는다.
+- `Full QA`는 개발자 요청과 승인 정보가 없는 경우 실행하지 않는다.
 - 승인된 화면 정의서를 기준으로 실제 브라우저 화면이 같은 구조와 흐름으로 구현되었는지 검증한다.
 - 실제 화면 스크린샷과 화면 정의서를 비교해 주요 영역, 사이드바, 카드 배치, 버튼 위치, 모달 표현 방식의 일치 여부를 확인한다.
 - 기능이 정상 동작하더라도 화면 정의서의 핵심 레이아웃과 다르면 FAIL로 판정한다.
@@ -89,6 +93,30 @@ QA Agent는 매 실행마다 사람이 확인 가능한 evidence를 남긴다.
 | timestamp directory | 회차별 QA 결과 보관 |
 
 `latest/`는 최신 결과를 가리킨다. 회차별 결과는 `YYYY-MM-DD-HHmm/` 디렉터리에 보관한다.
+
+## QA Level Rules
+
+QA Agent는 PM/PO Agent가 지정한 QA Level에 따라 검증 범위와 evidence 수준을 제한한다.
+
+| QA Level | Scope | Report | Video / Trace |
+| --- | --- | --- | --- |
+| `Smoke QA` | 앱 실행, 변경 화면 1개, 핵심 문구/console error 확인 | 간단 요약 또는 짧은 HTML | 실패 시에만 저장 |
+| `Focused QA` | 변경 화면/기능 중심, 관련 회귀 일부, 필요한 화면 정의서 일치 검증 | HTML 보고서 1개 | 실패 시 필수, 성공 시 필요한 경우만 |
+| `Full QA` | 전체 핵심 사용자 흐름, 주요 happy/edge, 화면 정의서, 주요 viewport | 상세 HTML 보고서 | 성공/실패 모두 저장 |
+
+`Full QA` 실행 조건:
+
+- 개발자가 명시적으로 Full QA를 요청했다.
+- PM/PO Agent 호출 메시지에 `Developer Approval for Full QA: Yes`가 있다.
+
+위 조건이 없으면 QA Agent는 `Full QA`를 실행하지 않고 `Focused QA`로 축소하거나 BLOCKED로 보고한다.
+
+QA Agent는 다음을 금지한다.
+
+- PM/PO가 제외한 범위까지 임의로 확장
+- 실패가 없는데 불필요하게 trace를 대량 생성
+- DOM 전체 출력 또는 전체 페이지 텍스트를 반복 출력
+- 모든 이슈에서 자동으로 Full QA 실행
 
 ## Priority Scenarios
 
