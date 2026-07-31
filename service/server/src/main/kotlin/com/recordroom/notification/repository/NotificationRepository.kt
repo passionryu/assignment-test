@@ -14,15 +14,15 @@ class NotificationRepository(
     private val queryFactory: JPAQueryFactory,
     private val notificationJpaRepository: NotificationJpaRepository,
 ) {
-    // 메인 화면에는 현재 회원의 최신 알림만 최대 3개 노출한다.
+    // 메인 화면에는 현재 회원이 아직 확인하지 않은 최신 알림만 최대 3개 노출한다.
     fun findLatestNotifications(memberId: Long): List<NotificationResponse> =
-        findNotifications(memberId = memberId, offset = 0, limit = 3)
+        findNotifications(memberId = memberId, offset = 0, limit = 3, unreadOnly = true)
 
     // 전체 알림 모달은 현재 회원의 알림을 최신순으로 page/size만큼 조회한다.
-    fun findNotifications(memberId: Long, offset: Long, limit: Long): List<NotificationResponse> {
+    fun findNotifications(memberId: Long, offset: Long, limit: Long, unreadOnly: Boolean = false): List<NotificationResponse> {
         val actor = QMemberEntity("actor")
 
-        return queryFactory
+        val query = queryFactory
             .select(
                 notificationEntity.id,
                 notificationEntity.type,
@@ -38,7 +38,14 @@ class NotificationRepository(
             .from(notificationEntity)
             .leftJoin(roomEntity).on(roomEntity.id.eq(notificationEntity.roomId))
             .leftJoin(actor).on(actor.id.eq(notificationEntity.actorMemberId))
-            .where(notificationEntity.receiverMemberId.eq(memberId))
+
+        if (unreadOnly) {
+            query.where(notificationEntity.receiverMemberId.eq(memberId), notificationEntity.readAt.isNull)
+        } else {
+            query.where(notificationEntity.receiverMemberId.eq(memberId))
+        }
+
+        return query
             .orderBy(notificationEntity.createdAt.desc(), notificationEntity.id.desc())
             .offset(offset)
             .limit(limit)
