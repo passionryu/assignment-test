@@ -1,0 +1,72 @@
+{
+  "status": "PASS",
+  "checkedAt": "2026-07-31T05:15:47.580Z",
+  "checks": [
+    {
+      "name": "프로필 카드 표시",
+      "passed": true,
+      "detail": "아바타/이름/아이디/이메일/전화번호 표시"
+    },
+    {
+      "name": "이메일/전화번호 수정 입력 미노출",
+      "passed": true,
+      "detail": "이름/프로필 이미지 URL/비밀번호 입력만 노출"
+    },
+    {
+      "name": "회원 정보 수정 성공",
+      "passed": true,
+      "detail": "이름과 프로필 이미지 URL 반영"
+    },
+    {
+      "name": "빈 이름 실패 케이스",
+      "passed": true,
+      "detail": "이름을 입력해 주세요. 오류 표시"
+    },
+    {
+      "name": "짧은 새 비밀번호 실패 케이스",
+      "passed": true,
+      "detail": "8자 이상 검증 오류 표시"
+    },
+    {
+      "name": "비밀번호 변경 정상 피드백",
+      "passed": true,
+      "detail": "현재/새 비밀번호 입력 후 성공 피드백 표시"
+    },
+    {
+      "name": "전체 알림 ON 시 개별 토글 모두 ON",
+      "passed": true,
+      "detail": "채팅/편지/추억/미션 모두 ON"
+    },
+    {
+      "name": "전체 알림 OFF 상태에서 개별 토글 조정 가능",
+      "passed": true,
+      "detail": "전체 OFF 후 채팅/편지만 ON으로 개별 저장"
+    },
+    {
+      "name": "알림 설정 새로고침 후 유지",
+      "passed": true,
+      "detail": "전체 OFF 및 개별 ON/OFF 상태 유지"
+    },
+    {
+      "name": "로그아웃 확인 모달 표시",
+      "passed": true,
+      "detail": "취소/확인 버튼 포함"
+    },
+    {
+      "name": "로그아웃 취소 동작",
+      "passed": true,
+      "detail": "모달 닫힘 및 화면 유지"
+    },
+    {
+      "name": "로그아웃 확인 동작",
+      "passed": true,
+      "detail": "Lv1 확인 흐름: 모달 닫힘"
+    },
+    {
+      "name": "회원 탈퇴 placeholder 확인",
+      "passed": true,
+      "detail": "위험 액션 안내와 비활성 버튼만 존재"
+    }
+  ],
+  "evidenceDir": "docs/qa/issue-4/evidence"
+}
