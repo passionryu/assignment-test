@@ -300,14 +300,10 @@ function App() {
     setMessage(null);
     setErrorMessage(null);
 
+    markNotificationAsRead(notification.id);
+
     if (notification.id < 9000) {
-      const readResponse = await safeApiRequest<{ read: boolean }>(`/notifications/${notification.id}/read`, { method: "POST" });
-      if (readResponse?.read) {
-        markNotificationAsRead(notification.id);
-        void loadLatestNotifications();
-      }
-    } else {
-      markNotificationAsRead(notification.id);
+      void safeApiRequest<{ read: boolean }>(`/notifications/${notification.id}/read`, { method: "POST" });
     }
 
     if (notification.roomId) {
@@ -647,10 +643,8 @@ function HomeView({
             <UserRound size={24} />
           </div>
           <div className="profile-summary home-profile-summary">
-            <div className="avatar">{profile?.profileImageUrl ? <img src={profile.profileImageUrl} alt="" /> : initials}</div>
-            <div className="home-profile-info">
-              <strong>{profile?.displayName ?? "-"}</strong>
-              <span className="profile-username">아이디 {profile?.username ?? "-"}</span>
+            <div className="home-profile-media">
+              <div className="avatar">{profile?.profileImageUrl ? <img src={profile.profileImageUrl} alt="" /> : initials}</div>
               <dl className="home-profile-detail">
                 <div>
                   <dt>이메일</dt>
@@ -661,6 +655,10 @@ function HomeView({
                   <dd>{profile?.phoneNumber ?? "-"}</dd>
                 </div>
               </dl>
+            </div>
+            <div className="home-profile-info">
+              <strong>{profile?.displayName ?? "-"}</strong>
+              <span className="profile-username">아이디 {profile?.username ?? "-"}</span>
             </div>
           </div>
           <div className="profile-actions">

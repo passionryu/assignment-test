@@ -781,23 +781,33 @@ dl {
 }
 
 .home-profile-summary {
-  align-items: flex-start;
-  gap: 16px;
+  display: grid;
+  grid-template-columns: minmax(120px, 0.9fr) minmax(0, 1fr);
+  align-items: start;
+  gap: 18px;
   background: #fbfcff;
   padding: 16px;
   flex: 0 0 auto;
 }
 
 .home-profile-summary .avatar {
-  width: 68px;
-  height: 68px;
-  font-size: 22px;
+  width: 82px;
+  height: 82px;
+  font-size: 26px;
+}
+
+.home-profile-media {
+  min-width: 0;
+  display: grid;
+  gap: 12px;
 }
 
 .home-profile-info {
   min-width: 0;
   display: grid;
-  gap: 7px;
+  align-content: start;
+  gap: 8px;
+  padding-top: 6px;
 }
 
 .home-profile-info strong {
@@ -812,15 +822,13 @@ dl {
 
 .home-profile-detail {
   display: grid;
-  gap: 6px;
-  margin-top: 3px;
+  gap: 8px;
+  margin-top: 0;
 }
 
 .home-profile-detail div {
   display: grid;
-  grid-template-columns: 58px minmax(0, 1fr);
-  align-items: baseline;
-  gap: 9px;
+  gap: 3px;
 }
 
 .home-profile-detail dt {
