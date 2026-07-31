@@ -99,6 +99,21 @@ class RoomRepository(
     fun existsActiveRoomMember(roomId: Long, memberId: Long): Boolean =
         roomMemberJpaRepository.existsByRoomIdAndMemberIdAndLeftAtIsNull(roomId, memberId)
 
+    // 방 정보 화면에는 현재 참여 중인 멤버 수만 보여줘야 하므로 탈퇴하지 않은 멤버십을 집계한다.
+    fun countActiveRoomMembers(roomId: Long): Int {
+        val activeMember = QRoomMemberEntity("activeRoomMemberCount")
+
+        return queryFactory
+            .select(activeMember.id.count())
+            .from(activeMember)
+            .where(
+                activeMember.roomId.eq(roomId),
+                activeMember.leftAt.isNull,
+            )
+            .fetchOne()
+            ?.toInt() ?: 0
+    }
+
     fun existsPendingInvitationForMember(
         roomId: Long,
         memberId: Long,

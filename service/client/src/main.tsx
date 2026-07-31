@@ -57,6 +57,16 @@ type RoomSummary = {
   pendingMissionCount: number;
 };
 
+type RoomDetail = {
+  id: number;
+  name: string;
+  description: string | null;
+  type: RoomSummary["type"];
+  role: RoomSummary["role"];
+  memberCount: number;
+  canManage: boolean;
+};
+
 type CreateRoomForm = {
   name: string;
   type: RoomSummary["type"];
@@ -73,6 +83,11 @@ type CreateRoomResponse = {
   name: string;
   type: RoomSummary["type"];
   role: RoomSummary["role"];
+};
+
+type DeleteRoomResponse = {
+  id: number;
+  deleted: boolean;
 };
 
 type PendingRoomInvitation = {
@@ -191,6 +206,7 @@ type ApiError = {
 
 type RoomFeatureKind = "chat" | "memories" | "missions" | "letters";
 type AppView = "home" | "rooms" | "room" | "settings" | RoomFeatureKind;
+type RoomSettingsMode = "menu" | "info" | "edit" | "delete" | null;
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8080/api";
 const memberHeader = { "X-Member-Id": "1" };
@@ -507,6 +523,29 @@ function demoCalendarDay(day: number, rooms: CalendarRoomActivity[]): CalendarDa
   };
 }
 
+function roomSummaryToDetail(room: RoomSummary): RoomDetail {
+  return {
+    id: room.id,
+    name: room.name,
+    description: room.description,
+    type: room.type,
+    role: room.role,
+    memberCount: room.memberCount,
+    canManage: room.role === "OWNER",
+  };
+}
+
+function mergeRoomSummary(room: RoomSummary, detail: RoomDetail): RoomSummary {
+  return {
+    ...room,
+    name: detail.name,
+    description: detail.description,
+    type: detail.type,
+    role: detail.role,
+    memberCount: detail.memberCount,
+  };
+}
+
 function App() {
   const [profile, setProfile] = useState<MemberProfile | null>(null);
   const [settings, setSettings] = useState<NotificationSettings | null>(null);
@@ -533,6 +572,10 @@ function App() {
   const [passwordForm, setPasswordForm] = useState({ currentPassword: "", newPassword: "" });
   const [createRoomForm, setCreateRoomForm] = useState<CreateRoomForm>({ name: "", type: "COUPLE", description: "" });
   const [inviteContacts, setInviteContacts] = useState<Record<number, string>>({});
+  const [roomSettingsMode, setRoomSettingsMode] = useState<RoomSettingsMode>(null);
+  const [roomDetail, setRoomDetail] = useState<RoomDetail | null>(null);
+  const [roomEditForm, setRoomEditForm] = useState({ name: "", description: "" });
+  const [roomActionLoading, setRoomActionLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [roomFeedbackModal, setRoomFeedbackModal] = useState<{ title: string; message: string } | null>(null);
@@ -919,6 +962,87 @@ function App() {
     }
   }
 
+  async function openRoomSettings() {
+    if (!selectedRoom) return;
+
+    const fallbackDetail = roomSummaryToDetail(selectedRoom);
+    setMessage(null);
+    setErrorMessage(null);
+    setRoomFeedbackModal(null);
+    setRoomDetail(fallbackDetail);
+    setRoomEditForm({
+      name: fallbackDetail.name,
+      description: fallbackDetail.description ?? "",
+    });
+    setRoomSettingsMode("menu");
+
+    const response = await safeApiGet<RoomDetail>(`/rooms/${selectedRoom.id}`);
+    if (!response) return;
+
+    setRoomDetail(response);
+    setRoomEditForm({
+      name: response.name,
+      description: response.description ?? "",
+    });
+  }
+
+  async function updateRoomInfo() {
+    if (!roomDetail) return;
+
+    setRoomActionLoading(true);
+    setMessage(null);
+    setErrorMessage(null);
+    try {
+      const updatedRoom = await apiRequest<RoomDetail>(`/rooms/${roomDetail.id}`, {
+        method: "PATCH",
+        body: {
+          name: roomEditForm.name,
+          description: roomEditForm.description || null,
+        },
+      });
+
+      setRoomDetail(updatedRoom);
+      setRooms((currentRooms) => currentRooms.map((room) => (room.id === updatedRoom.id ? mergeRoomSummary(room, updatedRoom) : room)));
+      setRoomSettingsMode(null);
+      setRoomFeedbackModal({ title: "방 정보 수정 완료", message: "방 이름과 설명이 수정되었습니다." });
+    } catch (error) {
+      setRoomSettingsMode(null);
+      setRoomFeedbackModal({ title: "방 정보 수정 실패", message: toMessage(error) });
+    } finally {
+      setRoomActionLoading(false);
+    }
+  }
+
+  async function deleteSelectedRoom() {
+    if (!roomDetail) return;
+
+    setRoomActionLoading(true);
+    setMessage(null);
+    setErrorMessage(null);
+    try {
+      await apiRequest<DeleteRoomResponse>(`/rooms/${roomDetail.id}`, {
+        method: "DELETE",
+      });
+
+      const nextRooms = await loadRooms();
+      const nextRoomId = nextRooms[0]?.id ?? null;
+      const nextCalendarRoomId = calendarRoomId === roomDetail.id ? null : calendarRoomId;
+      setSelectedRoomId(nextRoomId);
+      setExpandedRoomId(nextRoomId);
+      setCalendarRoomId(nextCalendarRoomId);
+      setActiveView(nextRoomId ? "rooms" : "home");
+      await loadCalendarActivities(nextCalendarRoomId);
+      setRoomSettingsMode(null);
+      setRoomDetail(null);
+      setRoomFeedbackModal({ title: "방 삭제 완료", message: "선택한 방을 삭제했습니다." });
+    } catch (error) {
+      setRoomSettingsMode(null);
+      setRoomFeedbackModal({ title: "방 삭제 실패", message: toMessage(error) });
+    } finally {
+      setRoomActionLoading(false);
+    }
+  }
+
   return (
     <main className={`workspace ${sidebarCollapsed ? "sidebar-collapsed" : ""}`}>
       <Sidebar
@@ -965,6 +1089,7 @@ function App() {
             sending={chatSending}
             onDraftChange={setChatDraft}
             onSend={sendChatMessage}
+            onOpenRoomSettings={openRoomSettings}
             onMoveRoomFeature={(view) => {
               if (!selectedRoom) return;
               moveToRoomFeature(selectedRoom.id, view);
@@ -1036,6 +1161,20 @@ function App() {
 
       {roomFeedbackModal ? (
         <AlertModal title={roomFeedbackModal.title} message={roomFeedbackModal.message} onClose={() => setRoomFeedbackModal(null)} />
+      ) : null}
+
+      {roomSettingsMode ? (
+        <RoomSettingsModal
+          mode={roomSettingsMode}
+          room={roomDetail}
+          editForm={roomEditForm}
+          loading={roomActionLoading}
+          onModeChange={setRoomSettingsMode}
+          onEditFormChange={setRoomEditForm}
+          onSave={updateRoomInfo}
+          onDelete={deleteSelectedRoom}
+          onClose={() => setRoomSettingsMode(null)}
+        />
       ) : null}
 
       {notificationsModalOpen ? (
@@ -1430,6 +1569,7 @@ function RoomHomeView({
   sending,
   onDraftChange,
   onSend,
+  onOpenRoomSettings,
   onMoveRoomFeature,
 }: {
   selectedRoom: RoomSummary | null;
@@ -1439,6 +1579,7 @@ function RoomHomeView({
   sending: boolean;
   onDraftChange: (value: string) => void;
   onSend: () => void;
+  onOpenRoomSettings: () => void;
   onMoveRoomFeature: (view: RoomFeatureKind) => void;
 }) {
   if (!selectedRoom) {
@@ -1482,16 +1623,21 @@ function RoomHomeView({
             <h2>{selectedRoom.name}</h2>
             <p>{selectedRoom.description ?? "설명 없음"}</p>
           </div>
-          <dl className="room-home-meta">
-            <div>
-              <dt>역할</dt>
-              <dd>{selectedRoom.role === "OWNER" ? "방장" : "멤버"}</dd>
-            </div>
-            <div>
-              <dt>멤버</dt>
-              <dd>{selectedRoom.memberCount}명</dd>
-            </div>
-          </dl>
+          <div className="room-home-control">
+            <dl className="room-home-meta">
+              <div>
+                <dt>역할</dt>
+                <dd>{selectedRoom.role === "OWNER" ? "방장" : "멤버"}</dd>
+              </div>
+              <div>
+                <dt>멤버</dt>
+                <dd>{selectedRoom.memberCount}명</dd>
+              </div>
+            </dl>
+            <button className="room-settings-button" type="button" aria-label="방 설정 열기" onClick={onOpenRoomSettings}>
+              <Settings size={22} />
+            </button>
+          </div>
         </article>
 
         <div className="room-home-content">
@@ -2147,6 +2293,209 @@ function AlertModal({ title, message, onClose }: { title: string; message: strin
         <div className="modal-actions">
           <button className="primary-button" type="button" onClick={onClose}>
             확인
+          </button>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function RoomSettingsModal({
+  mode,
+  room,
+  editForm,
+  loading,
+  onModeChange,
+  onEditFormChange,
+  onSave,
+  onDelete,
+  onClose,
+}: {
+  mode: RoomSettingsMode;
+  room: RoomDetail | null;
+  editForm: { name: string; description: string };
+  loading: boolean;
+  onModeChange: (mode: RoomSettingsMode) => void;
+  onEditFormChange: (form: { name: string; description: string }) => void;
+  onSave: () => void;
+  onDelete: () => void;
+  onClose: () => void;
+}) {
+  const canManage = room?.canManage ?? false;
+
+  if (!room) {
+    return (
+      <div className="modal-backdrop" role="presentation">
+        <section className="modal" role="dialog" aria-modal="true" aria-labelledby="room-settings-loading-title">
+          <h2 id="room-settings-loading-title">방 설정</h2>
+          <p>방 정보를 불러오는 중입니다.</p>
+          <div className="modal-actions">
+            <button className="outline-button" type="button" onClick={onClose}>
+              닫기
+            </button>
+          </div>
+        </section>
+      </div>
+    );
+  }
+
+  if (mode === "info") {
+    return (
+      <div className="modal-backdrop" role="presentation">
+        <section className="modal room-settings-modal" role="dialog" aria-modal="true" aria-labelledby="room-info-title">
+          <div className="modal-title-row">
+            <div>
+              <h2 id="room-info-title">방 정보 조회</h2>
+              <p>현재 방의 기본 정보와 내 권한을 확인한다.</p>
+            </div>
+            <button className="icon-button" type="button" aria-label="닫기" onClick={onClose}>
+              <X size={18} />
+            </button>
+          </div>
+          <dl className="room-detail-list">
+            <div>
+              <dt>방 이름</dt>
+              <dd>{room.name}</dd>
+            </div>
+            <div>
+              <dt>방 설명</dt>
+              <dd>{room.description ?? "설명 없음"}</dd>
+            </div>
+            <div>
+              <dt>방 타입</dt>
+              <dd>{roomTypeLabel(room.type)}</dd>
+            </div>
+            <div>
+              <dt>내 역할</dt>
+              <dd>{room.role === "OWNER" ? "방장" : "멤버"}</dd>
+            </div>
+            <div>
+              <dt>멤버</dt>
+              <dd>{room.memberCount}명</dd>
+            </div>
+          </dl>
+          <div className="modal-actions">
+            <button className="outline-button" type="button" onClick={() => onModeChange("menu")}>
+              이전
+            </button>
+            <button className="primary-button" type="button" onClick={onClose}>
+              확인
+            </button>
+          </div>
+        </section>
+      </div>
+    );
+  }
+
+  if (mode === "edit") {
+    return (
+      <div className="modal-backdrop" role="presentation">
+        <section className="modal room-settings-modal" role="dialog" aria-modal="true" aria-labelledby="room-edit-title">
+          <div className="modal-title-row">
+            <div>
+              <h2 id="room-edit-title">방 정보 수정</h2>
+              <p>방장만 방 이름과 설명을 수정할 수 있다.</p>
+            </div>
+            <button className="icon-button" type="button" aria-label="닫기" onClick={onClose}>
+              <X size={18} />
+            </button>
+          </div>
+          <label className="field">
+            방 이름
+            <input
+              value={editForm.name}
+              onChange={(event) => onEditFormChange({ ...editForm, name: event.target.value })}
+              disabled={!canManage || loading}
+              placeholder="방 이름"
+            />
+          </label>
+          <label className="field">
+            방 설명
+            <textarea
+              value={editForm.description}
+              onChange={(event) => onEditFormChange({ ...editForm, description: event.target.value })}
+              disabled={!canManage || loading}
+              placeholder="방 설명"
+              rows={4}
+            />
+          </label>
+          {!canManage ? <p className="modal-help-text">멤버는 방 정보를 수정할 수 없습니다.</p> : null}
+          <div className="modal-actions">
+            <button className="outline-button" type="button" onClick={() => onModeChange("menu")} disabled={loading}>
+              이전
+            </button>
+            <button className="primary-button" type="button" onClick={onSave} disabled={!canManage || loading || !editForm.name.trim()}>
+              {loading ? "저장 중" : "저장"}
+            </button>
+          </div>
+        </section>
+      </div>
+    );
+  }
+
+  if (mode === "delete") {
+    return (
+      <div className="modal-backdrop" role="presentation">
+        <section className="modal room-settings-modal" role="alertdialog" aria-modal="true" aria-labelledby="room-delete-title">
+          <div className="modal-title-row">
+            <div>
+              <h2 id="room-delete-title">방 삭제</h2>
+              <p>삭제한 방은 목록과 캘린더에서 더 이상 보이지 않는다.</p>
+            </div>
+            <button className="icon-button" type="button" aria-label="닫기" onClick={onClose}>
+              <X size={18} />
+            </button>
+          </div>
+          <div className="delete-warning">
+            <strong>{room.name}</strong>
+            <span>이 방을 삭제하려면 방장 권한이 필요하다.</span>
+          </div>
+          <div className="modal-actions">
+            <button className="outline-button" type="button" onClick={() => onModeChange("menu")} disabled={loading}>
+              이전
+            </button>
+            <button className="danger-button" type="button" onClick={onDelete} disabled={!canManage || loading}>
+              {loading ? "삭제 중" : "삭제"}
+            </button>
+          </div>
+        </section>
+      </div>
+    );
+  }
+
+  return (
+    <div className="modal-backdrop" role="presentation">
+      <section className="modal room-settings-modal" role="dialog" aria-modal="true" aria-labelledby="room-settings-title">
+        <div className="modal-title-row">
+          <div>
+            <h2 id="room-settings-title">방 설정</h2>
+            <p>{room.name}의 정보 확인, 수정, 삭제를 선택한다.</p>
+          </div>
+          <button className="icon-button" type="button" aria-label="닫기" onClick={onClose}>
+            <X size={18} />
+          </button>
+        </div>
+        <div className="room-settings-actions">
+          <button type="button" onClick={() => onModeChange("info")}>
+            <BookOpen size={22} />
+            <span>
+              <strong>방 정보 조회</strong>
+              <small>방 이름, 설명, 타입, 멤버 수 확인</small>
+            </span>
+          </button>
+          <button type="button" onClick={() => onModeChange("edit")} disabled={!canManage}>
+            <FileText size={22} />
+            <span>
+              <strong>방 정보 수정</strong>
+              <small>방장만 제목과 방 설명 수정 가능</small>
+            </span>
+          </button>
+          <button className="danger-action" type="button" onClick={() => onModeChange("delete")} disabled={!canManage}>
+            <ShieldAlert size={22} />
+            <span>
+              <strong>방 삭제</strong>
+              <small>방장만 방 삭제 가능</small>
+            </span>
           </button>
         </div>
       </section>
