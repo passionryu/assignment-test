@@ -1,0 +1,148 @@
+{
+  "status": "PASS",
+  "checkedAt": "2026-07-31T06:49:23.279Z",
+  "target": {
+    "issue": "#4",
+    "branch": "feature-4",
+    "fixCommit": "c3694be fix(profile): 설정 화면 정의서 레이아웃 반영",
+    "reviewCommit": "77fa3a7 docs(review): 이슈 4 설정 화면 수정 재검토",
+    "checkedAtKst": "2026. 7. 31. 오후 3:49:17"
+  },
+  "checks": [
+    {
+      "group": "Screen Spec Match",
+      "name": "좌측 사이드바 존재",
+      "passed": true,
+      "detail": "x=0, width=270",
+      "evidence": "evidence/recheck-01-settings-screen-spec-match-1440.png"
+    },
+    {
+      "group": "Screen Spec Match",
+      "name": "사이드바 메뉴 구성 표시",
+      "passed": true,
+      "detail": "방 리스트와 다른 방 항목, 설정 active 확인",
+      "evidence": "evidence/recheck-01-settings-screen-spec-match-1440.png"
+    },
+    {
+      "group": "Screen Spec Match",
+      "name": "메인 콘텐츠가 설정 화면으로 표시",
+      "passed": true,
+      "detail": "설정 제목/설명 표시",
+      "evidence": "evidence/recheck-01-settings-screen-spec-match-1440.png"
+    },
+    {
+      "group": "Screen Spec Match",
+      "name": "좌측 본문 프로필 우선 카드",
+      "passed": true,
+      "detail": "프로필 카드가 좌측 첫 영역에 배치됨",
+      "evidence": "evidence/recheck-01-settings-screen-spec-match-1440.png"
+    },
+    {
+      "group": "Screen Spec Match",
+      "name": "우측 설정 구조 배치",
+      "passed": true,
+      "detail": "비밀번호/알림/정책/위험 영역 순서 확인",
+      "evidence": "evidence/recheck-01-settings-screen-spec-match-1440.png"
+    },
+    {
+      "group": "Screen Spec Match",
+      "name": "로그아웃/회원 탈퇴 위험 영역 분리",
+      "passed": true,
+      "detail": "위험 영역 내 두 액션 분리 표시",
+      "evidence": "evidence/recheck-01-settings-screen-spec-match-1440.png"
+    },
+    {
+      "group": "Screen Spec Match",
+      "name": "노트북/웹 모니터 레이아웃 무결성",
+      "passed": true,
+      "detail": "viewport 1440x900, horizontal overflow 없음",
+      "evidence": "evidence/recheck-01-settings-screen-spec-match-1440.png"
+    },
+    {
+      "group": "Screen Spec Match",
+      "name": "1366x768 화면 깨짐 없음",
+      "passed": true,
+      "detail": "노트북 폭에서도 가로 overflow 없이 2열 유지",
+      "evidence": "evidence/recheck-02-settings-screen-spec-match-1366.png"
+    },
+    {
+      "group": "Functional E2E",
+      "name": "프로필 정보 표시",
+      "passed": true,
+      "detail": "이름/아이디/이메일/전화번호 표시",
+      "evidence": "evidence/recheck-01-settings-screen-spec-match-1440.png"
+    },
+    {
+      "group": "Functional E2E",
+      "name": "프로필 수정 모달 표시",
+      "passed": true,
+      "detail": "프로필 수정 모달과 수정 가능 범위 안내 표시",
+      "evidence": "evidence/recheck-03-profile-edit-modal.png"
+    },
+    {
+      "group": "Functional E2E",
+      "name": "이메일/전화번호 수정 불가",
+      "passed": true,
+      "detail": "모달에는 이름/프로필 이미지 URL만 입력 가능",
+      "evidence": "evidence/recheck-03-profile-edit-modal.png"
+    },
+    {
+      "group": "Functional E2E",
+      "name": "프로필 수정 성공",
+      "passed": true,
+      "detail": "이름과 이미지 URL 반영",
+      "evidence": "evidence/recheck-04-profile-update-success.png"
+    },
+    {
+      "group": "Functional E2E",
+      "name": "빈 이름 실패 케이스",
+      "passed": true,
+      "detail": "빈 이름 저장 거부",
+      "evidence": "evidence/recheck-05-profile-empty-name-error.png"
+    },
+    {
+      "group": "Functional E2E",
+      "name": "짧은 비밀번호 실패",
+      "passed": true,
+      "detail": "8자 이상 검증 오류 표시",
+      "evidence": "evidence/recheck-06-password-short-error.png"
+    },
+    {
+      "group": "Functional E2E",
+      "name": "비밀번호 변경 성공",
+      "passed": true,
+      "detail": "정상 피드백 표시",
+      "evidence": "evidence/recheck-06-password-short-error.png"
+    },
+    {
+      "group": "Functional E2E",
+      "name": "전체 알림 ON 정책",
+      "passed": true,
+      "detail": "전체 ON 시 채팅/편지/추억/미션 모두 ON",
+      "evidence": "evidence/recheck-07-notification-all-on.png"
+    },
+    {
+      "group": "Functional E2E",
+      "name": "전체 OFF 후 개별 알림 조정 및 유지",
+      "passed": true,
+      "detail": "새로고침 후에도 개별 알림 상태 유지",
+      "evidence": "evidence/recheck-08-notification-persisted.png"
+    },
+    {
+      "group": "Functional E2E",
+      "name": "로그아웃 모달",
+      "passed": true,
+      "detail": "확인/취소 흐름 표시",
+      "evidence": "evidence/recheck-09-logout-modal.png"
+    },
+    {
+      "group": "Functional E2E",
+      "name": "회원 탈퇴 placeholder",
+      "passed": true,
+      "detail": "실제 탈퇴 API 없이 위험 액션 안내와 placeholder 표시",
+      "evidence": "evidence/recheck-10-withdraw-placeholder.png"
+    }
+  ],
+  "failures": [],
+  "evidenceDir": "docs/qa/issue-4/evidence"
+}

@@ -35,7 +35,7 @@ Tech Lead Agent는 승인된 기획과 화면 정의를 기술 설계로 변환�
 - DB 모델과 관계를 정의한다.
 - 주문 상태 모델과 허용 상태 전이를 정의한다.
 - Docker 실행 구조와 seed data 전략을 설계한다.
-- Happy Case, Edge Case, Validation Case를 정의한다.
+- API별 Happy Case, Edge Case, Validation Case를 정의한다.
 - curl 테스트 명령을 작성한다.
 - 구현 완료 후 실제 API를 호출해 1차 검증한다.
 - 실패한 검증은 수정 요청으로 정리한다.
@@ -47,7 +47,7 @@ Tech Lead Agent는 승인된 기획과 화면 정의를 기술 설계로 변환�
 - `docs/dev-spec/DEV-003-admin-orders.md`
 - `docs/dev-spec/DEV-004-docker-seed.md`
 - `docs/qa/issue-{issueNumber}/curl-test-cases.md`
-- `docs/qa/issue-{issueNumber}/tech-verification-report.md`
+- `docs/qa/issue-{issueNumber}/테크리드_에이전트_1차검증.md`
 
 ## Technical Design Rules
 
@@ -80,6 +80,44 @@ curl 1차 검증은 다음 범위를 포함한다.
 | Admin | 관리자 관점의 주문 목록 또는 상태 변경이 동작하는가 |
 | Error | 실패 시 일관된 error response를 반환하는가 |
 
+## API Validation Matrix Rules
+
+Tech Lead Agent는 API 1개당 대표 happy case만 확인하고 PASS를 줄 수 없다.
+
+각 API는 기능 특성에 맞춰 아래 기준을 만족해야 한다.
+
+| API Type | Minimum curl cases |
+| --- | --- |
+| `GET` 단건 조회 | happy, 인증 누락, 권한 없는 사용자, 존재하지 않는 id 또는 리소스 없음 |
+| `GET` 목록 조회 | happy, 빈 목록, pagination/filter 기본값, 잘못된 query parameter |
+| `POST` 생성 | happy, 필수 필드 누락, null 입력, blank 입력, 길이 초과, 타입 오류, 중복 생성, 권한 오류, malformed JSON |
+| `PATCH` / `PUT` 수정 | happy, 필수 필드 누락, null 입력, blank 입력, 길이 초과, 타입 오류, 수정 불가 필드 포함, 존재하지 않는 id, 권한 오류, malformed JSON |
+| `DELETE` 삭제 | happy, 존재하지 않는 id, 권한 오류, 이미 삭제된 리소스 재삭제, 관련 데이터가 있을 때 정책 확인 |
+| 상태 변경 API | happy, 허용되지 않은 상태 전이, 같은 상태 중복 요청, 권한 오류, 존재하지 않는 리소스 |
+
+필드 단위 validation은 request body의 각 필드마다 검토한다.
+
+| Field Type | Required edge cases |
+| --- | --- |
+| string | null, blank, trim 필요값, 최소 길이 미달, 최대 길이 초과, 허용되지 않는 형식 |
+| email | null, blank, 형식 오류, 최대 길이 초과, 중복 |
+| password | null, blank, 최소 길이 미달, 최대 길이 초과, 정책 불일치 |
+| number | null, 음수, 0 허용 여부, 최대값 초과, 숫자가 아닌 값 |
+| boolean | null, 문자열 입력, 누락 시 기본값 또는 오류 정책 |
+| enum/status | null, 존재하지 않는 값, 대소문자 오류, 허용되지 않는 전이 |
+| date/time | null, 형식 오류, 과거/미래 제한, timezone 기준 |
+| array | null, 빈 배열, 최대 개수 초과, 중복 원소, 잘못된 원소 |
+
+검증 예외가 필요한 경우에는 `CONDITIONAL_PASS`로만 처리하고, 왜 이번 이슈에서 제외하는지 보고서에 명시한다.
+
+다음 중 하나라도 누락되면 `PASS`를 줄 수 없다.
+
+- POST/PATCH/PUT API의 필드별 validation matrix
+- 인증/권한 실패 케이스
+- malformed JSON 또는 잘못된 Content-Type 계열 오류
+- 존재하지 않는 리소스 접근
+- error response 구조 확인
+
 ## Verification Report Format
 
 ```markdown
@@ -95,6 +133,16 @@ curl 1차 검증은 다음 범위를 포함한다.
 
 | Test ID | Case | Expected | Actual | Status |
 | --- | --- | --- | --- | --- |
+
+## API Validation Matrix
+
+| API | Field / Policy | Case | Expected | Actual | Status |
+| --- | --- | --- | --- | --- | --- |
+
+## Excluded Edge Cases
+
+| API | Excluded Case | Reason | Follow-up |
+| --- | --- | --- | --- |
 
 ## Issues
 
@@ -124,7 +172,7 @@ Evidence에는 다음을 남긴다.
 
 - dev-spec 문서 경로
 - curl-test-cases 문서 경로
-- tech-verification-report 문서 경로
+- 테크리드_에이전트_1차검증 문서 경로
 - 실행한 curl 명령
 - 대상 commit hash
 - 실패한 API 응답과 수정 요청
@@ -133,7 +181,8 @@ Evidence에는 다음을 남긴다.
 
 - 기술 스택, API, DB, Docker, seed 전략이 문서화되어 있다.
 - Full Stack Dev Agent가 구현 가능한 수준의 dev-spec이 있다.
-- curl happy case와 주요 edge case가 실행되었다.
+- API별 happy case와 validation matrix 기반 edge case가 실행되었다.
+- 제외한 edge case는 `Excluded Edge Cases`에 이유와 후속 조치가 기록되어 있다.
 - 검증 결과가 PASS, CONDITIONAL_PASS, FAIL 중 하나로 기록되었다.
 - 실패 항목은 재현 가능한 수정 요청으로 남아 있다.
 

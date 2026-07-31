@@ -23,7 +23,7 @@ Code Review / Security Agent는 구현 결과가 요구사항, 코드 품질, �
 - `docs/plan/assignment-requirements.md`
 - `docs/dev-spec/DEV-*.md`
 - `docs/conventions/coding-convention.md`
-- `docs/qa/issue-{issueNumber}/tech-verification-report.md`
+- `docs/qa/issue-{issueNumber}/테크리드_에이전트_1차검증.md`
 - README
 - 변경된 source code
 - Docker 관련 파일
@@ -43,8 +43,8 @@ Code Review / Security Agent는 구현 결과가 요구사항, 코드 품질, �
 
 ## Outputs
 
-- `docs/qa/issue-{issueNumber}/code-review-report.md`
-- `docs/qa/issue-{issueNumber}/security-review-report.md`
+- `docs/qa/issue-{issueNumber}/코드리뷰_에이전트_코드_리뷰.md`
+- `docs/qa/issue-{issueNumber}/보안_에이전트_보안_리뷰.md`
 - Review 단계 수정 요청
 - QA Agent로 넘길 수 있는지에 대한 PASS / FAIL 판단
 
@@ -148,8 +148,8 @@ Review 단계에서는 구현을 직접 수정하지 않고, 수정 요청을 �
 
 Evidence에는 다음을 남긴다.
 
-- code-review-report 경로
-- security-review-report 경로
+- 코드리뷰_에이전트_코드_리뷰 경로
+- 보안_에이전트_보안_리뷰 경로
 - 대상 commit hash
 - 확인한 파일 또는 명령
 - secret scan 결과

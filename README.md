@@ -31,20 +31,20 @@ docs/
 
 docs/qa/
   issue-3/
-    tech-verification-report.md
-    code-review-report.md
-    security-review-report.md
-    qa-report.md
+    테크리드_에이전트_1차검증.md
+    코드리뷰_에이전트_코드_리뷰.md
+    보안_에이전트_보안_리뷰.md
+    QA_레포트.md
   issue-4/
-    tech-verification-report.md
-    code-review-report.md
-    security-review-report.md
-    qa-report.md
+    테크리드_에이전트_1차검증.md
+    코드리뷰_에이전트_코드_리뷰.md
+    보안_에이전트_보안_리뷰.md
+    QA_레포트.md
   issue-5/
-    tech-verification-report.md
-    code-review-report.md
-    security-review-report.md
-    qa-report.md
+    테크리드_에이전트_1차검증.md
+    코드리뷰_에이전트_코드_리뷰.md
+    보안_에이전트_보안_리뷰.md
+    QA_레포트.md
 
 service/
   server/     Backend application
@@ -54,6 +54,8 @@ service/
 test-results/
   playwright/ Playwright evidence reports, screenshots, videos, and traces
 ```
+
+New AI QA runs use `docs/qa/issue-{issueNumber}/QA_레포트.html` as the primary browser-readable report. Existing Markdown QA reports remain as historical records or short indexes.
 
 ## Execution
 
