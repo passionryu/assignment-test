@@ -24,6 +24,11 @@ data class ChatMessageResponse(
     val mine: Boolean,
 )
 
+data class ChatReplyCandidate(
+    val memberId: Long,
+    val displayName: String,
+)
+
 data class SendChatMessageRequest(
     val body: String?,
 )

@@ -13,14 +13,14 @@ class ChatAssistantClient(
 ) {
     private val log = LoggerFactory.getLogger(ChatAssistantClient::class.java)
 
-    // 사용자의 방 대화가 끊기지 않도록 GPT 응답을 생성하고, 외부 API 실패 시 짧은 로컬 응답으로 격리한다.
-    fun generateReply(roomName: String, senderName: String, userMessage: String): String {
+    // GPT 키가 준비된 경우에만 외부 응답을 만들고, 실패하면 로컬 구성원 응답으로 넘기기 위해 null을 반환한다.
+    fun generateReplyOrNull(roomName: String, senderName: String, userMessage: String): String? {
         if (!hasUsableApiKey()) {
-            return fallbackReply(userMessage)
+            return null
         }
 
         val chatClient = chatClientBuilderProvider.getIfAvailable()?.build()
-            ?: return fallbackReply(userMessage)
+            ?: return null
 
         return runCatching {
             chatClient
@@ -44,7 +44,6 @@ class ChatAssistantClient(
                 .content()
                 ?.trim()
                 ?.takeIf { it.isNotEmpty() }
-                ?: fallbackReply(userMessage)
         }.getOrElse { exception ->
             log.warn(
                 "[채팅 AI 응답] GPT 응답 생성 실패. who=system, what=ChatAssistantClient.generateReply, requestData=roomName:{},senderName:{},messageLength:{}, reason={}",
@@ -53,17 +52,9 @@ class ChatAssistantClient(
                 userMessage.length,
                 exception.message ?: "unknown",
             )
-            fallbackReply(userMessage)
+            null
         }
     }
-
-    private fun fallbackReply(userMessage: String): String =
-        when {
-            userMessage.contains("사진") -> "좋아요. 이 사진 이야기는 나중에 책에 담기에도 좋겠어요."
-            userMessage.contains("편지") -> "편지로 남기면 더 오래 기억될 것 같아요."
-            userMessage.contains("미션") -> "미션 기록으로 남겨두면 함께 확인하기 좋겠어요."
-            else -> "좋아요. 이 대화도 오늘의 기록으로 남겨둘게요."
-        }
 
     private fun hasUsableApiKey(): Boolean =
         apiKey.isNotBlank() && !apiKey.startsWith("local-missing")

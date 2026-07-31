@@ -527,6 +527,8 @@ function App() {
   const [chatSearchKeyword, setChatSearchKeyword] = useState("");
   const [chatSearchResults, setChatSearchResults] = useState<ChatSearchResult[]>([]);
   const [chatLoading, setChatLoading] = useState(false);
+  const [chatSending, setChatSending] = useState(false);
+  const chatSendingRef = useRef(false);
   const [profileForm, setProfileForm] = useState({ displayName: "", profileImageUrl: "" });
   const [passwordForm, setPasswordForm] = useState({ currentPassword: "", newPassword: "" });
   const [createRoomForm, setCreateRoomForm] = useState<CreateRoomForm>({ name: "", type: "COUPLE", description: "" });
@@ -549,7 +551,7 @@ function App() {
   }, []);
 
   useEffect(() => {
-    if (activeView !== "chat" || !selectedRoom) return;
+    if ((activeView !== "chat" && activeView !== "room") || !selectedRoom) return;
 
     void loadChatMessages(selectedRoom.id);
   }, [activeView, selectedRoom?.id]);
@@ -748,6 +750,7 @@ function App() {
 
   async function sendChatMessage() {
     if (!selectedRoom) return;
+    if (chatSendingRef.current) return;
 
     const body = chatDraft.trim();
     if (!body) {
@@ -757,6 +760,8 @@ function App() {
 
     setMessage(null);
     setErrorMessage(null);
+    chatSendingRef.current = true;
+    setChatSending(true);
     try {
       const response = await apiRequest<SendChatMessageResponse>(`/rooms/${selectedRoom.id}/chat/messages`, {
         method: "POST",
@@ -767,6 +772,9 @@ function App() {
       await loadCalendarActivities(calendarRoomId);
     } catch (error) {
       setErrorMessage(toMessage(error));
+    } finally {
+      chatSendingRef.current = false;
+      setChatSending(false);
     }
   }
 
@@ -951,6 +959,12 @@ function App() {
         {activeView === "room" ? (
           <RoomHomeView
             selectedRoom={selectedRoom}
+            messages={chatMessages}
+            draft={chatDraft}
+            loading={chatLoading}
+            sending={chatSending}
+            onDraftChange={setChatDraft}
+            onSend={sendChatMessage}
             onMoveRoomFeature={(view) => {
               if (!selectedRoom) return;
               moveToRoomFeature(selectedRoom.id, view);
@@ -981,6 +995,7 @@ function App() {
             searchKeyword={chatSearchKeyword}
             searchResults={chatSearchResults}
             loading={chatLoading}
+            sending={chatSending}
             onDraftChange={setChatDraft}
             onSend={sendChatMessage}
             onSearchKeywordChange={setChatSearchKeyword}
@@ -1409,9 +1424,21 @@ function isInteractiveTarget(target: EventTarget | null) {
 
 function RoomHomeView({
   selectedRoom,
+  messages,
+  draft,
+  loading,
+  sending,
+  onDraftChange,
+  onSend,
   onMoveRoomFeature,
 }: {
   selectedRoom: RoomSummary | null;
+  messages: ChatMessage[];
+  draft: string;
+  loading: boolean;
+  sending: boolean;
+  onDraftChange: (value: string) => void;
+  onSend: () => void;
   onMoveRoomFeature: (view: RoomFeatureKind) => void;
 }) {
   if (!selectedRoom) {
@@ -1471,14 +1498,24 @@ function RoomHomeView({
           <article className="room-chat-preview">
             <div className="room-section-heading">
               <h2>최근 대화</h2>
-              <p>방의 메인 소통 흐름을 먼저 보여준다.</p>
+              <p>방의 메인 소통 흐름을 먼저 보여주고 바로 대화를 남긴다.</p>
             </div>
-            <div className="chat-date-divider">{formatDateLabel(todayDateKey())}</div>
-            <div className="chat-preview-list">
-              <p className="chat-bubble other">민지: 오늘 사진 진짜 잘 나왔다.</p>
-              <p className="chat-bubble mine">류성열: 이날 기록은 나중에 꼭 다시 보자.</p>
-              <p className="chat-bubble other">민지: 편지도 하나 보냈어.</p>
-              <p className="chat-bubble mine">류성열: 미션 인증도 확인할게.</p>
+            <ChatMessageTimeline messages={messages} loading={loading} compact />
+            <div className="chat-input-row compact-chat-input">
+              <textarea
+                value={draft}
+                onChange={(event) => onDraftChange(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.nativeEvent.isComposing || event.key !== "Enter" || event.shiftKey) return;
+                  event.preventDefault();
+                  onSend();
+                }}
+                placeholder="이 방에 남길 메시지"
+                rows={1}
+              />
+              <button className="primary-button" type="button" onClick={onSend} disabled={!selectedRoom || sending}>
+                {sending ? "전송 중" : "보내기"}
+              </button>
             </div>
           </article>
 
@@ -1517,6 +1554,41 @@ function RoomHomeView({
         </div>
       </section>
     </>
+  );
+}
+
+function ChatMessageTimeline({ messages, loading, compact = false }: { messages: ChatMessage[]; loading: boolean; compact?: boolean }) {
+  const endRef = useRef<HTMLDivElement | null>(null);
+  const groupedMessages = useMemo(() => groupChatMessagesByDate(messages), [messages]);
+
+  useEffect(() => {
+    endRef.current?.scrollIntoView({ block: "end" });
+  }, [messages.length]);
+
+  return (
+    <div className={`chat-message-area ${compact ? "compact-chat-area" : ""}`} aria-live="polite">
+      {loading ? <p className="chat-empty">대화를 불러오는 중입니다.</p> : null}
+      {!loading && groupedMessages.length === 0 ? <p className="chat-empty">아직 남긴 대화가 없습니다.</p> : null}
+      {groupedMessages.map((group) => (
+        <div className="chat-day-group" key={group.date}>
+          <div className="chat-date-divider">{formatDateLabel(group.date)}</div>
+          {group.messages.map((message) => (
+            <div
+              className={`chat-message-row ${message.mine ? "mine" : ""} ${message.senderType === "ASSISTANT" ? "assistant" : ""}`}
+              id={`chat-message-${message.id}`}
+              key={message.id}
+            >
+              <div className="chat-message-meta">
+                <strong>{message.senderName}</strong>
+                <span>{formatChatTime(message.sentAt)}</span>
+              </div>
+              <p className="chat-message-bubble">{message.body}</p>
+            </div>
+          ))}
+        </div>
+      ))}
+      <div ref={endRef} />
+    </div>
   );
 }
 
@@ -1694,6 +1766,7 @@ function ChatView({
   searchKeyword,
   searchResults,
   loading,
+  sending,
   onDraftChange,
   onSend,
   onSearchKeywordChange,
@@ -1706,19 +1779,13 @@ function ChatView({
   searchKeyword: string;
   searchResults: ChatSearchResult[];
   loading: boolean;
+  sending: boolean;
   onDraftChange: (value: string) => void;
   onSend: () => void;
   onSearchKeywordChange: (value: string) => void;
   onSearch: () => void;
   onMoveToMessage: (messageId: number) => void;
 }) {
-  const endRef = useRef<HTMLDivElement | null>(null);
-  const groupedMessages = useMemo(() => groupChatMessagesByDate(messages), [messages]);
-
-  useEffect(() => {
-    endRef.current?.scrollIntoView({ block: "end" });
-  }, [messages.length]);
-
   return (
     <>
       <header className="page-header">
@@ -1738,44 +1805,22 @@ function ChatView({
             <MessageCircle size={24} />
           </div>
 
-          <div className="chat-message-area" aria-live="polite">
-            {loading ? <p className="chat-empty">대화를 불러오는 중입니다.</p> : null}
-            {!loading && groupedMessages.length === 0 ? <p className="chat-empty">아직 남긴 대화가 없습니다.</p> : null}
-            {groupedMessages.map((group) => (
-              <div className="chat-day-group" key={group.date}>
-                <div className="chat-date-divider">{formatDateLabel(group.date)}</div>
-                {group.messages.map((message) => (
-                  <div
-                    className={`chat-message-row ${message.mine ? "mine" : ""} ${message.senderType === "ASSISTANT" ? "assistant" : ""}`}
-                    id={`chat-message-${message.id}`}
-                    key={message.id}
-                  >
-                    <div className="chat-message-meta">
-                      <strong>{message.senderName}</strong>
-                      <span>{formatChatTime(message.sentAt)}</span>
-                    </div>
-                    <p className="chat-message-bubble">{message.body}</p>
-                  </div>
-                ))}
-              </div>
-            ))}
-            <div ref={endRef} />
-          </div>
+          <ChatMessageTimeline messages={messages} loading={loading} />
 
           <div className="chat-input-row">
             <textarea
               value={draft}
               onChange={(event) => onDraftChange(event.target.value)}
               onKeyDown={(event) => {
-                if (event.key !== "Enter" || event.shiftKey) return;
+                if (event.nativeEvent.isComposing || event.key !== "Enter" || event.shiftKey) return;
                 event.preventDefault();
                 onSend();
               }}
-              placeholder="메시지를 입력하면 기록방 AI가 짧게 응답합니다."
+              placeholder="메시지를 입력하면 방 구성원이 답장합니다."
               rows={2}
             />
-            <button className="primary-button" type="button" onClick={onSend} disabled={!selectedRoom}>
-              보내기
+            <button className="primary-button" type="button" onClick={onSend} disabled={!selectedRoom || sending}>
+              {sending ? "전송 중" : "보내기"}
             </button>
           </div>
         </article>
@@ -2306,10 +2351,10 @@ function demoChatMessages(roomId: number): ChatMessage[] {
     {
       id: 8003,
       roomId: room.id,
-      senderMemberId: 99,
-      senderName: "기록방 AI",
-      senderType: "ASSISTANT",
-      body: "이 대화는 날짜별 기록으로 남겨두면 다시 돌아보기 좋겠어요.",
+      senderMemberId: room.id === 1 ? 2 : 3,
+      senderName: room.id === 1 ? "민지" : room.id === 2 ? "아버지" : "지훈",
+      senderType: "MEMBER",
+      body: "이 대화는 날짜별 기록으로 남겨두면 다시 돌아보기 좋겠다.",
       sentAt: `${baseDate}T09:05:00+09:00`,
       occurredDate: baseDate,
       mine: false,
