@@ -672,6 +672,14 @@ function App() {
     setActiveView(nextView);
   }
 
+  function openRoomHome(roomId: number) {
+    setMessage(null);
+    setErrorMessage(null);
+    setSelectedRoomId(roomId);
+    setExpandedRoomId(roomId);
+    setActiveView("home");
+  }
+
   function moveToRoomFeature(roomId: number, view: Exclude<AppView, "home" | "rooms" | "settings">) {
     setSelectedRoomId(roomId);
     setExpandedRoomId(roomId);
@@ -849,6 +857,7 @@ function App() {
             onInviteContactChange={(roomId, value) => setInviteContacts((current) => ({ ...current, [roomId]: value }))}
             onSendInvitation={sendRoomInvitation}
             onRespondInvitation={respondInvitation}
+            onSelectRoom={openRoomHome}
           />
         ) : null}
         {activeView === "chat" ? <RoomFeatureView selectedRoom={selectedRoom} kind="chat" /> : null}
@@ -1267,6 +1276,10 @@ function ActivityIcon({ type }: { type: "chat" | "mission" | "memory" | "letter"
   return <Mail className={className} size={16} aria-hidden="true" />;
 }
 
+function isInteractiveTarget(target: EventTarget | null) {
+  return target instanceof HTMLElement && Boolean(target.closest("button, input, select, textarea, a"));
+}
+
 function RoomsView({
   rooms,
   selectedRoomId,
@@ -1279,6 +1292,7 @@ function RoomsView({
   onInviteContactChange,
   onSendInvitation,
   onRespondInvitation,
+  onSelectRoom,
 }: {
   rooms: RoomSummary[];
   selectedRoomId: number | null;
@@ -1291,6 +1305,7 @@ function RoomsView({
   onInviteContactChange: (roomId: number, value: string) => void;
   onSendInvitation: (roomId: number) => void;
   onRespondInvitation: (invitationId: number, action: "accept" | "decline") => void;
+  onSelectRoom: (roomId: number) => void;
 }) {
   return (
     <>
@@ -1378,7 +1393,23 @@ function RoomsView({
           const canInvite = room.role === "OWNER";
 
           return (
-            <article className={`room-card ${room.id === selectedRoomId ? "selected" : ""}`} key={room.id}>
+            <article
+              className={`room-card ${room.id === selectedRoomId ? "selected" : ""}`}
+              key={room.id}
+              role="button"
+              tabIndex={0}
+              aria-label={`${room.name} 방으로 이동`}
+              onClick={(event) => {
+                if (isInteractiveTarget(event.target)) return;
+                onSelectRoom(room.id);
+              }}
+              onKeyDown={(event) => {
+                if (isInteractiveTarget(event.target)) return;
+                if (event.key !== "Enter" && event.key !== " ") return;
+                event.preventDefault();
+                onSelectRoom(room.id);
+              }}
+            >
               <div>
                 <span>{roomTypeLabel(room.type)}</span>
                 <h2>{room.name}</h2>
@@ -1407,7 +1438,6 @@ function RoomsView({
                     초대
                   </button>
                 </div>
-                {!canInvite ? <span className="invite-permission-hint">방장 권한 필요</span> : null}
               </div>
             </article>
           );

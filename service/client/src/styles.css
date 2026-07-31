@@ -1008,6 +1008,22 @@ dl {
   align-items: center;
   gap: 18px;
   padding: 22px;
+  cursor: pointer;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.2s ease;
+}
+
+.room-card:hover {
+  border-color: rgba(240, 79, 149, 0.5);
+  box-shadow: 0 16px 42px rgba(37, 50, 72, 0.08);
+  transform: translateY(-1px);
+}
+
+.room-card:focus-visible {
+  outline: 3px solid rgba(240, 79, 149, 0.24);
+  outline-offset: 3px;
 }
 
 .room-card.no-actions {
@@ -1084,13 +1100,6 @@ dl {
   background: #f4f7fb;
   color: #98a2b3;
   cursor: not-allowed;
-}
-
-.invite-permission-hint {
-  color: #98a2b3;
-  font-size: 12px;
-  font-weight: 900;
-  white-space: nowrap;
 }
 
 .skeleton-list {
