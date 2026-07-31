@@ -9,6 +9,7 @@ import {
   Clock,
   FileText,
   Home,
+  Image as ImageIcon,
   KeyRound,
   List,
   LogOut,
@@ -491,9 +492,9 @@ function App() {
     void loadCalendarActivities(nextRoomId);
   }
 
-  function viewSelectedDateRecords() {
+  function viewSelectedDateRecords(summaryRoomId?: number) {
     const selectedDay = calendar?.days.find((day) => day.date === selectedCalendarDate);
-    const target = selectedDay ? calendarTarget(selectedDay) : null;
+    const target = selectedDay ? calendarTarget(selectedDay, summaryRoomId) : null;
 
     if (!target) {
       return;
@@ -750,7 +751,7 @@ function HomeView({
   onNotificationClick: (notification: NotificationItem) => void;
   onCalendarRoomFilter: (roomId: number | null) => void;
   onCalendarDateSelect: (date: string) => void;
-  onViewDateRecords: () => void;
+  onViewDateRecords: (roomId?: number) => void;
   onOpenProfileEdit: () => void;
   onLogout: () => void;
 }) {
@@ -856,14 +857,22 @@ function RecordCalendar({
   selectedRoomId: number | null;
   onRoomFilter: (roomId: number | null) => void;
   onDateSelect: (date: string) => void;
-  onViewRecords: () => void;
+  onViewRecords: (roomId?: number) => void;
 }) {
+  const [selectedSummaryRoomId, setSelectedSummaryRoomId] = useState<number | null>(null);
   const month = calendar?.month ?? currentMonth;
   const days = useMemo(() => buildCalendarCells(month), [month]);
   const activityByDate = useMemo(() => new Map((calendar?.days ?? []).map((day) => [day.date, day])), [calendar]);
   const selectedDay = selectedDate ? activityByDate.get(selectedDate) ?? null : null;
   const selectedDayLabel = selectedDate ? formatDateLabel(selectedDate) : "날짜를 선택하세요";
-  const canViewRecords = Boolean(selectedDay && selectedDay.totalCount > 0);
+  const activeSummaryRooms = selectedDay?.rooms.filter((room) => room.totalCount > 0) ?? [];
+  const requiresRoomSelection = activeSummaryRooms.length > 1;
+  const selectedSummaryRoom = activeSummaryRooms.find((room) => room.roomId === selectedSummaryRoomId) ?? null;
+  const canViewRecords = Boolean(selectedDay && selectedDay.totalCount > 0 && (!requiresRoomSelection || selectedSummaryRoom));
+
+  useEffect(() => {
+    setSelectedSummaryRoomId(null);
+  }, [selectedDate, selectedRoomId]);
 
   return (
     <div className="record-calendar">
@@ -879,10 +888,10 @@ function RecordCalendar({
       </div>
 
       <div className="calendar-legend" aria-label="기록 유형 범례">
-        <span><i className="activity-dot chat" />채팅</span>
-        <span><i className="activity-dot mission" />미션</span>
-        <span><i className="activity-dot memory" />추억</span>
-        <span><i className="activity-dot letter" />편지</span>
+        <span><ActivityIcon type="chat" />채팅</span>
+        <span><ActivityIcon type="mission" />미션</span>
+        <span><ActivityIcon type="memory" />추억</span>
+        <span><ActivityIcon type="letter" />편지</span>
       </div>
 
       <div className="calendar-content">
@@ -925,16 +934,24 @@ function RecordCalendar({
           {selectedDay ? (
             <>
               <p>{activitySummaryText(selectedDay)}</p>
+              {requiresRoomSelection ? <p className="summary-help">기록을 볼 방을 먼저 선택하세요.</p> : null}
               <div className="summary-room-list">
-                {selectedDay.rooms.map((room) => (
-                  <div key={room.roomId}>
+                {activeSummaryRooms.map((room) => (
+                  <button
+                    className={room.roomId === selectedSummaryRoomId ? "selected" : ""}
+                    type="button"
+                    key={room.roomId}
+                    onClick={() => setSelectedSummaryRoomId(room.roomId)}
+                    disabled={!requiresRoomSelection}
+                    aria-pressed={room.roomId === selectedSummaryRoomId}
+                  >
                     <strong>{room.roomName}</strong>
                     <span>{activitySummaryText(room)}</span>
-                  </div>
+                  </button>
                 ))}
               </div>
-              <button className="primary-button" type="button" onClick={onViewRecords} disabled={!canViewRecords}>
-                기록 보기
+              <button className="primary-button" type="button" onClick={() => onViewRecords(selectedSummaryRoom?.roomId)} disabled={!canViewRecords}>
+                {requiresRoomSelection && !selectedSummaryRoom ? "방을 선택하세요" : "기록 보기"}
               </button>
             </>
           ) : (
@@ -954,12 +971,22 @@ function RecordCalendar({
 function ActivityDots({ activity }: { activity: CalendarDayActivity }) {
   return (
     <span className="activity-dots" aria-label={activitySummaryText(activity)}>
-      {activity.chatCount > 0 ? <i className="activity-dot chat" /> : null}
-      {activity.missionCount > 0 ? <i className="activity-dot mission" /> : null}
-      {activity.memoryCount > 0 ? <i className="activity-dot memory" /> : null}
-      {activity.letterCount > 0 ? <i className="activity-dot letter" /> : null}
+      {activity.chatCount > 0 ? <ActivityIcon type="chat" /> : null}
+      {activity.missionCount > 0 ? <ActivityIcon type="mission" /> : null}
+      {activity.memoryCount > 0 ? <ActivityIcon type="memory" /> : null}
+      {activity.letterCount > 0 ? <ActivityIcon type="letter" /> : null}
     </span>
   );
+}
+
+function ActivityIcon({ type }: { type: "chat" | "mission" | "memory" | "letter" }) {
+  const className = `activity-icon ${type}`;
+
+  if (type === "chat") return <MessageCircle className={className} size={16} aria-hidden="true" />;
+  if (type === "mission") return <CheckCircle2 className={className} size={16} aria-hidden="true" />;
+  if (type === "memory") return <ImageIcon className={className} size={16} aria-hidden="true" />;
+
+  return <Mail className={className} size={16} aria-hidden="true" />;
 }
 
 function RoomsView({
@@ -1578,8 +1605,10 @@ function activitySummaryText(activity: Pick<CalendarDayActivity, "chatCount" | "
   return parts.length > 0 ? parts.join(" · ") : "기록 없음";
 }
 
-function calendarTarget(day: CalendarDayActivity): { roomId: number; view: Exclude<AppView, "home" | "rooms" | "settings"> } | null {
-  const room = day.rooms.find((candidate) => candidate.totalCount > 0);
+function calendarTarget(day: CalendarDayActivity, roomId?: number): { roomId: number; view: Exclude<AppView, "home" | "rooms" | "settings"> } | null {
+  const room = roomId
+    ? day.rooms.find((candidate) => candidate.roomId === roomId && candidate.totalCount > 0)
+    : day.rooms.find((candidate) => candidate.totalCount > 0);
 
   if (!room) {
     return null;

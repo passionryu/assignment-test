@@ -784,31 +784,30 @@ dl {
 .activity-dots {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
 }
 
-.activity-dot {
-  width: 8px;
-  height: 8px;
-  display: inline-block;
+.activity-icon {
+  width: 16px;
+  height: 16px;
   flex: 0 0 auto;
-  border-radius: 50%;
+  stroke-width: 2.35;
 }
 
-.activity-dot.chat {
-  background: #2f7df6;
+.activity-icon.chat {
+  color: #2f7df6;
 }
 
-.activity-dot.mission {
-  background: #7c3aed;
+.activity-icon.mission {
+  color: #7c3aed;
 }
 
-.activity-dot.memory {
-  background: #0c9fa8;
+.activity-icon.memory {
+  color: #0c9fa8;
 }
 
-.activity-dot.letter {
-  background: #f04f95;
+.activity-icon.letter {
+  color: #f04f95;
 }
 
 .selected-day-summary {
@@ -838,18 +837,41 @@ dl {
   line-height: 1.5;
 }
 
+.selected-day-summary .summary-help {
+  color: #f04f95;
+  font-size: 13px;
+}
+
 .summary-room-list {
   display: grid;
   gap: 10px;
 }
 
-.summary-room-list div {
+.summary-room-list button {
   display: grid;
   gap: 4px;
   border: 1px solid #edf1f6;
   border-radius: 8px;
   background: #fbfcff;
   padding: 12px;
+  text-align: left;
+  transition:
+    border-color 160ms ease,
+    background 160ms ease,
+    box-shadow 160ms ease,
+    transform 160ms ease;
+}
+
+.summary-room-list button:not(:disabled):hover,
+.summary-room-list button.selected {
+  border-color: #f04f95;
+  background: #fff7fb;
+  box-shadow: 0 10px 24px rgba(240, 79, 149, 0.12);
+  transform: translateY(-1px);
+}
+
+.summary-room-list button:disabled {
+  cursor: default;
 }
 
 .summary-room-list strong {
@@ -861,6 +883,13 @@ dl {
   color: #667085;
   font-size: 13px;
   font-weight: 800;
+}
+
+.selected-day-summary .primary-button:disabled {
+  border: 1px solid #e4ebf5;
+  background: #eef3fb;
+  color: #98a2b3;
+  box-shadow: none;
 }
 
 .room-hub-grid {
