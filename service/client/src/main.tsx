@@ -638,21 +638,29 @@ function HomeView({
       </header>
 
       <section className="home-grid">
-        <article className="profile-panel compact-panel">
-          <div className="panel-heading">
+        <article className="profile-panel compact-panel home-profile-card">
+          <div className="panel-heading compact-heading">
             <div>
               <span>프로필</span>
               <h2>내 정보</h2>
             </div>
             <UserRound size={24} />
           </div>
-          <div className="profile-summary">
+          <div className="profile-summary home-profile-summary">
             <div className="avatar">{profile?.profileImageUrl ? <img src={profile.profileImageUrl} alt="" /> : initials}</div>
-            <div>
+            <div className="home-profile-info">
               <strong>{profile?.displayName ?? "-"}</strong>
-              <span>아이디 {profile?.username ?? "-"}</span>
-              <span>이메일 {profile?.email ?? "-"}</span>
-              <span>전화번호 {profile?.phoneNumber ?? "-"}</span>
+              <span className="profile-username">아이디 {profile?.username ?? "-"}</span>
+              <dl className="home-profile-detail">
+                <div>
+                  <dt>이메일</dt>
+                  <dd>{profile?.email ?? "-"}</dd>
+                </div>
+                <div>
+                  <dt>전화번호</dt>
+                  <dd>{profile?.phoneNumber ?? "-"}</dd>
+                </div>
+              </dl>
             </div>
           </div>
           <div className="profile-actions">
@@ -1104,6 +1112,7 @@ function NotificationList({
           key={notification.id}
           onClick={() => onNotificationClick(notification)}
         >
+          {!notification.read ? <span className="notification-new-dot" aria-hidden="true" /> : null}
           <span className={`notification-type ${notification.type.toLowerCase().replace(/_/g, "-")}`}>
             {notificationIcon(notification.type)}
             {notificationTypeLabel(notification.type)}
@@ -1115,6 +1124,7 @@ function NotificationList({
             </span>
           </span>
           <span className="notification-time">
+            {!notification.read ? <span className="new-badge">NEW</span> : null}
             <Clock size={14} />
             {relativeTime(notification.occurredAt)}
           </span>
