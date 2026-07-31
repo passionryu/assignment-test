@@ -1,182 +1,36 @@
-<!doctype html>
-<html lang="ko">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Issue #5 Focused QA 레포트</title>
-  <style>
-    :root { color: #253248; background: #f6f8fc; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
-    body { margin: 0; }
-    main { width: min(1180px, calc(100% - 48px)); margin: 0 auto; padding: 38px 0 60px; }
-    h1 { margin: 0; font-size: 34px; letter-spacing: 0; }
-    h2 { margin: 0 0 14px; font-size: 24px; }
-    p { line-height: 1.65; }
-    .hero, .card { border: 1px solid #dfe7f2; border-radius: 8px; background: #fff; box-shadow: 0 12px 36px rgba(49,70,107,.08); padding: 24px; }
-    .hero { background: linear-gradient(135deg, #fff 0%, #fff7fb 55%, #eef8ff 100%); }
-    .status { display: inline-flex; align-items: center; border-radius: 999px; padding: 7px 13px; font-weight: 900; margin-top: 16px; }
-    .status.pass { color: #147a3d; background: #eaf8ef; border: 1px solid #bfe8cf; }
-    .status.fail { color: #b42318; background: #fff1f1; border: 1px solid #ffd0d0; }
-    .grid { display: grid; gap: 18px; margin-top: 18px; }
-    .meta { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 16px; margin-top: 18px; }
-    .meta div, .scope-list li, .note-list li { border: 1px solid #e4ebf5; border-radius: 8px; padding: 12px; background: #fbfcff; }
-    .scope-list, .note-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; padding: 0; list-style: none; }
-    .note-list li { background: #fffdf5; border-color: #f2df9b; }
-    table { width: 100%; border-collapse: collapse; overflow: hidden; border-radius: 8px; }
-    th, td { border-bottom: 1px solid #e4ebf5; padding: 12px; text-align: left; vertical-align: top; }
-    th { background: #f3f6fb; color: #42526b; }
-    tr.pass td:nth-child(2) { color: #147a3d; font-weight: 900; }
-    tr.fail td:nth-child(2) { color: #b42318; font-weight: 900; }
-    .shots { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
-    figure { margin: 0; border: 1px solid #e4ebf5; border-radius: 8px; overflow: hidden; background: #fff; }
-    figcaption { padding: 10px 12px; font-weight: 850; background: #f8fafc; }
-    img { display: block; width: 100%; height: auto; }
-    a { color: #1463ff; font-weight: 800; }
-    .empty { color: #667085; }
-    @media (max-width: 820px) { .meta, .scope-list, .note-list, .shots { grid-template-columns: 1fr; } }
-  </style>
-</head>
-<body>
-  <main>
-    <section class="hero">
-      <h1>Issue #5 Focused QA 레포트</h1>
-      <p>방 리스트 및 사이드바 구현 범위만 집중 검증했다. Full QA는 실행하지 않았다.</p>
-      <div class="status pass">최종 판정: PASS</div>
-      <div class="meta">
-        <div><strong>대상 브랜치</strong><br />feature-5</div>
-        <div><strong>구현 커밋</strong><br />dfbf855 feat(rooms): 방 리스트 및 사이드바 구현</div>
-        <div><strong>리뷰 커밋</strong><br />db0d2ef docs(review): 이슈 5 코드 리뷰 통과 기록</div>
-        <div><strong>검증 시각</strong><br />2026. 7. 31. 오후 4:36:54</div>
-      </div>
-    </section>
-
-    <section class="grid">
-      <article class="card">
-        <h2>QA Scope</h2>
-        <p><strong>검증 범위</strong></p>
-        <ul class="scope-list"><li>사이드바</li><li>홈</li><li>방 리스트</li><li>선택 방 하위 메뉴</li><li>설정 진입</li><li>방 내부 기능 placeholder</li></ul>
-        <p><strong>제외 범위</strong></p>
-        <ul class="scope-list"><li>채팅/추억/미션/편지 실제 기능</li><li>주문/책 기능</li><li>모바일 상세 QA</li><li>전체 회귀</li></ul>
-      </article>
-
-      <article class="card">
-        <h2>Screen Spec Match</h2>
-        <table><thead><tr><th>검증 항목</th><th>결과</th><th>상세</th><th>증거</th></tr></thead><tbody>
-    <tr class="pass">
-      <td>사이드바 구조 표시</td>
-      <td>PASS</td>
-      <td>좌측 사이드바와 방 기준 메뉴 구성 확인</td>
-      <td><a href="evidence/focused-01-home-default-room.png">evidence</a></td>
-    </tr>
-    <tr class="pass">
-      <td>참여 방 목록 표시</td>
-      <td>PASS</td>
-      <td>참여 방 3개가 사이드바에 표시됨</td>
-      <td><a href="evidence/focused-01-home-default-room.png">evidence</a></td>
-    </tr>
-    <tr class="pass">
-      <td>방 리스트 페이지 골격</td>
-      <td>PASS</td>
-      <td>방 생성/초대/참여/관리 허브와 참여 방 카드 표시</td>
-      <td><a href="evidence/focused-03-room-list.png">evidence</a></td>
-    </tr></tbody></table>
-      </article>
-
-      <article class="card">
-        <h2>Focused Function</h2>
-        <table><thead><tr><th>검증 항목</th><th>결과</th><th>상세</th><th>증거</th></tr></thead><tbody>
-    <tr class="pass">
-      <td>앱 실행 및 홈 표시</td>
-      <td>PASS</td>
-      <td>홈 화면 정상 표시</td>
-      <td><a href="evidence/focused-01-home-default-room.png">evidence</a></td>
-    </tr>
-    <tr class="pass">
-      <td>최상단 방 기본 선택</td>
-      <td>PASS</td>
-      <td>우리 둘의 100일이 기본 선택됨</td>
-      <td><a href="evidence/focused-01-home-default-room.png">evidence</a></td>
-    </tr>
-    <tr class="pass">
-      <td>다른 방 선택 후 컨텍스트 변경</td>
-      <td>PASS</td>
-      <td>선택 방과 본문 컨텍스트가 7월 가족으로 변경됨</td>
-      <td><a href="evidence/focused-02-selected-room-chat-placeholder.png">evidence</a></td>
-    </tr>
-    <tr class="pass">
-      <td>채팅 placeholder 이동</td>
-      <td>PASS</td>
-      <td>채팅 골격 화면 표시</td>
-      <td><a href="evidence/focused-02-selected-room-chat-placeholder.png">evidence</a></td>
-    </tr>
-    <tr class="pass">
-      <td>추억 게시판 placeholder 이동</td>
-      <td>PASS</td>
-      <td>추억 게시판 골격 화면 표시 및 선택 방 컨텍스트 유지</td>
-      <td><a href="evidence/focused-02-selected-room-chat-placeholder.png">evidence</a></td>
-    </tr>
-    <tr class="pass">
-      <td>미션 인증 placeholder 이동</td>
-      <td>PASS</td>
-      <td>미션 인증 골격 화면 표시 및 선택 방 컨텍스트 유지</td>
-      <td><a href="evidence/focused-02-selected-room-chat-placeholder.png">evidence</a></td>
-    </tr>
-    <tr class="pass">
-      <td>편지 placeholder 이동</td>
-      <td>PASS</td>
-      <td>편지 골격 화면 표시 및 선택 방 컨텍스트 유지</td>
-      <td><a href="evidence/focused-02-selected-room-chat-placeholder.png">evidence</a></td>
-    </tr>
-    <tr class="pass">
-      <td>방 리스트에서 방 선택 변경</td>
-      <td>PASS</td>
-      <td>방 리스트에서 선택한 방이 사이드바와 홈 본문에 반영됨</td>
-      <td><a href="evidence/focused-03-room-list.png">evidence</a></td>
-    </tr>
-    <tr class="pass">
-      <td>설정 진입 유지</td>
-      <td>PASS</td>
-      <td>Issue #4 설정 화면 골격으로 진입됨</td>
-      <td><a href="evidence/focused-04-settings-entry.png">evidence</a></td>
-    </tr></tbody></table>
-      </article>
-
-      <article class="card">
-        <h2>Runtime / UI</h2>
-        <table><thead><tr><th>검증 항목</th><th>결과</th><th>상세</th><th>증거</th></tr></thead><tbody>
-    <tr class="pass">
-      <td>앱 console/pageerror 없음</td>
-      <td>PASS</td>
-      <td>favicon.ico 404는 브라우저 기본 부수 요청으로 분리. 앱 JS console error/pageerror 없음</td>
-      <td>-</td>
-    </tr>
-    <tr class="pass">
-      <td>명백한 UI 깨짐 없음</td>
-      <td>PASS</td>
-      <td>1440px 웹 모니터 기준 가로 overflow 없음</td>
-      <td><a href="evidence/focused-04-settings-entry.png">evidence</a></td>
-    </tr></tbody></table>
-      </article>
-
-      <article class="card">
-        <h2>Non-blocking Notes</h2>
-        <ul class="note-list"><li>브라우저 기본 favicon.ico 요청 404가 1건 있었으나 앱 JS 오류, pageerror, API 오류가 아니므로 Focused QA non-blocking 노이즈로 분리했다.</li><li>성공 케이스이므로 영상과 trace 저장은 생략했다.</li></ul>
-      </article>
-
-      <article class="card">
-        <h2>Failure / Reproduction</h2>
-        <p class="empty">BLOCKER/CRITICAL 및 재현해야 할 실패 없음.</p>
-        <p class="empty">PASS이므로 영상/trace는 저장하지 않았다.</p>
-      </article>
-
-      <article class="card">
-        <h2>Evidence</h2>
-        <p>자동 검증 결과: <a href="evidence/issue-5-focused-qa-result.json">result JSON</a></p>
-        <div class="shots"><figure><figcaption>홈 화면과 최상단 방 기본 선택</figcaption><img src="evidence/focused-01-home-default-room.png" alt="홈 화면과 최상단 방 기본 선택" /></figure>
-<figure><figcaption>다른 방 선택 후 채팅 placeholder</figcaption><img src="evidence/focused-02-selected-room-chat-placeholder.png" alt="다른 방 선택 후 채팅 placeholder" /></figure>
-<figure><figcaption>방 리스트 페이지 골격</figcaption><img src="evidence/focused-03-room-list.png" alt="방 리스트 페이지 골격" /></figure>
-<figure><figcaption>설정 화면 진입</figcaption><img src="evidence/focused-04-settings-entry.png" alt="설정 화면 진입" /></figure></div>
-      </article>
-    </section>
-  </main>
-</body>
-</html>
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Issue #5 Focused QA 레포트</title><style>body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f7f9fc;color:#243044}main{max-width:1120px;margin:0 auto;padding:40px 28px 56px}h1{margin:0 0 8px;font-size:34px;letter-spacing:0}h2{margin:40px 0 16px;font-size:24px}p,li,td,th{font-size:15px;line-height:1.65}.summary{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:24px}.card,figure{background:#fff;border:1px solid #dfe7f1;border-radius:8px;box-shadow:0 10px 24px rgba(37,54,83,.07)}.card{padding:22px}.badge{display:inline-flex;align-items:center;padding:8px 14px;border-radius:999px;font-weight:700}.badge.pass{background:#e9f8ef;color:#15843f}.badge.fail{background:#fff1f2;color:#c81e42}table{width:100%;border-collapse:collapse;overflow:hidden;background:#fff;border:1px solid #dfe7f1;border-radius:8px}th,td{padding:12px 14px;border-bottom:1px solid #edf1f6;text-align:left;vertical-align:top}th{background:#f1f5fb;color:#475569}.pass-row td:nth-child(3){color:#15843f;font-weight:700}.fail-row td:nth-child(3){color:#c81e42;font-weight:700}.screens{display:grid;gap:22px}figure{margin:0;padding:14px}img{width:100%;height:auto;border-radius:6px;border:1px solid #e6edf5;display:block}figcaption{padding-top:10px;color:#526175;font-size:14px}code{background:#eef2f7;padding:2px 5px;border-radius:4px}@media(max-width:760px){.summary{grid-template-columns:1fr}main{padding:24px 16px 40px}}</style></head><body><main><h1>Issue #5 Focused QA 레포트</h1><p>Human QA 수정본의 선택 방 하위 메뉴 위치 유지 동작을 재검증했다.</p><p><span class="badge pass">최종 판정: PASS</span></p><section class="summary"><div class="card"><h2>검증 대상</h2><p>Issue: #5</p><p>브랜치: <code>feature-5</code></p><p>수정 커밋: <code>5e9ca3c fix(rooms): 선택 방 하위 메뉴 위치 유지</code></p><p>리뷰 커밋: <code>70db409 docs(review): 이슈 5 Human QA 수정 재검토</code></p><p>검증 시각: 2026. 7. 31. PM 5:32:50</p></div><div class="card"><h2>범위</h2><p>QA Level: Focused QA</p><p>Full QA: 실행하지 않음</p><p>중점: 사이드바 방 목록, 선택 방 inline 펼침, placeholder 이동, 방 리스트/설정 진입</p></div></section><h2>판정 요약</h2><p>BLOCKER/CRITICAL 없음.</p><ul><li>브라우저 기본 favicon.ico 요청 404는 앱 JS/API 오류가 아니므로 non-blocking으로 분리했다.</li></ul><h2>검증 항목</h2><table><thead><tr><th>그룹</th><th>항목</th><th>결과</th><th>상세</th><th>증거</th></tr></thead><tbody><tr class="pass-row"><td>Backend Smoke</td><td>GET /api/rooms 결과 기반 사이드바 표시</td><td>PASS</td><td>사이드바 방 개수: 3</td><td><a href="evidence/focused-01-home-default-room.png">evidence/focused-01-home-default-room.png</a></td></tr>
+<tr class="pass-row"><td>Screen Spec Match</td><td>최초 진입 - 방 목록 순서 유지</td><td>PASS</td><td>실제 순서: 우리 둘의 100일 &gt; 7월 가족 &gt; 여름 프로젝트반</td><td><a href="evidence/focused-01-home-default-room.png">evidence/focused-01-home-default-room.png</a></td></tr>
+<tr class="pass-row"><td>Focused Function</td><td>최초 진입 - 선택 방</td><td>PASS</td><td>선택 방: 우리 둘의 100일</td><td><a href="evidence/focused-01-home-default-room.png">evidence/focused-01-home-default-room.png</a></td></tr>
+<tr class="pass-row"><td>Focused Function</td><td>최초 진입 - 기존 위치에서 선택</td><td>PASS</td><td>선택 인덱스: 0, 기대 인덱스: 0</td><td><a href="evidence/focused-01-home-default-room.png">evidence/focused-01-home-default-room.png</a></td></tr>
+<tr class="pass-row"><td>Focused Function</td><td>최초 진입 - 하위 메뉴 inline 펼침</td><td>PASS</td><td>roomBottom=255, submenuTop=259</td><td><a href="evidence/focused-01-home-default-room.png">evidence/focused-01-home-default-room.png</a></td></tr>
+<tr class="pass-row"><td>Screen Spec Match</td><td>최초 진입 - 하위 메뉴 구성</td><td>PASS</td><td>하위 메뉴: 채팅1 / 추억 게시판 / 미션 인증2 / 편지</td><td><a href="evidence/focused-01-home-default-room.png">evidence/focused-01-home-default-room.png</a></td></tr>
+<tr class="pass-row"><td>Screen Spec Match</td><td>7월 가족 선택 - 방 목록 순서 유지</td><td>PASS</td><td>실제 순서: 우리 둘의 100일 &gt; 7월 가족 &gt; 여름 프로젝트반</td><td><a href="evidence/focused-02-family-inline-expand.png">evidence/focused-02-family-inline-expand.png</a></td></tr>
+<tr class="pass-row"><td>Focused Function</td><td>7월 가족 선택 - 선택 방</td><td>PASS</td><td>선택 방: 7월 가족</td><td><a href="evidence/focused-02-family-inline-expand.png">evidence/focused-02-family-inline-expand.png</a></td></tr>
+<tr class="pass-row"><td>Focused Function</td><td>7월 가족 선택 - 기존 위치에서 선택</td><td>PASS</td><td>선택 인덱스: 1, 기대 인덱스: 1</td><td><a href="evidence/focused-02-family-inline-expand.png">evidence/focused-02-family-inline-expand.png</a></td></tr>
+<tr class="pass-row"><td>Focused Function</td><td>7월 가족 선택 - 하위 메뉴 inline 펼침</td><td>PASS</td><td>roomBottom=311, submenuTop=315</td><td><a href="evidence/focused-02-family-inline-expand.png">evidence/focused-02-family-inline-expand.png</a></td></tr>
+<tr class="pass-row"><td>Screen Spec Match</td><td>7월 가족 선택 - 하위 메뉴 구성</td><td>PASS</td><td>하위 메뉴: 채팅 / 추억 게시판 / 미션 인증 / 편지</td><td><a href="evidence/focused-02-family-inline-expand.png">evidence/focused-02-family-inline-expand.png</a></td></tr>
+<tr class="pass-row"><td>Screen Spec Match</td><td>여름 프로젝트반 선택 - 방 목록 순서 유지</td><td>PASS</td><td>실제 순서: 우리 둘의 100일 &gt; 7월 가족 &gt; 여름 프로젝트반</td><td><a href="evidence/focused-03-project-placeholder.png">evidence/focused-03-project-placeholder.png</a></td></tr>
+<tr class="pass-row"><td>Focused Function</td><td>여름 프로젝트반 선택 - 선택 방</td><td>PASS</td><td>선택 방: 여름 프로젝트반</td><td><a href="evidence/focused-03-project-placeholder.png">evidence/focused-03-project-placeholder.png</a></td></tr>
+<tr class="pass-row"><td>Focused Function</td><td>여름 프로젝트반 선택 - 기존 위치에서 선택</td><td>PASS</td><td>선택 인덱스: 2, 기대 인덱스: 2</td><td><a href="evidence/focused-03-project-placeholder.png">evidence/focused-03-project-placeholder.png</a></td></tr>
+<tr class="pass-row"><td>Focused Function</td><td>여름 프로젝트반 선택 - 하위 메뉴 inline 펼침</td><td>PASS</td><td>roomBottom=363, submenuTop=367</td><td><a href="evidence/focused-03-project-placeholder.png">evidence/focused-03-project-placeholder.png</a></td></tr>
+<tr class="pass-row"><td>Screen Spec Match</td><td>여름 프로젝트반 선택 - 하위 메뉴 구성</td><td>PASS</td><td>하위 메뉴: 채팅 / 추억 게시판 / 미션 인증 / 편지</td><td><a href="evidence/focused-03-project-placeholder.png">evidence/focused-03-project-placeholder.png</a></td></tr>
+<tr class="pass-row"><td>Focused Function</td><td>채팅 placeholder 이동</td><td>PASS</td><td>본문에 '채팅' 및 '여름 프로젝트반 기준' 포함</td><td><a href="evidence/focused-03-project-placeholder.png">evidence/focused-03-project-placeholder.png</a></td></tr>
+<tr class="pass-row"><td>Focused Function</td><td>채팅 이동 후 선택 방 위치 유지</td><td>PASS</td><td>선택 방: 여름 프로젝트반, index=2</td><td><a href="evidence/focused-03-project-placeholder.png">evidence/focused-03-project-placeholder.png</a></td></tr>
+<tr class="pass-row"><td>Focused Function</td><td>추억 게시판 placeholder 이동</td><td>PASS</td><td>본문에 '추억 게시판' 및 '여름 프로젝트반 기준' 포함</td><td><a href="evidence/focused-03-project-placeholder.png">evidence/focused-03-project-placeholder.png</a></td></tr>
+<tr class="pass-row"><td>Focused Function</td><td>추억 게시판 이동 후 선택 방 위치 유지</td><td>PASS</td><td>선택 방: 여름 프로젝트반, index=2</td><td><a href="evidence/focused-03-project-placeholder.png">evidence/focused-03-project-placeholder.png</a></td></tr>
+<tr class="pass-row"><td>Focused Function</td><td>미션 인증 placeholder 이동</td><td>PASS</td><td>본문에 '미션 인증' 및 '여름 프로젝트반 기준' 포함</td><td><a href="evidence/focused-03-project-placeholder.png">evidence/focused-03-project-placeholder.png</a></td></tr>
+<tr class="pass-row"><td>Focused Function</td><td>미션 인증 이동 후 선택 방 위치 유지</td><td>PASS</td><td>선택 방: 여름 프로젝트반, index=2</td><td><a href="evidence/focused-03-project-placeholder.png">evidence/focused-03-project-placeholder.png</a></td></tr>
+<tr class="pass-row"><td>Focused Function</td><td>편지 placeholder 이동</td><td>PASS</td><td>본문에 '편지' 및 '여름 프로젝트반 기준' 포함</td><td><a href="evidence/focused-03-project-placeholder.png">evidence/focused-03-project-placeholder.png</a></td></tr>
+<tr class="pass-row"><td>Focused Function</td><td>편지 이동 후 선택 방 위치 유지</td><td>PASS</td><td>선택 방: 여름 프로젝트반, index=2</td><td><a href="evidence/focused-03-project-placeholder.png">evidence/focused-03-project-placeholder.png</a></td></tr>
+<tr class="pass-row"><td>Focused Function</td><td>방 리스트 골격 - 방 생성</td><td>PASS</td><td>본문에 '방 생성' 포함</td><td><a href="evidence/focused-04-room-list.png">evidence/focused-04-room-list.png</a></td></tr>
+<tr class="pass-row"><td>Focused Function</td><td>방 리스트 골격 - 초대 받은 방</td><td>PASS</td><td>본문에 '초대 받은 방' 포함</td><td><a href="evidence/focused-04-room-list.png">evidence/focused-04-room-list.png</a></td></tr>
+<tr class="pass-row"><td>Focused Function</td><td>방 리스트 골격 - 참여 방</td><td>PASS</td><td>본문에 '참여 방' 포함</td><td><a href="evidence/focused-04-room-list.png">evidence/focused-04-room-list.png</a></td></tr>
+<tr class="pass-row"><td>Focused Function</td><td>방 리스트 골격 - 방 관리</td><td>PASS</td><td>본문에 '방 관리' 포함</td><td><a href="evidence/focused-04-room-list.png">evidence/focused-04-room-list.png</a></td></tr>
+<tr class="pass-row"><td>Focused Function</td><td>설정 화면 진입 유지</td><td>PASS</td><td>설정 본문 진입 확인</td><td><a href="evidence/focused-04-room-list.png">evidence/focused-04-room-list.png</a></td></tr>
+<tr class="pass-row"><td>Runtime/UI</td><td>명백한 console error 없음</td><td>PASS</td><td>blocking console errors=0</td><td>-</td></tr>
+<tr class="pass-row"><td>Runtime/UI</td><td>pageerror 없음</td><td>PASS</td><td>pageerrors=0</td><td>-</td></tr>
+<tr class="pass-row"><td>Runtime/UI</td><td>API/리소스 4xx/5xx 없음</td><td>PASS</td><td>non-favicon 4xx/5xx responses=0</td><td>-</td></tr>
+<tr class="pass-row"><td>Runtime/UI</td><td>명백한 가로 UI 깨짐 없음</td><td>PASS</td><td>viewport=1440, documentScrollWidth=1440, bodyScrollWidth=1440</td><td><a href="evidence/focused-04-room-list.png">evidence/focused-04-room-list.png</a></td></tr></tbody></table><h2>스크린샷 Evidence</h2><section class="screens"><figure><img src="evidence/focused-01-home-default-room.png" alt="최초 진입 - 최상단 방 기존 위치 inline 펼침"><figcaption>최초 진입 - 최상단 방 기존 위치 inline 펼침</figcaption></figure>
+<figure><img src="evidence/focused-02-family-inline-expand.png" alt="7월 가족 선택 - 기존 위치 inline 펼침"><figcaption>7월 가족 선택 - 기존 위치 inline 펼침</figcaption></figure>
+<figure><img src="evidence/focused-03-project-placeholder.png" alt="여름 프로젝트반 선택 - 편지 placeholder 컨텍스트 유지"><figcaption>여름 프로젝트반 선택 - 편지 placeholder 컨텍스트 유지</figcaption></figure>
+<figure><img src="evidence/focused-04-room-list.png" alt="방 리스트 페이지 골격 유지"><figcaption>방 리스트 페이지 골격 유지</figcaption></figure></section></main></body></html>
