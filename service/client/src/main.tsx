@@ -1,7 +1,9 @@
 import { StrictMode, useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
 import {
+  BadgeCheck,
   Bell,
+  BookImage,
   BookOpen,
   CalendarDays,
   CheckCircle2,
@@ -14,6 +16,7 @@ import {
   List,
   LogOut,
   Mail,
+  MailPlus,
   MessageCircle,
   PanelLeftClose,
   PanelLeftOpen,
@@ -148,7 +151,8 @@ type ApiError = {
   requestId: string;
 };
 
-type AppView = "home" | "rooms" | "chat" | "memories" | "missions" | "letters" | "settings";
+type RoomFeatureKind = "chat" | "memories" | "missions" | "letters";
+type AppView = "home" | "rooms" | "room" | "settings" | RoomFeatureKind;
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8080/api";
 const memberHeader = { "X-Member-Id": "1" };
@@ -677,10 +681,10 @@ function App() {
     setErrorMessage(null);
     setSelectedRoomId(roomId);
     setExpandedRoomId(roomId);
-    setActiveView("home");
+    setActiveView("room");
   }
 
-  function moveToRoomFeature(roomId: number, view: Exclude<AppView, "home" | "rooms" | "settings">) {
+  function moveToRoomFeature(roomId: number, view: RoomFeatureKind) {
     setSelectedRoomId(roomId);
     setExpandedRoomId(roomId);
     setActiveView(view);
@@ -844,6 +848,15 @@ function App() {
             onLogout={() => setLogoutOpen(true)}
           />
         ) : null}
+        {activeView === "room" ? (
+          <RoomHomeView
+            selectedRoom={selectedRoom}
+            onMoveRoomFeature={(view) => {
+              if (!selectedRoom) return;
+              moveToRoomFeature(selectedRoom.id, view);
+            }}
+          />
+        ) : null}
         {activeView === "rooms" ? (
           <RoomsView
             rooms={rooms}
@@ -927,7 +940,7 @@ function Sidebar({
   pendingInvitationCount: number;
   onMove: (view: AppView) => void;
   onSelectRoom: (roomId: number, nextView?: AppView) => void;
-  onMoveRoomFeature: (roomId: number, view: Exclude<AppView, "home" | "rooms" | "settings">) => void;
+  onMoveRoomFeature: (roomId: number, view: RoomFeatureKind) => void;
   onToggleSidebar: () => void;
 }) {
   const selectedRoom = rooms.find((room) => room.id === selectedRoomId) ?? rooms[0] ?? null;
@@ -970,7 +983,7 @@ function Sidebar({
                   type="button"
                   aria-label={`${room.name} ${isExpanded ? "메뉴 접기" : "메뉴 펼치기"}`}
                   aria-expanded={isExpanded}
-                  onClick={() => onSelectRoom(room.id, "home")}
+                  onClick={() => onSelectRoom(room.id, "room")}
                 >
                   <UsersRound size={18} />
                   <span className="nav-label">{room.name}</span>
@@ -1280,6 +1293,119 @@ function isInteractiveTarget(target: EventTarget | null) {
   return target instanceof HTMLElement && Boolean(target.closest("button, input, select, textarea, a"));
 }
 
+function RoomHomeView({
+  selectedRoom,
+  onMoveRoomFeature,
+}: {
+  selectedRoom: RoomSummary | null;
+  onMoveRoomFeature: (view: RoomFeatureKind) => void;
+}) {
+  if (!selectedRoom) {
+    return (
+      <>
+        <header className="page-header">
+          <div>
+            <h1>방 홈</h1>
+            <p>참여 중인 방을 선택하면 방 기준 기록 흐름을 확인할 수 있다.</p>
+          </div>
+        </header>
+        <section className="placeholder-page">
+          <article className="dashboard-card wide-card">
+            <div className="panel-heading">
+              <div>
+                <span>방 선택 필요</span>
+                <h2>참여 방이 없습니다</h2>
+              </div>
+              <UsersRound size={24} />
+            </div>
+            <p>방 리스트에서 참여 방을 만들거나 초대를 수락해 주세요.</p>
+          </article>
+        </section>
+      </>
+    );
+  }
+
+  return (
+    <>
+      <header className="page-header">
+        <div>
+          <h1>{selectedRoom.name}</h1>
+          <p>최근 대화와 기록 기능을 한 곳에서 확인한다.</p>
+        </div>
+      </header>
+
+      <section className="room-home-page">
+        <article className="room-home-summary">
+          <div>
+            <span>{roomTypeLabel(selectedRoom.type)}</span>
+            <h2>{selectedRoom.name}</h2>
+            <p>{selectedRoom.description ?? "설명 없음"}</p>
+          </div>
+          <dl className="room-home-meta">
+            <div>
+              <dt>역할</dt>
+              <dd>{selectedRoom.role === "OWNER" ? "방장" : "멤버"}</dd>
+            </div>
+            <div>
+              <dt>멤버</dt>
+              <dd>{selectedRoom.memberCount}명</dd>
+            </div>
+          </dl>
+        </article>
+
+        <div className="room-home-content">
+          <article className="room-chat-preview">
+            <div className="room-section-heading">
+              <h2>최근 대화</h2>
+              <p>방의 메인 소통 흐름을 먼저 보여준다.</p>
+            </div>
+            <div className="chat-date-divider">{formatDateLabel(todayDateKey())}</div>
+            <div className="chat-preview-list">
+              <p className="chat-bubble other">민지: 오늘 사진 진짜 잘 나왔다.</p>
+              <p className="chat-bubble mine">류성열: 이날 기록은 나중에 꼭 다시 보자.</p>
+              <p className="chat-bubble other">민지: 편지도 하나 보냈어.</p>
+              <p className="chat-bubble mine">류성열: 미션 인증도 확인할게.</p>
+            </div>
+          </article>
+
+          <article className="room-feature-panel">
+            <div className="room-section-heading">
+              <h2>방 기능</h2>
+              <p>대화에서 파생된 기록을 기능별로 확인한다.</p>
+            </div>
+            <div className="room-feature-list">
+              <button className="room-feature-card memory" type="button" onClick={() => onMoveRoomFeature("memories")}>
+                <span className="room-feature-icon"><BookImage size={32} /></span>
+                <span>
+                  <strong>추억 게시판</strong>
+                  <small>사진과 글로 남긴 추억 보기</small>
+                </span>
+                <span aria-hidden="true">›</span>
+              </button>
+              <button className="room-feature-card mission" type="button" onClick={() => onMoveRoomFeature("missions")}>
+                <span className="room-feature-icon"><BadgeCheck size={32} /></span>
+                <span>
+                  <strong>미션 인증</strong>
+                  <small>인증 요청과 동의 현황 확인</small>
+                </span>
+                <span aria-hidden="true">›</span>
+              </button>
+              <button className="room-feature-card letter" type="button" onClick={() => onMoveRoomFeature("letters")}>
+                <span className="room-feature-icon"><MailPlus size={32} /></span>
+                <span>
+                  <strong>편지</strong>
+                  <small>편지를 작성하거나 받은 편지 보기</small>
+                </span>
+                <span aria-hidden="true">›</span>
+              </button>
+            </div>
+          </article>
+        </div>
+      </section>
+    </>
+  );
+}
+
 function RoomsView({
   rooms,
   selectedRoomId,
@@ -1447,7 +1573,7 @@ function RoomsView({
   );
 }
 
-function RoomFeatureView({ selectedRoom, kind }: { selectedRoom: RoomSummary | null; kind: Exclude<AppView, "home" | "rooms" | "settings"> }) {
+function RoomFeatureView({ selectedRoom, kind }: { selectedRoom: RoomSummary | null; kind: RoomFeatureKind }) {
   const copy = roomFeatureCopy(kind);
 
   return (
@@ -1874,7 +2000,7 @@ function roomTypeLabel(type: RoomSummary["type"]): string {
   return "학급/동아리";
 }
 
-function roomFeatureCopy(kind: Exclude<AppView, "home" | "rooms" | "settings">) {
+function roomFeatureCopy(kind: RoomFeatureKind) {
   if (kind === "chat") {
     return {
       title: "채팅",
@@ -1888,7 +2014,7 @@ function roomFeatureCopy(kind: Exclude<AppView, "home" | "rooms" | "settings">) 
       title: "추억 게시판",
       description: "추억 게시판 화면 골격이다.",
       body: "사진과 글 카드 피드, 댓글, 작성 화면은 이후 추억 게시판 기능 이슈에서 구현한다.",
-      icon: <BookOpen size={24} />,
+      icon: <BookImage size={24} />,
     };
   }
   if (kind === "missions") {
@@ -1896,14 +2022,14 @@ function roomFeatureCopy(kind: Exclude<AppView, "home" | "rooms" | "settings">) 
       title: "미션 인증",
       description: "미션 인증 화면 골격이다.",
       body: "진행중, 승인 대기, 완료 탭과 동의율은 이후 미션 인증 기능 이슈에서 구현한다.",
-      icon: <CheckCircle2 size={24} />,
+      icon: <BadgeCheck size={24} />,
     };
   }
   return {
     title: "편지",
     description: "편지 화면 골격이다.",
     body: "받은 편지함, 보낸 편지함, 편지 쓰기는 이후 편지 기능 이슈에서 구현한다.",
-    icon: <Mail size={24} />,
+    icon: <MailPlus size={24} />,
   };
 }
 
@@ -2008,7 +2134,7 @@ function activitySummaryText(activity: Pick<CalendarDayActivity, "chatCount" | "
   return parts.length > 0 ? parts.join(" · ") : "기록 없음";
 }
 
-function calendarTarget(day: CalendarDayActivity, roomId?: number): { roomId: number; view: Exclude<AppView, "home" | "rooms" | "settings"> } | null {
+function calendarTarget(day: CalendarDayActivity, roomId?: number): { roomId: number; view: RoomFeatureKind } | null {
   const room = roomId
     ? day.rooms.find((candidate) => candidate.roomId === roomId && candidate.totalCount > 0)
     : day.rooms.find((candidate) => candidate.totalCount > 0);
