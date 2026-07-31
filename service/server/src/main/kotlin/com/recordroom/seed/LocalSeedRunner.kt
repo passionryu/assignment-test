@@ -52,7 +52,17 @@ class LocalSeedRunner(
                 (1, '류성열', 'recordryu', 'ryu@example.com', '010-1234-5678', null, 'local-dummy-hash', false),
                 (2, '민지', 'minji', 'minji@example.com', '010-2222-3333', null, 'local-dummy-hash', false),
                 (3, '아버지', 'father', 'father@example.com', '010-3333-4444', null, 'local-dummy-hash', false),
-                (4, '지훈', 'jihun', 'jihun@example.com', '010-4444-5555', null, 'local-dummy-hash', false)
+                (4, '지훈', 'jihun', 'jihun@example.com', '010-4444-5555', null, 'local-dummy-hash', false),
+                (20, '초대회원0', 'invitee0', 'invitee0@example.com', '010-0000-0000', null, 'local-dummy-hash', false),
+                (21, '초대회원1', 'invitee1', 'invitee1@example.com', '010-1111-1111', null, 'local-dummy-hash', false),
+                (22, '초대회원2', 'invitee2', 'invitee2@example.com', '010-2222-2222', null, 'local-dummy-hash', false),
+                (23, '초대회원3', 'invitee3', 'invitee3@example.com', '010-3333-3333', null, 'local-dummy-hash', false),
+                (24, '초대회원4', 'invitee4', 'invitee4@example.com', '010-4444-4444', null, 'local-dummy-hash', false),
+                (25, '초대회원5', 'invitee5', 'invitee5@example.com', '010-5555-5555', null, 'local-dummy-hash', false),
+                (26, '초대회원6', 'invitee6', 'invitee6@example.com', '010-6666-6666', null, 'local-dummy-hash', false),
+                (27, '초대회원7', 'invitee7', 'invitee7@example.com', '010-7777-7777', null, 'local-dummy-hash', false),
+                (28, '초대회원8', 'invitee8', 'invitee8@example.com', '010-8888-8888', null, 'local-dummy-hash', false),
+                (29, '초대회원9', 'invitee9', 'invitee9@example.com', '010-9999-9999', null, 'local-dummy-hash', false)
             on conflict (id) do update set
                 display_name = excluded.display_name,
                 username = excluded.username,
@@ -72,7 +82,9 @@ class LocalSeedRunner(
                 (1, '우리 둘의 100일', '둘이 함께 쌓는 기록방', 'COUPLE', 1),
                 (2, '7월 가족', '가족의 이번 달 기록방', 'FAMILY', 1),
                 (3, '여름 프로젝트반', '프로젝트 구성원의 기록방', 'GROUP', 1),
-                (4, '민지의 여행 준비방', '여행 준비 과정을 같이 모으는 방', 'GROUP', 2)
+                (4, '민지의 여행 준비방', '여행 준비 과정을 같이 모으는 방', 'GROUP', 2),
+                (40, '가족 여행 사진방', '가족 여행 사진을 함께 모으는 방', 'FAMILY', 3),
+                (41, '4학년 1반', '반 기록을 함께 모으는 학급방', 'GROUP', 4)
             on conflict (id) do update set
                 name = excluded.name,
                 description = excluded.description,
@@ -95,7 +107,9 @@ class LocalSeedRunner(
                 (4, 2, 3, 'MEMBER'),
                 (5, 3, 1, 'OWNER'),
                 (6, 3, 4, 'MEMBER'),
-                (7, 4, 2, 'OWNER')
+                (7, 4, 2, 'OWNER'),
+                (40, 40, 3, 'OWNER'),
+                (41, 41, 4, 'OWNER')
             on conflict (room_id, member_id) do update set
                 role = excluded.role
             """.trimIndent(),
@@ -118,18 +132,43 @@ class LocalSeedRunner(
                 expires_at,
                 responded_at
             )
-            values (
-                1,
-                4,
-                2,
-                'ryu@example.com',
-                null,
-                1,
-                'PENDING',
-                now() - interval '1 hour',
-                now() + interval '7 days',
-                null
-            )
+            values
+                (
+                    1,
+                    4,
+                    2,
+                    'ryu@example.com',
+                    null,
+                    1,
+                    'PENDING',
+                    now() - interval '1 hour',
+                    now() + interval '7 days',
+                    null
+                ),
+                (
+                    40,
+                    40,
+                    3,
+                    'ryu@example.com',
+                    null,
+                    1,
+                    'PENDING',
+                    now() - interval '2 hours',
+                    now() + interval '6 days',
+                    null
+                ),
+                (
+                    41,
+                    41,
+                    4,
+                    'ryu@example.com',
+                    null,
+                    1,
+                    'PENDING',
+                    now() - interval '3 hours',
+                    now() + interval '5 days',
+                    null
+                )
             on conflict (id) do update set
                 room_id = excluded.room_id,
                 inviter_member_id = excluded.inviter_member_id,

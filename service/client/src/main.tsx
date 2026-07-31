@@ -18,7 +18,6 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   Phone,
-  Plus,
   Settings,
   ShieldAlert,
   UserRound,
@@ -214,6 +213,24 @@ const demoPendingInvitations: PendingRoomInvitation[] = [
     inviterName: "민지",
     createdAt: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
     expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+  },
+  {
+    id: 2,
+    roomId: 40,
+    roomName: "가족 여행 사진방",
+    roomType: "FAMILY",
+    inviterName: "아버지",
+    createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+    expiresAt: new Date(Date.now() + 6 * 24 * 60 * 60 * 1000).toISOString(),
+  },
+  {
+    id: 3,
+    roomId: 41,
+    roomName: "4학년 1반",
+    roomType: "GROUP",
+    inviterName: "지훈",
+    createdAt: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(),
+    expiresAt: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString(),
   },
 ];
 
@@ -469,6 +486,7 @@ function App() {
   const [inviteContacts, setInviteContacts] = useState<Record<number, string>>({});
   const [message, setMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [inviteErrorMessage, setInviteErrorMessage] = useState<string | null>(null);
   const [profileEditOpen, setProfileEditOpen] = useState(false);
   const [logoutOpen, setLogoutOpen] = useState(false);
   const [notificationsModalOpen, setNotificationsModalOpen] = useState(false);
@@ -732,9 +750,10 @@ function App() {
     const contact = inviteContacts[roomId]?.trim() ?? "";
     setMessage(null);
     setErrorMessage(null);
+    setInviteErrorMessage(null);
 
     if (!contact) {
-      setErrorMessage("초대할 이메일 또는 전화번호를 입력해 주세요.");
+      setInviteErrorMessage("초대할 이메일 또는 전화번호를 입력해 주세요.");
       return;
     }
 
@@ -747,7 +766,7 @@ function App() {
       await loadRooms();
       setMessage("초대를 보냈습니다.");
     } catch (error) {
-      setErrorMessage(toMessage(error));
+      setInviteErrorMessage(toMessage(error));
     }
   }
 
@@ -822,7 +841,6 @@ function App() {
             onInviteContactChange={(roomId, value) => setInviteContacts((current) => ({ ...current, [roomId]: value }))}
             onSendInvitation={sendRoomInvitation}
             onRespondInvitation={respondInvitation}
-            onSelectRoom={selectRoom}
           />
         ) : null}
         {activeView === "chat" ? <RoomFeatureView selectedRoom={selectedRoom} kind="chat" /> : null}
@@ -856,6 +874,8 @@ function App() {
       ) : null}
 
       {logoutOpen ? <LogoutModal onClose={() => setLogoutOpen(false)} /> : null}
+
+      {inviteErrorMessage ? <AlertModal title="초대 실패" message={inviteErrorMessage} onClose={() => setInviteErrorMessage(null)} /> : null}
 
       {notificationsModalOpen ? (
         <NotificationsModal
@@ -1249,7 +1269,6 @@ function RoomsView({
   onInviteContactChange,
   onSendInvitation,
   onRespondInvitation,
-  onSelectRoom,
 }: {
   rooms: RoomSummary[];
   selectedRoomId: number | null;
@@ -1262,7 +1281,6 @@ function RoomsView({
   onInviteContactChange: (roomId: number, value: string) => void;
   onSendInvitation: (roomId: number) => void;
   onRespondInvitation: (invitationId: number, action: "accept" | "decline") => void;
-  onSelectRoom: (roomId: number, nextView?: AppView) => void;
 }) {
   return (
     <>
@@ -1271,10 +1289,6 @@ function RoomsView({
           <h1>방 리스트</h1>
           <p>방을 만들고, 초대를 보내고, 받은 초대를 수락하거나 거절한다.</p>
         </div>
-        <button className="primary-button" type="button" onClick={onCreateRoom}>
-          <Plus size={18} />
-          방 생성
-        </button>
       </header>
 
       <section className="room-hub-grid">
@@ -1351,7 +1365,7 @@ function RoomsView({
 
       <section className="joined-room-list">
         {rooms.map((room) => (
-          <article className={`room-card ${room.id === selectedRoomId ? "selected" : ""}`} key={room.id}>
+          <article className={`room-card ${room.id === selectedRoomId ? "selected" : ""} ${room.role === "OWNER" ? "has-actions" : "no-actions"}`} key={room.id}>
             <div>
               <span>{roomTypeLabel(room.type)}</span>
               <h2>{room.name}</h2>
@@ -1367,11 +1381,8 @@ function RoomsView({
                 <dd>{room.memberCount}명</dd>
               </div>
             </dl>
-            <div className="room-card-actions">
-              <button className="outline-button" type="button" onClick={() => onSelectRoom(room.id, "home")}>
-                선택
-              </button>
-              {room.role === "OWNER" ? (
+            {room.role === "OWNER" ? (
+              <div className="room-card-actions">
                 <div className="invite-inline-form">
                   <input
                     value={inviteContacts[room.id] ?? ""}
@@ -1383,8 +1394,8 @@ function RoomsView({
                     초대
                   </button>
                 </div>
-              ) : null}
-            </div>
+              </div>
+            ) : null}
           </article>
         ))}
       </section>
@@ -1663,6 +1674,22 @@ function LogoutModal({ onClose }: { onClose: () => void }) {
           </button>
           <button className="primary-button" type="button" onClick={onClose}>
             로그아웃
+          </button>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function AlertModal({ title, message, onClose }: { title: string; message: string; onClose: () => void }) {
+  return (
+    <div className="modal-backdrop" role="presentation">
+      <section className="modal" role="alertdialog" aria-modal="true" aria-labelledby="alert-title">
+        <h2 id="alert-title">{title}</h2>
+        <p>{message}</p>
+        <div className="modal-actions">
+          <button className="primary-button" type="button" onClick={onClose}>
+            확인
           </button>
         </div>
       </section>
