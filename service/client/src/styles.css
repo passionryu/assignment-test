@@ -509,21 +509,10 @@ dl {
 }
 
 .notification-item.read {
-  border-color: #eef1f6;
-  background: #f7f9fc;
-  color: #7b8797;
-  opacity: 0.78;
-}
-
-.notification-item.read .notification-type {
-  filter: grayscale(0.85);
-  opacity: 0.62;
-}
-
-.notification-item.read .notification-body strong,
-.notification-item.read .notification-body span,
-.notification-item.read .notification-time {
-  color: #8a98aa;
+  border-color: #e4ebf5;
+  background: #ffffff;
+  color: #253248;
+  opacity: 1;
 }
 
 .notification-new-dot {
@@ -782,9 +771,10 @@ dl {
 
 .home-profile-summary {
   display: grid;
-  grid-template-columns: minmax(180px, 1.18fr) minmax(0, 0.82fr);
+  grid-template-columns: 82px minmax(0, 1fr);
   align-items: start;
-  gap: 16px;
+  column-gap: 14px;
+  row-gap: 12px;
   background: #fbfcff;
   padding: 16px;
   flex: 0 0 auto;
@@ -796,18 +786,12 @@ dl {
   font-size: 26px;
 }
 
-.home-profile-media {
-  min-width: 0;
-  display: grid;
-  gap: 12px;
-}
-
 .home-profile-info {
   min-width: 0;
   display: grid;
   align-content: start;
-  gap: 8px;
-  padding-top: 6px;
+  gap: 7px;
+  padding-top: 4px;
 }
 
 .home-profile-info strong {
@@ -816,16 +800,11 @@ dl {
 
 .profile-username {
   margin-top: 0;
-  color: #8a98aa;
-  font-size: 14px;
-}
-
-.home-profile-detail {
   display: grid;
-  gap: 8px;
-  margin-top: 0;
+  gap: 4px;
 }
 
+.profile-username div,
 .home-profile-detail div {
   display: grid;
   grid-template-columns: 48px minmax(0, 1fr);
@@ -833,12 +812,14 @@ dl {
   gap: 8px;
 }
 
+.profile-username dt,
 .home-profile-detail dt {
   color: #98a2b3;
   font-size: 12px;
   font-weight: 900;
 }
 
+.profile-username dd,
 .home-profile-detail dd {
   min-width: 0;
   margin: 0;
@@ -846,6 +827,13 @@ dl {
   font-size: 12px;
   font-weight: 850;
   overflow-wrap: anywhere;
+}
+
+.home-profile-detail {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 8px;
+  margin-top: 0;
 }
 
 .avatar {

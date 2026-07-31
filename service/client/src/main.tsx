@@ -643,23 +643,26 @@ function HomeView({
             <UserRound size={24} />
           </div>
           <div className="profile-summary home-profile-summary">
-            <div className="home-profile-media">
-              <div className="avatar">{profile?.profileImageUrl ? <img src={profile.profileImageUrl} alt="" /> : initials}</div>
-              <dl className="home-profile-detail">
+            <div className="avatar">{profile?.profileImageUrl ? <img src={profile.profileImageUrl} alt="" /> : initials}</div>
+            <div className="home-profile-info">
+              <strong>{profile?.displayName ?? "-"}</strong>
+              <dl className="profile-username">
                 <div>
-                  <dt>이메일</dt>
-                  <dd>{profile?.email ?? "-"}</dd>
-                </div>
-                <div>
-                  <dt>전화번호</dt>
-                  <dd>{profile?.phoneNumber ?? "-"}</dd>
+                  <dt>아이디</dt>
+                  <dd>{profile?.username ?? "-"}</dd>
                 </div>
               </dl>
             </div>
-            <div className="home-profile-info">
-              <strong>{profile?.displayName ?? "-"}</strong>
-              <span className="profile-username">아이디 {profile?.username ?? "-"}</span>
-            </div>
+            <dl className="home-profile-detail">
+              <div>
+                <dt>이메일</dt>
+                <dd>{profile?.email ?? "-"}</dd>
+              </div>
+              <div>
+                <dt>전화번호</dt>
+                <dd>{profile?.phoneNumber ?? "-"}</dd>
+              </div>
+            </dl>
           </div>
           <div className="profile-actions">
             <button className="primary-button" type="button" onClick={onOpenProfileEdit}>
