@@ -2,9 +2,13 @@ package com.recordroom.room.repository
 
 import com.querydsl.jpa.impl.JPAQueryFactory
 import com.recordroom.member.model.QMemberEntity.memberEntity
+import com.recordroom.room.model.PendingRoomInvitationResponse
 import com.recordroom.room.model.QRoomEntity.roomEntity
 import com.recordroom.room.model.QRoomInvitationEntity.roomInvitationEntity
 import com.recordroom.room.model.QRoomMemberEntity
+import com.recordroom.room.model.RoomEntity
+import com.recordroom.room.model.RoomInvitationEntity
+import com.recordroom.room.model.RoomMemberEntity
 import com.recordroom.room.model.RoomSummaryResponse
 import org.springframework.stereotype.Repository
 import java.time.OffsetDateTime
@@ -12,6 +16,9 @@ import java.time.OffsetDateTime
 @Repository
 class RoomRepository(
     private val queryFactory: JPAQueryFactory,
+    private val roomJpaRepository: RoomJpaRepository,
+    private val roomMemberJpaRepository: RoomMemberJpaRepository,
+    private val roomInvitationJpaRepository: RoomInvitationJpaRepository,
 ) {
     // 사용자가 참여 중인 방만 사이드바에 노출해야 하므로 멤버십 기준으로 조회한다.
     fun findRoomsJoinedByMember(memberId: Long): List<RoomSummaryResponse> {
@@ -73,6 +80,103 @@ class RoomRepository(
             )
             .fetchOne()
             ?.toInt() ?: 0
+
+    fun saveRoom(room: RoomEntity): RoomEntity =
+        roomJpaRepository.save(room)
+
+    fun saveRoomMember(roomMember: RoomMemberEntity): RoomMemberEntity =
+        roomMemberJpaRepository.save(roomMember)
+
+    fun saveRoomInvitation(invitation: RoomInvitationEntity): RoomInvitationEntity =
+        roomInvitationJpaRepository.save(invitation)
+
+    fun findActiveRoom(roomId: Long): RoomEntity? =
+        roomJpaRepository.findByIdAndArchivedAtIsNull(roomId)
+
+    fun findActiveRoomMember(roomId: Long, memberId: Long): RoomMemberEntity? =
+        roomMemberJpaRepository.findByRoomIdAndMemberIdAndLeftAtIsNull(roomId, memberId)
+
+    fun existsActiveRoomMember(roomId: Long, memberId: Long): Boolean =
+        roomMemberJpaRepository.existsByRoomIdAndMemberIdAndLeftAtIsNull(roomId, memberId)
+
+    fun existsPendingInvitationForMember(
+        roomId: Long,
+        memberId: Long,
+        email: String?,
+        phoneNumber: String?,
+        now: OffsetDateTime,
+    ): Boolean {
+        val hasMemberInvitation = roomInvitationJpaRepository.existsByRoomIdAndStatusAndInviteeMemberIdAndExpiresAtAfter(
+            roomId = roomId,
+            status = "PENDING",
+            inviteeMemberId = memberId,
+            expiresAt = now,
+        )
+        val hasEmailInvitation = email?.let {
+            roomInvitationJpaRepository.existsByRoomIdAndStatusAndInviteeEmailAndExpiresAtAfter(
+                roomId = roomId,
+                status = "PENDING",
+                inviteeEmail = it,
+                expiresAt = now,
+            )
+        } ?: false
+        val hasPhoneInvitation = phoneNumber?.let {
+            roomInvitationJpaRepository.existsByRoomIdAndStatusAndInviteePhoneNumberAndExpiresAtAfter(
+                roomId = roomId,
+                status = "PENDING",
+                inviteePhoneNumber = it,
+                expiresAt = now,
+            )
+        } ?: false
+
+        return hasMemberInvitation || hasEmailInvitation || hasPhoneInvitation
+    }
+
+    fun findPendingInvitation(invitationId: Long): RoomInvitationEntity? =
+        roomInvitationJpaRepository.findByIdAndStatus(invitationId, "PENDING")
+
+    // 받은 초대 목록은 현재 회원 식별값과 연락처 모두로 매칭해야 누락 없이 확인할 수 있다.
+    fun findPendingInvitationsReceivedByMember(memberId: Long): List<PendingRoomInvitationResponse> {
+        val inviter = com.recordroom.member.model.QMemberEntity("inviter")
+        val receiver = com.recordroom.member.model.QMemberEntity("receiver")
+        val now = OffsetDateTime.now()
+
+        return queryFactory
+            .select(
+                roomInvitationEntity.id,
+                roomInvitationEntity.roomId,
+                roomEntity.name,
+                roomEntity.type,
+                inviter.displayName,
+                roomInvitationEntity.createdAt,
+                roomInvitationEntity.expiresAt,
+            )
+            .from(roomInvitationEntity)
+            .join(roomEntity).on(roomEntity.id.eq(roomInvitationEntity.roomId))
+            .join(inviter).on(inviter.id.eq(roomInvitationEntity.inviterMemberId))
+            .join(receiver).on(receiver.id.eq(memberId))
+            .where(
+                roomInvitationEntity.status.eq("PENDING"),
+                roomInvitationEntity.expiresAt.after(now),
+                roomEntity.archivedAt.isNull,
+                roomInvitationEntity.inviteeMemberId.eq(receiver.id)
+                    .or(roomInvitationEntity.inviteeEmail.eq(receiver.email))
+                    .or(roomInvitationEntity.inviteePhoneNumber.eq(receiver.phoneNumber)),
+            )
+            .orderBy(roomInvitationEntity.createdAt.desc())
+            .fetch()
+            .map { row ->
+                PendingRoomInvitationResponse(
+                    id = row.get(roomInvitationEntity.id) ?: 0L,
+                    roomId = row.get(roomInvitationEntity.roomId) ?: 0L,
+                    roomName = row.get(roomEntity.name) ?: "",
+                    roomType = row.get(roomEntity.type) ?: "",
+                    inviterName = row.get(inviter.displayName) ?: "",
+                    createdAt = row.get(roomInvitationEntity.createdAt)?.toString() ?: "",
+                    expiresAt = row.get(roomInvitationEntity.expiresAt)?.toString() ?: "",
+                )
+            }
+    }
 
     private fun seedUnreadChatCount(roomId: Long): Int =
         when (roomId) {

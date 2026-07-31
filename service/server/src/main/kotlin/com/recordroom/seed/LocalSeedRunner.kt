@@ -26,6 +26,7 @@ class LocalSeedRunner(
             seedMembers()
             seedRooms()
             seedRoomMembers()
+            seedRoomInvitations()
             seedNotificationSettings()
             seedContents()
             seedNotifications()
@@ -70,7 +71,8 @@ class LocalSeedRunner(
             values
                 (1, '우리 둘의 100일', '둘이 함께 쌓는 기록방', 'COUPLE', 1),
                 (2, '7월 가족', '가족의 이번 달 기록방', 'FAMILY', 1),
-                (3, '여름 프로젝트반', '프로젝트 구성원의 기록방', 'GROUP', 1)
+                (3, '여름 프로젝트반', '프로젝트 구성원의 기록방', 'GROUP', 1),
+                (4, '민지의 여행 준비방', '여행 준비 과정을 같이 모으는 방', 'GROUP', 2)
             on conflict (id) do update set
                 name = excluded.name,
                 description = excluded.description,
@@ -92,9 +94,52 @@ class LocalSeedRunner(
                 (3, 2, 1, 'OWNER'),
                 (4, 2, 3, 'MEMBER'),
                 (5, 3, 1, 'OWNER'),
-                (6, 3, 4, 'MEMBER')
+                (6, 3, 4, 'MEMBER'),
+                (7, 4, 2, 'OWNER')
             on conflict (room_id, member_id) do update set
                 role = excluded.role
+            """.trimIndent(),
+        )
+    }
+
+    // 초대 받은 방 조회와 수락/거절 흐름을 바로 확인할 수 있도록 대기 초대를 준비한다.
+    private fun seedRoomInvitations() {
+        jdbcTemplate.update(
+            """
+            insert into room_invitations (
+                id,
+                room_id,
+                inviter_member_id,
+                invitee_email,
+                invitee_phone_number,
+                invitee_member_id,
+                status,
+                created_at,
+                expires_at,
+                responded_at
+            )
+            values (
+                1,
+                4,
+                2,
+                'ryu@example.com',
+                null,
+                1,
+                'PENDING',
+                now() - interval '1 hour',
+                now() + interval '7 days',
+                null
+            )
+            on conflict (id) do update set
+                room_id = excluded.room_id,
+                inviter_member_id = excluded.inviter_member_id,
+                invitee_email = excluded.invitee_email,
+                invitee_phone_number = excluded.invitee_phone_number,
+                invitee_member_id = excluded.invitee_member_id,
+                status = excluded.status,
+                created_at = excluded.created_at,
+                expires_at = excluded.expires_at,
+                responded_at = excluded.responded_at
             """.trimIndent(),
         )
     }

@@ -15,6 +15,15 @@ class MemberRepository(
     fun findProfile(memberId: Long): MemberProfileResponse? =
         memberJpaRepository.findByIdAndDeletedFalse(memberId)?.toProfileResponse()
 
+    fun findActiveMember(memberId: Long): MemberEntity? =
+        memberJpaRepository.findByIdAndDeletedFalse(memberId)
+
+    fun findActiveMemberByEmail(email: String): MemberEntity? =
+        memberJpaRepository.findByEmailAndDeletedFalse(email)
+
+    fun findActiveMemberByPhoneNumber(phoneNumber: String): MemberEntity? =
+        memberJpaRepository.findByPhoneNumberAndDeletedFalse(phoneNumber)
+
     fun updateProfile(memberId: Long, displayName: String, profileImageUrl: String?): MemberProfileResponse? {
         val member = memberJpaRepository.findByIdAndDeletedFalse(memberId) ?: return null
 

@@ -55,9 +55,42 @@ type RoomSummary = {
   pendingMissionCount: number;
 };
 
+type CreateRoomForm = {
+  name: string;
+  type: RoomSummary["type"];
+  description: string;
+};
+
 type RoomsResponse = {
   rooms: RoomSummary[];
   pendingInvitationCount: number;
+};
+
+type CreateRoomResponse = {
+  id: number;
+  name: string;
+  type: RoomSummary["type"];
+  role: RoomSummary["role"];
+};
+
+type PendingRoomInvitation = {
+  id: number;
+  roomId: number;
+  roomName: string;
+  roomType: RoomSummary["type"];
+  inviterName: string;
+  createdAt: string;
+  expiresAt: string;
+};
+
+type PendingRoomInvitationsResponse = {
+  items: PendingRoomInvitation[];
+};
+
+type RespondRoomInvitationResponse = {
+  id: number;
+  roomId: number;
+  status: "ACCEPTED" | "DECLINED";
 };
 
 type NotificationType = "CHAT" | "LETTER" | "MEMORY" | "MISSION_APPROVAL_REQUEST" | "MISSION_PROGRESS";
@@ -169,6 +202,18 @@ const demoRooms: RoomSummary[] = [
     memberCount: 12,
     unreadChatCount: 3,
     pendingMissionCount: 0,
+  },
+];
+
+const demoPendingInvitations: PendingRoomInvitation[] = [
+  {
+    id: 1,
+    roomId: 4,
+    roomName: "민지의 여행 준비방",
+    roomType: "GROUP",
+    inviterName: "민지",
+    createdAt: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
+    expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
   },
 ];
 
@@ -409,6 +454,7 @@ function App() {
   const [rooms, setRooms] = useState<RoomSummary[]>([]);
   const [latestNotifications, setLatestNotifications] = useState<NotificationItem[]>([]);
   const [allNotifications, setAllNotifications] = useState<NotificationItem[]>([]);
+  const [pendingInvitations, setPendingInvitations] = useState<PendingRoomInvitation[]>([]);
   const [calendar, setCalendar] = useState<CalendarResponse | null>(null);
   const [selectedCalendarDate, setSelectedCalendarDate] = useState<string | null>(null);
   const [calendarRoomId, setCalendarRoomId] = useState<number | null>(null);
@@ -419,6 +465,8 @@ function App() {
   const [activeView, setActiveView] = useState<AppView>("home");
   const [profileForm, setProfileForm] = useState({ displayName: "", profileImageUrl: "" });
   const [passwordForm, setPasswordForm] = useState({ currentPassword: "", newPassword: "" });
+  const [createRoomForm, setCreateRoomForm] = useState<CreateRoomForm>({ name: "", type: "COUPLE", description: "" });
+  const [inviteContacts, setInviteContacts] = useState<Record<number, string>>({});
   const [message, setMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [profileEditOpen, setProfileEditOpen] = useState(false);
@@ -448,6 +496,7 @@ function App() {
       setSettings(settingsResponse);
       setRooms(visibleRooms);
       await loadLatestNotifications();
+      await loadPendingInvitations();
       await loadCalendarActivities(null);
       setPendingInvitationCount(roomsResponse.pendingInvitationCount);
       setProfileForm({
@@ -459,6 +508,7 @@ function App() {
       setProfile(demoProfile);
       setSettings(demoSettings);
       setRooms(demoRooms);
+      setPendingInvitations(demoPendingInvitations);
       setLatestNotifications(demoNotifications.filter((notification) => !notification.read).slice(0, 3));
       setAllNotifications(demoNotifications);
       setCalendar(demoCalendar);
@@ -475,6 +525,21 @@ function App() {
   async function loadLatestNotifications() {
     const latestResponse = await safeApiGet<NotificationsResponse>("/notifications/latest");
     setLatestNotifications(latestResponse?.items.length ? latestResponse.items : demoNotifications.filter((notification) => !notification.read).slice(0, 3));
+  }
+
+  async function loadRooms() {
+    const roomsResponse = await apiGet<RoomsResponse>("/rooms");
+    const visibleRooms = roomsResponse.rooms.length > 0 ? roomsResponse.rooms : demoRooms;
+    setRooms(visibleRooms);
+    setPendingInvitationCount(roomsResponse.pendingInvitationCount);
+    setSelectedRoomId((currentSelectedRoomId) => currentSelectedRoomId ?? visibleRooms[0]?.id ?? null);
+
+    return visibleRooms;
+  }
+
+  async function loadPendingInvitations() {
+    const response = await safeApiGet<PendingRoomInvitationsResponse>("/room-invitations/pending");
+    setPendingInvitations(response?.items ?? []);
   }
 
   async function loadCalendarActivities(nextRoomId: number | null) {
@@ -640,6 +705,73 @@ function App() {
     });
   }
 
+  async function createRoom() {
+    setMessage(null);
+    setErrorMessage(null);
+    try {
+      const createdRoom = await apiRequest<CreateRoomResponse>("/rooms", {
+        method: "POST",
+        body: {
+          name: createRoomForm.name,
+          type: createRoomForm.type,
+          description: createRoomForm.description || null,
+        },
+      });
+      const nextRooms = await loadRooms();
+      await loadCalendarActivities(calendarRoomId);
+      setSelectedRoomId(createdRoom.id);
+      setExpandedRoomId(createdRoom.id);
+      setCreateRoomForm({ name: "", type: "COUPLE", description: "" });
+      setMessage(`${nextRooms.find((room) => room.id === createdRoom.id)?.name ?? createdRoom.name} 방을 만들었습니다.`);
+    } catch (error) {
+      setErrorMessage(toMessage(error));
+    }
+  }
+
+  async function sendRoomInvitation(roomId: number) {
+    const contact = inviteContacts[roomId]?.trim() ?? "";
+    setMessage(null);
+    setErrorMessage(null);
+
+    if (!contact) {
+      setErrorMessage("초대할 이메일 또는 전화번호를 입력해 주세요.");
+      return;
+    }
+
+    try {
+      await apiRequest<{ id: number; status: string; expiresAt: string }>(`/rooms/${roomId}/invitations`, {
+        method: "POST",
+        body: contact.includes("@") ? { email: contact, phoneNumber: null } : { email: null, phoneNumber: contact },
+      });
+      setInviteContacts((current) => ({ ...current, [roomId]: "" }));
+      await loadRooms();
+      setMessage("초대를 보냈습니다.");
+    } catch (error) {
+      setErrorMessage(toMessage(error));
+    }
+  }
+
+  async function respondInvitation(invitationId: number, action: "accept" | "decline") {
+    setMessage(null);
+    setErrorMessage(null);
+    try {
+      const response = await apiRequest<RespondRoomInvitationResponse>(`/room-invitations/${invitationId}/${action}`, {
+        method: "POST",
+      });
+      await loadRooms();
+      await loadPendingInvitations();
+      if (action === "accept") {
+        setSelectedRoomId(response.roomId);
+        setExpandedRoomId(response.roomId);
+        setMessage("초대를 수락했습니다. 방 리스트에 새 방이 추가되었습니다.");
+      } else {
+        setMessage("초대를 거절했습니다.");
+      }
+    } catch (error) {
+      setErrorMessage(toMessage(error));
+    }
+  }
+
   return (
     <main className={`workspace ${sidebarCollapsed ? "sidebar-collapsed" : ""}`}>
       <Sidebar
@@ -682,6 +814,14 @@ function App() {
             rooms={rooms}
             selectedRoomId={selectedRoom?.id ?? null}
             pendingInvitationCount={pendingInvitationCount}
+            pendingInvitations={pendingInvitations}
+            createRoomForm={createRoomForm}
+            inviteContacts={inviteContacts}
+            onCreateRoomFormChange={setCreateRoomForm}
+            onCreateRoom={createRoom}
+            onInviteContactChange={(roomId, value) => setInviteContacts((current) => ({ ...current, [roomId]: value }))}
+            onSendInvitation={sendRoomInvitation}
+            onRespondInvitation={respondInvitation}
             onSelectRoom={selectRoom}
           />
         ) : null}
@@ -1101,11 +1241,27 @@ function RoomsView({
   rooms,
   selectedRoomId,
   pendingInvitationCount,
+  pendingInvitations,
+  createRoomForm,
+  inviteContacts,
+  onCreateRoomFormChange,
+  onCreateRoom,
+  onInviteContactChange,
+  onSendInvitation,
+  onRespondInvitation,
   onSelectRoom,
 }: {
   rooms: RoomSummary[];
   selectedRoomId: number | null;
   pendingInvitationCount: number;
+  pendingInvitations: PendingRoomInvitation[];
+  createRoomForm: CreateRoomForm;
+  inviteContacts: Record<number, string>;
+  onCreateRoomFormChange: (form: CreateRoomForm) => void;
+  onCreateRoom: () => void;
+  onInviteContactChange: (roomId: number, value: string) => void;
+  onSendInvitation: (roomId: number) => void;
+  onRespondInvitation: (invitationId: number, action: "accept" | "decline") => void;
   onSelectRoom: (roomId: number, nextView?: AppView) => void;
 }) {
   return (
@@ -1113,29 +1269,83 @@ function RoomsView({
       <header className="page-header">
         <div>
           <h1>방 리스트</h1>
-          <p>방 생성, 초대 받은 방 조회, 참여 방 조회, 방 관리 진입을 한 곳에서 확인한다.</p>
+          <p>방을 만들고, 초대를 보내고, 받은 초대를 수락하거나 거절한다.</p>
         </div>
-        <button className="primary-button" type="button">
+        <button className="primary-button" type="button" onClick={onCreateRoom}>
           <Plus size={18} />
           방 생성
         </button>
       </header>
 
       <section className="room-hub-grid">
-        <article className="hub-card">
+        <article className="hub-card room-create-card">
+          <span>새 방 만들기</span>
+          <div className="room-form-grid">
+            <label className="field compact-field">
+              방 이름
+              <input
+                value={createRoomForm.name}
+                onChange={(event) => onCreateRoomFormChange({ ...createRoomForm, name: event.target.value })}
+                placeholder="예: 우리 둘의 200일"
+              />
+            </label>
+            <label className="field compact-field">
+              방 타입
+              <select
+                value={createRoomForm.type}
+                onChange={(event) => onCreateRoomFormChange({ ...createRoomForm, type: event.target.value as RoomSummary["type"] })}
+              >
+                <option value="COUPLE">커플</option>
+                <option value="FAMILY">가족</option>
+                <option value="GROUP">학급/동아리</option>
+              </select>
+            </label>
+          </div>
+          <label className="field compact-field">
+            방 설명
+            <input
+              value={createRoomForm.description}
+              onChange={(event) => onCreateRoomFormChange({ ...createRoomForm, description: event.target.value })}
+              placeholder="방의 목적을 짧게 적는다"
+            />
+          </label>
+          <button className="primary-button full-width compact-submit" type="button" onClick={onCreateRoom}>
+            방 생성
+          </button>
+        </article>
+
+        <article className="hub-card invitation-card">
           <span>초대 받은 방</span>
           <strong>{pendingInvitationCount}개</strong>
-          <p>초대 수락/거절은 이후 상세 이슈에서 구현한다.</p>
+          {pendingInvitations.length > 0 ? (
+            <div className="pending-invitation-list">
+              {pendingInvitations.map((invitation) => (
+                <div className="pending-invitation-item" key={invitation.id}>
+                  <div>
+                    <strong>{invitation.roomName}</strong>
+                    <p>{invitation.inviterName}님이 초대했습니다. {roomTypeLabel(invitation.roomType)}</p>
+                  </div>
+                  <div className="inline-actions">
+                    <button className="primary-button small-button" type="button" onClick={() => onRespondInvitation(invitation.id, "accept")}>
+                      수락
+                    </button>
+                    <button className="outline-button small-button" type="button" onClick={() => onRespondInvitation(invitation.id, "decline")}>
+                      거절
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p>현재 처리할 초대가 없습니다.</p>
+          )}
         </article>
+
         <article className="hub-card">
           <span>참여 방</span>
           <strong>{rooms.length}개</strong>
           <p>현재 멤버가 참여 중인 기록방 목록이다.</p>
-        </article>
-        <article className="hub-card">
-          <span>방 관리</span>
-          <strong>진입 골격</strong>
-          <p>방 이름, 설명, 초대 관리는 이후 상세 화면으로 확장한다.</p>
+          <p>방장인 방에서는 이메일 또는 전화번호로 바로 초대할 수 있다.</p>
         </article>
       </section>
 
@@ -1161,9 +1371,19 @@ function RoomsView({
               <button className="outline-button" type="button" onClick={() => onSelectRoom(room.id, "home")}>
                 선택
               </button>
-              <button className="outline-button" type="button">
-                관리
-              </button>
+              {room.role === "OWNER" ? (
+                <div className="invite-inline-form">
+                  <input
+                    value={inviteContacts[room.id] ?? ""}
+                    onChange={(event) => onInviteContactChange(room.id, event.target.value)}
+                    placeholder="이메일 또는 전화번호"
+                    aria-label={`${room.name} 초대 연락처`}
+                  />
+                  <button className="primary-button" type="button" onClick={() => onSendInvitation(room.id)}>
+                    초대
+                  </button>
+                </div>
+              ) : null}
             </div>
           </article>
         ))}

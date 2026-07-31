@@ -5,4 +5,8 @@ import org.springframework.data.jpa.repository.JpaRepository
 
 interface MemberJpaRepository : JpaRepository<MemberEntity, Long> {
     fun findByIdAndDeletedFalse(id: Long): MemberEntity?
+
+    fun findByEmailAndDeletedFalse(email: String): MemberEntity?
+
+    fun findByPhoneNumberAndDeletedFalse(phoneNumber: String): MemberEntity?
 }
