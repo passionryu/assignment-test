@@ -421,7 +421,7 @@ Expected:
 
 ## 10. Verification Report Format
 
-Full Stack Dev Agent should update `docs/qa/issue-{issueNumber}/tech-verification-report.md` after implementation.
+Full Stack Dev Agent should update `docs/qa/issue-{issueNumber}/테크리드_에이전트_1차검증.md` after implementation.
 
 Required sections:
 

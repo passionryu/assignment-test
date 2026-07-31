@@ -93,7 +93,7 @@ PM/PO Agent는 완료 판단의 근거를 문서 경로, commit hash, QA report,
 Evidence 필드는 사람이 검토할 수 있는 구체 경로를 사용한다.
 
 ```text
-docs/qa/issue-{issueNumber}/qa-report.md
+docs/qa/issue-{issueNumber}/QA_레포트.html
 test-results/playwright/latest/index.html
 README.md
 commit:<short-sha>

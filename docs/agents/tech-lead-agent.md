@@ -47,7 +47,7 @@ Tech Lead Agent는 승인된 기획과 화면 정의를 기술 설계로 변환�
 - `docs/dev-spec/DEV-003-admin-orders.md`
 - `docs/dev-spec/DEV-004-docker-seed.md`
 - `docs/qa/issue-{issueNumber}/curl-test-cases.md`
-- `docs/qa/issue-{issueNumber}/tech-verification-report.md`
+- `docs/qa/issue-{issueNumber}/테크리드_에이전트_1차검증.md`
 
 ## Technical Design Rules
 
@@ -124,7 +124,7 @@ Evidence에는 다음을 남긴다.
 
 - dev-spec 문서 경로
 - curl-test-cases 문서 경로
-- tech-verification-report 문서 경로
+- 테크리드_에이전트_1차검증 문서 경로
 - 실행한 curl 명령
 - 대상 commit hash
 - 실패한 API 응답과 수정 요청

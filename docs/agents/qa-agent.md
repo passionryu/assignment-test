@@ -60,7 +60,8 @@ QA Agent는 다음을 검토하지 않는다.
 
 ## Outputs
 
-- `docs/qa/issue-{issueNumber}/qa-report.md`
+- `docs/qa/issue-{issueNumber}/QA_레포트.html`
+- `docs/qa/issue-{issueNumber}/QA_레포트.md`는 필요할 때만 짧은 인덱스 또는 요약으로 남긴다.
 - `test-results/playwright/latest/index.html`
 - `test-results/playwright/latest/summary.md`
 - `test-results/playwright/latest/screenshots/happy/`
@@ -76,6 +77,7 @@ QA Agent는 매 실행마다 사람이 확인 가능한 evidence를 남긴다.
 
 | Evidence | Rule |
 | --- | --- |
+| QA web report | 신규 AI QA 실행의 1차 산출물로 생성 |
 | HTML report | 항상 생성 |
 | summary.md | 항상 생성 |
 | happy screenshot | 주요 단계마다 저장 |
@@ -105,56 +107,66 @@ QA Agent는 매 실행마다 사람이 확인 가능한 evidence를 남긴다.
 
 실제 서비스 주제가 확정되면 시나리오 이름은 해당 도메인 언어로 바꾼다.
 
-## QA Report Format
+## QA Web Report Format
 
-```markdown
-# QA Report
+신규 AI QA 결과는 Markdown 본문만으로 끝내지 않고, 사람이 브라우저에서 바로 볼 수 있는 HTML 보고서로 반환한다.
 
-- 실행 일시:
-- 대상 Commit:
-- 실행 환경:
-- 전체 결과: PASS / CONDITIONAL_PASS / FAIL
-- Playwright HTML Report:
-- Evidence Directory:
+HTML 보고서는 다음 내용을 한 페이지 안에서 확인할 수 있어야 한다.
 
-## Screen Spec Match
+- 전체 판정과 대상 commit
+- 화면 정의서 일치 검증 결과
+- 해피 케이스 결과와 스크린샷/영상 링크
+- 실패 케이스 결과, 재현 절차, 기대 결과, 실제 결과
+- 실패 screenshot, video, trace 링크
+- console error와 network failure 요약
+- PM/PO 또는 Full Stack Dev Agent에게 넘길 다음 조치
 
-- 기준 화면 정의서:
-- 비교 대상 실제 화면:
-- 일치 여부: PASS / FAIL
+```html
+<main>
+  <header>
+    <h1>Issue #{issueNumber} QA Report</h1>
+    <dl>
+      <dt>실행 일시</dt>
+      <dd></dd>
+      <dt>대상 Commit</dt>
+      <dd></dd>
+      <dt>전체 결과</dt>
+      <dd>PASS / CONDITIONAL_PASS / FAIL</dd>
+    </dl>
+  </header>
 
-| 항목 | 화면 정의서 | 실제 구현 | 판정 |
-| --- | --- | --- | --- |
-| 전체 레이아웃 |  |  | PASS / FAIL |
-| 사이드바 / 내비게이션 |  |  | PASS / FAIL |
-| 주요 카드 배치 |  |  | PASS / FAIL |
-| 주요 버튼 위치 |  |  | PASS / FAIL |
-| 모달 / 오버레이 표현 |  |  | PASS / FAIL |
-| 화면 문구와 정보 우선순위 |  |  | PASS / FAIL |
+  <section id="screen-spec-match">
+    <h2>Screen Spec Match</h2>
+    <p>기준 화면 정의서와 실제 브라우저 화면의 일치 여부를 기록한다.</p>
+    <table>
+      <thead>
+        <tr><th>항목</th><th>화면 정의서</th><th>실제 구현</th><th>판정</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>전체 레이아웃</td><td></td><td></td><td>PASS / FAIL</td></tr>
+        <tr><td>사이드바 / 내비게이션</td><td></td><td></td><td>PASS / FAIL</td></tr>
+        <tr><td>주요 카드 배치</td><td></td><td></td><td>PASS / FAIL</td></tr>
+        <tr><td>주요 버튼 위치</td><td></td><td></td><td>PASS / FAIL</td></tr>
+        <tr><td>모달 / 오버레이 표현</td><td></td><td></td><td>PASS / FAIL</td></tr>
+      </tbody>
+    </table>
+  </section>
 
-## Happy Case 결과
+  <section id="happy-cases">
+    <h2>Happy Cases</h2>
+    <p>각 시나리오별 결과, 영상, 스크린샷 링크를 제공한다.</p>
+  </section>
 
-| Case ID | Scenario | Result | Video | Screenshot |
-| --- | --- | --- | --- | --- |
+  <section id="failure-cases">
+    <h2>Failure Cases</h2>
+    <p>재현 절차, 기대 결과, 실제 결과, screenshot, video, trace 링크를 제공한다.</p>
+  </section>
 
-## Failure Case 결과
-
-| Case ID | Scenario | Result | Reproduction Steps | Video | Screenshot | Trace |
-| --- | --- | --- | --- | --- | --- | --- |
-
-## 실패 재현 절차
-
-### QA-FAIL-001 시나리오명
-
-1.
-2.
-3.
-
-## 종합 판단
-
-- 제출 가능 여부:
-- 남은 리스크:
-- 재검증 필요 항목:
+  <section id="decision">
+    <h2>종합 판단</h2>
+    <p>제출 가능 여부, 남은 리스크, 재검증 필요 항목을 기록한다.</p>
+  </section>
+</main>
 ```
 
 ## Playwright Rules
@@ -184,7 +196,8 @@ FAIL일 때는 반드시 재현 절차와 evidence를 남긴다.
 
 Evidence 필드에는 다음을 남긴다.
 
-- `docs/qa/issue-{issueNumber}/qa-report.md`
+- `docs/qa/issue-{issueNumber}/QA_레포트.html`
+- `docs/qa/issue-{issueNumber}/QA_레포트.md`가 있으면 HTML 보고서로 이동하는 인덱스 또는 요약
 - `test-results/playwright/latest/index.html`
 - 실패 screenshot 경로
 - 실패 video 경로
@@ -194,9 +207,9 @@ Evidence 필드에는 다음을 남긴다.
 ## Done Criteria
 
 - 승인된 화면 정의서와 실제 브라우저 화면의 일치 여부를 검증했다.
-- `Screen Spec Match` 결과가 `docs/qa/issue-{issueNumber}/qa-report.md`에 기록되어 있다.
+- `Screen Spec Match` 결과가 `docs/qa/issue-{issueNumber}/QA_레포트.html`에 기록되어 있다.
 - Playwright로 핵심 사용자 흐름을 실행했다.
-- `docs/qa/issue-{issueNumber}/qa-report.md`에 결과가 기록되어 있다.
+- `docs/qa/issue-{issueNumber}/QA_레포트.html`에 결과가 기록되어 있다.
 - 최신 HTML report가 `test-results/playwright/latest/index.html`에 생성되어 있다.
 - 해피 케이스 영상과 스크린샷이 저장되어 있다.
 - 실패 시나리오는 재현 절차, 영상, 스크린샷, trace가 포함되어 있다.
