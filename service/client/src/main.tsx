@@ -65,6 +65,56 @@ type AppView = "home" | "rooms" | "chat" | "memories" | "missions" | "letters" |
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8080/api";
 const memberHeader = { "X-Member-Id": "1" };
 
+const demoProfile: MemberProfile = {
+  id: 1,
+  displayName: "류성열",
+  username: "recordryu",
+  email: "ryu@example.com",
+  phoneNumber: "010-1234-5678",
+  profileImageUrl: null,
+};
+
+const demoSettings: NotificationSettings = {
+  allEnabled: true,
+  chatEnabled: true,
+  letterEnabled: true,
+  memoryEnabled: true,
+  missionEnabled: true,
+};
+
+const demoRooms: RoomSummary[] = [
+  {
+    id: 1,
+    name: "우리 둘의 100일",
+    description: "둘이 함께 남기는 100일 기록방",
+    type: "COUPLE",
+    role: "OWNER",
+    memberCount: 2,
+    unreadChatCount: 1,
+    pendingMissionCount: 2,
+  },
+  {
+    id: 2,
+    name: "7월 가족",
+    description: "가족 여행과 일상 기록을 모으는 방",
+    type: "FAMILY",
+    role: "MEMBER",
+    memberCount: 5,
+    unreadChatCount: 0,
+    pendingMissionCount: 1,
+  },
+  {
+    id: 3,
+    name: "여름 프로젝트반",
+    description: "프로젝트반 활동과 미션 인증 기록방",
+    type: "GROUP",
+    role: "MEMBER",
+    memberCount: 12,
+    unreadChatCount: 3,
+    pendingMissionCount: 0,
+  },
+];
+
 function App() {
   const [profile, setProfile] = useState<MemberProfile | null>(null);
   const [settings, setSettings] = useState<NotificationSettings | null>(null);
@@ -97,17 +147,26 @@ function App() {
         apiGet<NotificationSettings>("/members/me/notification-settings"),
         apiGet<RoomsResponse>("/rooms"),
       ]);
+      const visibleRooms = roomsResponse.rooms.length > 0 ? roomsResponse.rooms : demoRooms;
       setProfile(profileResponse);
       setSettings(settingsResponse);
-      setRooms(roomsResponse.rooms);
+      setRooms(visibleRooms);
       setPendingInvitationCount(roomsResponse.pendingInvitationCount);
       setProfileForm({
         displayName: profileResponse.displayName,
         profileImageUrl: profileResponse.profileImageUrl ?? "",
       });
-      setSelectedRoomId((currentSelectedRoomId) => currentSelectedRoomId ?? roomsResponse.rooms[0]?.id ?? null);
+      setSelectedRoomId((currentSelectedRoomId) => currentSelectedRoomId ?? visibleRooms[0]?.id ?? null);
     } catch (error) {
-      setErrorMessage(toMessage(error));
+      setProfile(demoProfile);
+      setSettings(demoSettings);
+      setRooms(demoRooms);
+      setPendingInvitationCount(1);
+      setProfileForm({
+        displayName: demoProfile.displayName,
+        profileImageUrl: demoProfile.profileImageUrl ?? "",
+      });
+      setSelectedRoomId((currentSelectedRoomId) => currentSelectedRoomId ?? demoRooms[0].id);
     }
   }
 
