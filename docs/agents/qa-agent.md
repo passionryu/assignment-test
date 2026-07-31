@@ -75,22 +75,24 @@ QA Agent는 다음을 검토하지 않는다.
 - `test-results/playwright/latest/traces/failure/`
 - `test-results/playwright/YYYY-MM-DD-HHmm/`
 
+위 산출물은 QA Level에 따라 선택적으로 생성한다. `Smoke QA`는 짧은 요약과 필요한 최소 스크린샷만 남길 수 있고, HTML/영상/trace는 `Focused QA` 이상 또는 실패 재현이 필요한 경우에 생성한다.
+
 ## Evidence Policy
 
-QA Agent는 매 실행마다 사람이 확인 가능한 evidence를 남긴다.
+QA Agent는 PM/PO Agent가 지정한 QA Level에 맞춰 필요한 만큼만 evidence를 남긴다.
 
 | Evidence | Rule |
 | --- | --- |
-| QA web report | 신규 AI QA 실행의 1차 산출물로 생성 |
-| HTML report | 항상 생성 |
-| summary.md | 항상 생성 |
-| happy screenshot | 주요 단계마다 저장 |
-| happy video | 항상 저장 |
-| failure screenshot | 실패 시점 저장 |
-| failure video | 항상 저장 |
-| failure trace | 항상 저장 |
-| latest directory | 가장 최근 QA 결과 보관 |
-| timestamp directory | 회차별 QA 결과 보관 |
+| QA web report | `Focused QA` 이상에서 생성한다. `Smoke QA`는 짧은 Markdown 요약으로 대체할 수 있다. |
+| HTML report | `Focused QA` 이상에서 생성한다. `Smoke QA`는 PM/PO가 요청한 경우에만 생성한다. |
+| summary.md | QA를 실행한 경우 짧게 생성한다. |
+| happy screenshot | `Smoke QA`는 0~1장, `Focused QA`는 주요 화면만, `Full QA`는 주요 단계마다 저장한다. |
+| happy video | `Full QA`에서 저장한다. `Focused QA`는 PM/PO가 요청한 경우에만 저장한다. |
+| failure screenshot | 실패 시점에는 항상 저장한다. |
+| failure video | 실패 재현이 필요한 경우 저장한다. |
+| failure trace | 실패 원인 분석이 필요한 경우 저장한다. |
+| latest directory | QA를 실행한 경우 가장 최근 결과만 갱신한다. |
+| timestamp directory | `Focused QA` 이상 또는 실패 재현이 필요한 경우에만 생성한다. |
 
 `latest/`는 최신 결과를 가리킨다. 회차별 결과는 `YYYY-MM-DD-HHmm/` 디렉터리에 보관한다.
 
@@ -117,6 +119,7 @@ QA Agent는 다음을 금지한다.
 - 실패가 없는데 불필요하게 trace를 대량 생성
 - DOM 전체 출력 또는 전체 페이지 텍스트를 반복 출력
 - 모든 이슈에서 자동으로 Full QA 실행
+- `Smoke QA`에서 HTML, 영상, trace를 관성적으로 생성
 
 ## Priority Scenarios
 
@@ -235,11 +238,11 @@ Evidence 필드에는 다음을 남긴다.
 ## Done Criteria
 
 - 승인된 화면 정의서와 실제 브라우저 화면의 일치 여부를 검증했다.
-- `Screen Spec Match` 결과가 `docs/qa/issue-{issueNumber}/QA_레포트.html`에 기록되어 있다.
+- `Screen Spec Match` 결과가 QA Level에 맞는 보고서 또는 요약에 기록되어 있다.
 - Playwright로 핵심 사용자 흐름을 실행했다.
-- `docs/qa/issue-{issueNumber}/QA_레포트.html`에 결과가 기록되어 있다.
-- 최신 HTML report가 `test-results/playwright/latest/index.html`에 생성되어 있다.
-- 해피 케이스 영상과 스크린샷이 저장되어 있다.
+- `Smoke QA`는 짧은 요약, `Focused QA` 이상은 HTML 보고서에 결과가 기록되어 있다.
+- 최신 결과가 QA Level에 맞는 형태로 `docs/qa/issue-{issueNumber}/` 또는 `test-results/playwright/latest/`에 남아 있다.
+- 해피 케이스 evidence는 QA Level에 맞춰 스크린샷 또는 영상으로 저장되어 있다.
 - 실패 시나리오는 재현 절차, 영상, 스크린샷, trace가 포함되어 있다.
 - 수정 후 필요한 회귀 테스트를 다시 실행했다.
 - 최종 결과가 PASS, CONDITIONAL_PASS, FAIL 중 하나로 정리되어 있다.

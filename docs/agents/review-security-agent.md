@@ -17,6 +17,15 @@ Code Review / Security Agent는 구현 결과가 요구사항, 코드 품질, �
 - 주문 상태, 관리자 기능, 입력 검증 같은 위험 지점을 검토해야 할 때
 - QA Agent로 넘기기 전에 BLOCKER/CRITICAL을 제거해야 할 때
 
+PM/PO Agent가 다음 조건을 모두 만족한다고 판단하면 Review/Security Agent 호출을 생략할 수 있다.
+
+- UI 문구, CSS, 단순 레이아웃, 문서 수정처럼 보안 영향이 없는 변경이다.
+- DB schema, API contract, 인증/인가, 회원 정보, 주문, 권한, 입력 검증을 변경하지 않는다.
+- public repository 노출 위험이 있는 설정 파일, `.env`, secret, Docker 배포 설정을 변경하지 않는다.
+- 개발자가 직접 Human QA로 확인하겠다고 명시했다.
+
+단, 인증, 회원, 주문, 권한, 데이터 변경 로직, 파일 업로드, 외부 API 연동, secret 처리와 관련된 변경은 생략하지 않는다.
+
 ## Inputs
 
 - 구현 대상 commit

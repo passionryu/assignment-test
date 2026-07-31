@@ -92,6 +92,30 @@ PM Final Check에서 확인할 항목:
 
 PM/PO Agent는 토큰, 시간, evidence 비용을 줄이기 위해 QA Agent를 호출할 때 검증 강도를 반드시 지정한다.
 
+### Token Saving Operating Rules
+
+PM/PO Agent는 이슈 시작 전에 불필요한 에이전트 호출과 QA 확장을 막기 위해 다음 4가지를 먼저 고정한다.
+
+1. 작업 범위 고정
+   - 이번 이슈에서 구현할 것과 구현하지 않을 것을 먼저 명시한다.
+   - 중간에 UI 개선, 리팩터링, QA 범위를 임의로 추가하지 않는다.
+   - 추가 요청이 생기면 현재 이슈에 포함할지, 후속 이슈로 분리할지 PM/PO Agent가 판단한다.
+
+2. QA Level 기본값
+   - 기본 검증은 `Smoke QA`로 시작한다.
+   - 기능 위험도나 변경 범위가 커질 때만 `Focused QA`로 올린다.
+   - `Full QA`는 개발자가 명시적으로 요청하고 승인한 경우에만 실행한다.
+
+3. Agent 호출 생략 기준
+   - UI 문구, 가벼운 CSS, 단순 배치 수정은 Full Stack Dev Agent만 수행하고 Review/Security/QA는 생략할 수 있다.
+   - 보안 영향이 없는 조회/표시 기능은 Review를 선택으로 두고 Security는 생략할 수 있다.
+   - 인증, 회원, 주문, 권한, 데이터 변경 로직은 Review/Security와 QA를 생략하지 않는다.
+
+4. 보고서 축소
+   - 기본 보고는 구현 내용, 검증 명령, 결과, 남은 리스크만 짧게 남긴다.
+   - 상세 HTML, 영상, trace는 `Focused QA` 이상이거나 실패 재현이 필요한 경우에만 남긴다.
+   - `docs/qa/issue-{issueNumber}/`에는 필요한 evidence만 저장한다.
+
 | QA Level | 사용 시점 | 기본 범위 | Evidence |
 | --- | --- | --- | --- |
 | `Smoke QA` | 문서, CSS 미세 수정, 비핵심 UI 수정 | 앱 실행, 변경 화면 1개, 주요 console error 확인 | 짧은 요약, 스크린샷 1~2장 |
@@ -123,12 +147,14 @@ QA Level 선택 기준:
 
 | 변경 유형 | 기본 QA Level |
 | --- | --- |
-| README, 문서, 컨벤션 | QA 생략 또는 `Smoke QA` |
-| CSS 미세 수정 | `Smoke QA` |
+| README, 문서, 컨벤션 | QA 생략 |
+| UI 문구, CSS 미세 수정, 단순 배치 수정 | QA 생략 또는 `Smoke QA` |
 | 특정 화면 레이아웃 수정 | `Focused QA` |
+| 보안 영향 없는 조회/표시 기능 | `Smoke QA` 또는 `Focused QA`, Security 생략 가능 |
 | 특정 API/폼 수정 | `Focused QA` |
 | Human QA FAIL 수정 | 보통 `Focused QA` |
-| 주문, 인증, 제출 직전 전체 흐름 | 개발자 승인 후 `Full QA` |
+| 인증, 회원, 주문, 권한, 데이터 변경 로직 | Review/Security + `Focused QA` 이상 |
+| 제출 직전 전체 흐름 | 개발자 승인 후 `Full QA` |
 
 ## Evidence
 
