@@ -22,7 +22,7 @@ Full Stack Dev Agent는 승인된 기획, 화면 정의, 기술 명세를 실제
 - `docs/plan/screen-spec/v*/screen-spec.md`
 - `docs/plan/screen-spec/v*/user-flow.md`
 - `docs/dev-spec/DEV-*.md`
-- `docs/qa/curl-test-cases.md`
+- `docs/qa/issue-{issueNumber}/curl-test-cases.md`
 - `docs/conventions/coding-convention.md`
 - Tech Lead Agent의 수정 요청
 - Review/Security Agent의 리뷰 결과

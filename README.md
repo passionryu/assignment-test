@@ -27,7 +27,24 @@ Lv1 implementation skeleton is in progress.
 docs/
   plan/       Planning, requirements, decisions, AI usage, and screen specs
   dev-spec/   Feature-level implementation specs
-  qa/         Technical verification, review, security, and Playwright QA reports
+  qa/         Issue-scoped verification, review, security, and QA reports
+
+docs/qa/
+  issue-3/
+    tech-verification-report.md
+    code-review-report.md
+    security-review-report.md
+    qa-report.md
+  issue-4/
+    tech-verification-report.md
+    code-review-report.md
+    security-review-report.md
+    qa-report.md
+  issue-5/
+    tech-verification-report.md
+    code-review-report.md
+    security-review-report.md
+    qa-report.md
 
 service/
   server/     Backend application

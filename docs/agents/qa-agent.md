@@ -56,7 +56,7 @@ QA Agent는 다음을 검토하지 않는다.
 
 ## Outputs
 
-- `docs/qa/qa-report.md`
+- `docs/qa/issue-{issueNumber}/qa-report.md`
 - `test-results/playwright/latest/index.html`
 - `test-results/playwright/latest/summary.md`
 - `test-results/playwright/latest/screenshots/happy/`
@@ -163,7 +163,7 @@ FAIL일 때는 반드시 재현 절차와 evidence를 남긴다.
 
 Evidence 필드에는 다음을 남긴다.
 
-- `docs/qa/qa-report.md`
+- `docs/qa/issue-{issueNumber}/qa-report.md`
 - `test-results/playwright/latest/index.html`
 - 실패 screenshot 경로
 - 실패 video 경로
@@ -173,7 +173,7 @@ Evidence 필드에는 다음을 남긴다.
 ## Done Criteria
 
 - Playwright로 핵심 사용자 흐름을 실행했다.
-- `docs/qa/qa-report.md`에 결과가 기록되어 있다.
+- `docs/qa/issue-{issueNumber}/qa-report.md`에 결과가 기록되어 있다.
 - 최신 HTML report가 `test-results/playwright/latest/index.html`에 생성되어 있다.
 - 해피 케이스 영상과 스크린샷이 저장되어 있다.
 - 실패 시나리오는 재현 절차, 영상, 스크린샷, trace가 포함되어 있다.
