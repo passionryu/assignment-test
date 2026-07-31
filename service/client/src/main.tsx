@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import {
   Bell,
   BookOpen,
+  CalendarDays,
   CheckCircle2,
   ChevronDown,
   Clock,
@@ -82,6 +83,32 @@ type NotificationsResponse = {
   items: NotificationItem[];
 };
 
+type CalendarRoomActivity = {
+  roomId: number;
+  roomName: string;
+  totalCount: number;
+  chatCount: number;
+  memoryCount: number;
+  missionCount: number;
+  letterCount: number;
+};
+
+type CalendarDayActivity = {
+  date: string;
+  totalCount: number;
+  chatCount: number;
+  memoryCount: number;
+  missionCount: number;
+  letterCount: number;
+  rooms: CalendarRoomActivity[];
+};
+
+type CalendarResponse = {
+  month: string;
+  selectedDate: string | null;
+  days: CalendarDayActivity[];
+};
+
 type ApiError = {
   code: string;
   message: string;
@@ -92,6 +119,7 @@ type AppView = "home" | "rooms" | "chat" | "memories" | "missions" | "letters" |
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8080/api";
 const memberHeader = { "X-Member-Id": "1" };
+const currentMonth = toDateKey(new Date()).slice(0, 7);
 
 const demoProfile: MemberProfile = {
   id: 1,
@@ -222,12 +250,59 @@ const demoNotifications: NotificationItem[] = [
   }),
 ];
 
+const demoCalendar: CalendarResponse = {
+  month: currentMonth,
+  selectedDate: todayDateKey(),
+  days: [
+    {
+      date: todayDateKey(),
+      totalCount: 4,
+      chatCount: 2,
+      memoryCount: 1,
+      missionCount: 1,
+      letterCount: 0,
+      rooms: [
+        { roomId: 1, roomName: "우리 둘의 100일", totalCount: 3, chatCount: 2, memoryCount: 0, missionCount: 1, letterCount: 0 },
+        { roomId: 2, roomName: "7월 가족", totalCount: 1, chatCount: 0, memoryCount: 1, missionCount: 0, letterCount: 0 },
+      ],
+    },
+    {
+      date: offsetDateKey(-1),
+      totalCount: 4,
+      chatCount: 1,
+      memoryCount: 0,
+      missionCount: 1,
+      letterCount: 2,
+      rooms: [
+        { roomId: 2, roomName: "7월 가족", totalCount: 3, chatCount: 0, memoryCount: 0, missionCount: 1, letterCount: 2 },
+        { roomId: 3, roomName: "여름 프로젝트반", totalCount: 1, chatCount: 1, memoryCount: 0, missionCount: 0, letterCount: 0 },
+      ],
+    },
+    {
+      date: offsetDateKey(-2),
+      totalCount: 4,
+      chatCount: 0,
+      memoryCount: 1,
+      missionCount: 2,
+      letterCount: 1,
+      rooms: [
+        { roomId: 1, roomName: "우리 둘의 100일", totalCount: 1, chatCount: 0, memoryCount: 1, missionCount: 0, letterCount: 0 },
+        { roomId: 2, roomName: "7월 가족", totalCount: 2, chatCount: 0, memoryCount: 0, missionCount: 1, letterCount: 1 },
+        { roomId: 3, roomName: "여름 프로젝트반", totalCount: 1, chatCount: 0, memoryCount: 0, missionCount: 1, letterCount: 0 },
+      ],
+    },
+  ],
+};
+
 function App() {
   const [profile, setProfile] = useState<MemberProfile | null>(null);
   const [settings, setSettings] = useState<NotificationSettings | null>(null);
   const [rooms, setRooms] = useState<RoomSummary[]>([]);
   const [latestNotifications, setLatestNotifications] = useState<NotificationItem[]>([]);
   const [allNotifications, setAllNotifications] = useState<NotificationItem[]>([]);
+  const [calendar, setCalendar] = useState<CalendarResponse | null>(null);
+  const [selectedCalendarDate, setSelectedCalendarDate] = useState<string | null>(null);
+  const [calendarRoomId, setCalendarRoomId] = useState<number | null>(null);
   const [pendingInvitationCount, setPendingInvitationCount] = useState(0);
   const [selectedRoomId, setSelectedRoomId] = useState<number | null>(null);
   const [expandedRoomId, setExpandedRoomId] = useState<number | null>(null);
@@ -264,6 +339,7 @@ function App() {
       setSettings(settingsResponse);
       setRooms(visibleRooms);
       await loadLatestNotifications();
+      await loadCalendarActivities(null);
       setPendingInvitationCount(roomsResponse.pendingInvitationCount);
       setProfileForm({
         displayName: profileResponse.displayName,
@@ -276,6 +352,8 @@ function App() {
       setRooms(demoRooms);
       setLatestNotifications(demoNotifications.filter((notification) => !notification.read).slice(0, 3));
       setAllNotifications(demoNotifications);
+      setCalendar(demoCalendar);
+      setSelectedCalendarDate(demoCalendar.selectedDate ?? demoCalendar.days[0]?.date ?? null);
       setPendingInvitationCount(1);
       setProfileForm({
         displayName: demoProfile.displayName,
@@ -288,6 +366,21 @@ function App() {
   async function loadLatestNotifications() {
     const latestResponse = await safeApiGet<NotificationsResponse>("/notifications/latest");
     setLatestNotifications(latestResponse?.items.length ? latestResponse.items : demoNotifications.filter((notification) => !notification.read).slice(0, 3));
+  }
+
+  async function loadCalendarActivities(nextRoomId: number | null) {
+    const roomQuery = nextRoomId ? `&roomId=${nextRoomId}` : "";
+    const calendarResponse = await safeApiGet<CalendarResponse>(`/calendar?month=${currentMonth}${roomQuery}`);
+    const nextCalendar = calendarResponse ?? filterDemoCalendar(nextRoomId);
+
+    setCalendar(nextCalendar);
+    setSelectedCalendarDate((currentDate) => {
+      if (currentDate && nextCalendar.days.some((day) => day.date === currentDate)) {
+        return currentDate;
+      }
+
+      return nextCalendar.selectedDate ?? nextCalendar.days[0]?.date ?? null;
+    });
   }
 
   async function openNotificationsModal() {
@@ -393,6 +486,22 @@ function App() {
     setActiveView(view);
   }
 
+  function changeCalendarRoomFilter(nextRoomId: number | null) {
+    setCalendarRoomId(nextRoomId);
+    void loadCalendarActivities(nextRoomId);
+  }
+
+  function viewSelectedDateRecords() {
+    const selectedDay = calendar?.days.find((day) => day.date === selectedCalendarDate);
+    const target = selectedDay ? calendarTarget(selectedDay) : null;
+
+    if (!target) {
+      return;
+    }
+
+    moveToRoomFeature(target.roomId, target.view);
+  }
+
   function toggleAllNotifications(checked: boolean) {
     if (!settings) return;
 
@@ -445,9 +554,16 @@ function App() {
           <HomeView
             profile={profile}
             initials={initials}
+            rooms={rooms}
             latestNotifications={latestNotifications}
+            calendar={calendar}
+            selectedCalendarDate={selectedCalendarDate}
+            calendarRoomId={calendarRoomId}
             onOpenNotifications={openNotificationsModal}
             onNotificationClick={handleNotificationClick}
+            onCalendarRoomFilter={changeCalendarRoomFilter}
+            onCalendarDateSelect={setSelectedCalendarDate}
+            onViewDateRecords={viewSelectedDateRecords}
             onOpenProfileEdit={() => setProfileEditOpen(true)}
             onLogout={() => setLogoutOpen(true)}
           />
@@ -610,17 +726,31 @@ function Sidebar({
 function HomeView({
   profile,
   initials,
+  rooms,
   latestNotifications,
+  calendar,
+  selectedCalendarDate,
+  calendarRoomId,
   onOpenNotifications,
   onNotificationClick,
+  onCalendarRoomFilter,
+  onCalendarDateSelect,
+  onViewDateRecords,
   onOpenProfileEdit,
   onLogout,
 }: {
   profile: MemberProfile | null;
   initials: string;
+  rooms: RoomSummary[];
   latestNotifications: NotificationItem[];
+  calendar: CalendarResponse | null;
+  selectedCalendarDate: string | null;
+  calendarRoomId: number | null;
   onOpenNotifications: () => void;
   onNotificationClick: (notification: NotificationItem) => void;
+  onCalendarRoomFilter: (roomId: number | null) => void;
+  onCalendarDateSelect: (date: string) => void;
+  onViewDateRecords: () => void;
   onOpenProfileEdit: () => void;
   onLogout: () => void;
 }) {
@@ -691,17 +821,144 @@ function HomeView({
         <article className="dashboard-card wide-card">
           <div className="panel-heading">
             <div>
-              <span>캘린더 자리</span>
+              <span>전체 기록 캘린더</span>
               <h2>날짜별 기록 흐름</h2>
             </div>
-            <BookOpen size={24} />
+            <CalendarDays size={24} />
           </div>
-          <div className="calendar-placeholder">
-            <span>채팅, 추억, 미션, 편지 기록이 날짜별로 모이는 영역이다.</span>
-          </div>
+          <RecordCalendar
+            calendar={calendar}
+            rooms={rooms}
+            selectedDate={selectedCalendarDate}
+            selectedRoomId={calendarRoomId}
+            onRoomFilter={onCalendarRoomFilter}
+            onDateSelect={onCalendarDateSelect}
+            onViewRecords={onViewDateRecords}
+          />
         </article>
       </section>
     </>
+  );
+}
+
+function RecordCalendar({
+  calendar,
+  rooms,
+  selectedDate,
+  selectedRoomId,
+  onRoomFilter,
+  onDateSelect,
+  onViewRecords,
+}: {
+  calendar: CalendarResponse | null;
+  rooms: RoomSummary[];
+  selectedDate: string | null;
+  selectedRoomId: number | null;
+  onRoomFilter: (roomId: number | null) => void;
+  onDateSelect: (date: string) => void;
+  onViewRecords: () => void;
+}) {
+  const month = calendar?.month ?? currentMonth;
+  const days = useMemo(() => buildCalendarCells(month), [month]);
+  const activityByDate = useMemo(() => new Map((calendar?.days ?? []).map((day) => [day.date, day])), [calendar]);
+  const selectedDay = selectedDate ? activityByDate.get(selectedDate) ?? null : null;
+  const selectedDayLabel = selectedDate ? formatDateLabel(selectedDate) : "날짜를 선택하세요";
+  const canViewRecords = Boolean(selectedDay && selectedDay.totalCount > 0);
+
+  return (
+    <div className="record-calendar">
+      <div className="calendar-filter-row" aria-label="캘린더 방 필터">
+        <button className={selectedRoomId === null ? "active" : ""} type="button" onClick={() => onRoomFilter(null)}>
+          전체
+        </button>
+        {rooms.map((room) => (
+          <button className={selectedRoomId === room.id ? "active" : ""} type="button" key={room.id} onClick={() => onRoomFilter(room.id)}>
+            {room.name}
+          </button>
+        ))}
+      </div>
+
+      <div className="calendar-legend" aria-label="기록 유형 범례">
+        <span><i className="activity-dot chat" />채팅</span>
+        <span><i className="activity-dot mission" />미션</span>
+        <span><i className="activity-dot memory" />추억</span>
+        <span><i className="activity-dot letter" />편지</span>
+      </div>
+
+      <div className="calendar-content">
+        <div className="calendar-month">
+          <div className="calendar-month-header">
+            <strong>{formatMonthLabel(month)}</strong>
+            <span>활동 있는 날짜를 선택해 기록 흐름을 확인한다.</span>
+          </div>
+          <div className="calendar-weekdays" aria-hidden="true">
+            {["일", "월", "화", "수", "목", "금", "토"].map((weekday) => (
+              <span key={weekday}>{weekday}</span>
+            ))}
+          </div>
+          <div className="calendar-grid" aria-label={`${formatMonthLabel(month)} 기록 캘린더`}>
+            {days.map((cell, index) => {
+              const cellDate = cell.date;
+              const activity = cellDate ? activityByDate.get(cellDate) : null;
+              const isSelected = Boolean(cellDate && selectedDate === cellDate);
+
+              return cellDate ? (
+                <button
+                  className={`calendar-day ${activity ? "has-activity" : ""} ${isSelected ? "selected" : ""}`}
+                  type="button"
+                  key={cellDate}
+                  onClick={() => onDateSelect(cellDate)}
+                >
+                  <span>{cell.dayNumber}</span>
+                  {activity ? <ActivityDots activity={activity} /> : null}
+                </button>
+              ) : (
+                <span className="calendar-day empty" key={`empty-${index}`} />
+              );
+            })}
+          </div>
+        </div>
+
+        <aside className="selected-day-summary">
+          <span>선택 날짜 요약</span>
+          <h3>{selectedDayLabel}</h3>
+          {selectedDay ? (
+            <>
+              <p>{activitySummaryText(selectedDay)}</p>
+              <div className="summary-room-list">
+                {selectedDay.rooms.map((room) => (
+                  <div key={room.roomId}>
+                    <strong>{room.roomName}</strong>
+                    <span>{activitySummaryText(room)}</span>
+                  </div>
+                ))}
+              </div>
+              <button className="primary-button" type="button" onClick={onViewRecords} disabled={!canViewRecords}>
+                기록 보기
+              </button>
+            </>
+          ) : (
+            <>
+              <p>선택한 날짜에 아직 기록이 없습니다.</p>
+              <button className="primary-button" type="button" disabled>
+                기록 보기
+              </button>
+            </>
+          )}
+        </aside>
+      </div>
+    </div>
+  );
+}
+
+function ActivityDots({ activity }: { activity: CalendarDayActivity }) {
+  return (
+    <span className="activity-dots" aria-label={activitySummaryText(activity)}>
+      {activity.chatCount > 0 ? <i className="activity-dot chat" /> : null}
+      {activity.missionCount > 0 ? <i className="activity-dot mission" /> : null}
+      {activity.memoryCount > 0 ? <i className="activity-dot memory" /> : null}
+      {activity.letterCount > 0 ? <i className="activity-dot letter" /> : null}
+    </span>
   );
 }
 
@@ -1259,6 +1516,117 @@ function relativeTime(value: string): string {
 
   const days = Math.floor(hours / 24);
   return `${days}일 전`;
+}
+
+function todayDateKey(): string {
+  return offsetDateKey(0);
+}
+
+function offsetDateKey(offsetDays: number): string {
+  const date = new Date();
+  date.setDate(date.getDate() + offsetDays);
+
+  return toDateKey(date);
+}
+
+function toDateKey(date: Date): string {
+  const year = date.getFullYear();
+  const month = `${date.getMonth() + 1}`.padStart(2, "0");
+  const day = `${date.getDate()}`.padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+}
+
+function buildCalendarCells(month: string): Array<{ date: string | null; dayNumber: number | null }> {
+  const [year, monthIndex] = month.split("-").map(Number);
+  const firstDate = new Date(year, monthIndex - 1, 1);
+  const lastDate = new Date(year, monthIndex, 0);
+  const cells: Array<{ date: string | null; dayNumber: number | null }> = [];
+
+  for (let index = 0; index < firstDate.getDay(); index += 1) {
+    cells.push({ date: null, dayNumber: null });
+  }
+
+  for (let day = 1; day <= lastDate.getDate(); day += 1) {
+    cells.push({ date: toDateKey(new Date(year, monthIndex - 1, day)), dayNumber: day });
+  }
+
+  return cells;
+}
+
+function formatMonthLabel(month: string): string {
+  const [year, monthValue] = month.split("-");
+
+  return `${year}년 ${Number(monthValue)}월`;
+}
+
+function formatDateLabel(dateKey: string): string {
+  const date = new Date(`${dateKey}T00:00:00`);
+  const weekdays = ["일", "월", "화", "수", "목", "금", "토"];
+
+  return `${date.getFullYear()}년 ${date.getMonth() + 1}월 ${date.getDate()}일 ${weekdays[date.getDay()]}요일`;
+}
+
+function activitySummaryText(activity: Pick<CalendarDayActivity, "chatCount" | "memoryCount" | "missionCount" | "letterCount">): string {
+  const parts = [
+    activity.chatCount > 0 ? `채팅 ${activity.chatCount}개` : null,
+    activity.missionCount > 0 ? `미션 ${activity.missionCount}개` : null,
+    activity.memoryCount > 0 ? `추억 ${activity.memoryCount}개` : null,
+    activity.letterCount > 0 ? `편지 ${activity.letterCount}개` : null,
+  ].filter(Boolean);
+
+  return parts.length > 0 ? parts.join(" · ") : "기록 없음";
+}
+
+function calendarTarget(day: CalendarDayActivity): { roomId: number; view: Exclude<AppView, "home" | "rooms" | "settings"> } | null {
+  const room = day.rooms.find((candidate) => candidate.totalCount > 0);
+
+  if (!room) {
+    return null;
+  }
+
+  if (room.chatCount > 0) return { roomId: room.roomId, view: "chat" };
+  if (room.memoryCount > 0) return { roomId: room.roomId, view: "memories" };
+  if (room.missionCount > 0) return { roomId: room.roomId, view: "missions" };
+  if (room.letterCount > 0) return { roomId: room.roomId, view: "letters" };
+
+  return null;
+}
+
+function filterDemoCalendar(roomId: number | null): CalendarResponse {
+  if (!roomId) {
+    return demoCalendar;
+  }
+
+  const days = demoCalendar.days
+    .map((day) => {
+      const rooms = day.rooms.filter((room) => room.roomId === roomId);
+      const chatCount = sumCalendarRooms(rooms, "chatCount");
+      const memoryCount = sumCalendarRooms(rooms, "memoryCount");
+      const missionCount = sumCalendarRooms(rooms, "missionCount");
+      const letterCount = sumCalendarRooms(rooms, "letterCount");
+
+      return {
+        ...day,
+        rooms,
+        chatCount,
+        memoryCount,
+        missionCount,
+        letterCount,
+        totalCount: chatCount + memoryCount + missionCount + letterCount,
+      };
+    })
+    .filter((day) => day.totalCount > 0);
+
+  return {
+    month: demoCalendar.month,
+    selectedDate: days[0]?.date ?? null,
+    days,
+  };
+}
+
+function sumCalendarRooms(rooms: CalendarRoomActivity[], key: "chatCount" | "memoryCount" | "missionCount" | "letterCount"): number {
+  return rooms.reduce((sum, room) => sum + room[key], 0);
 }
 
 async function apiGet<T>(path: string): Promise<T> {
