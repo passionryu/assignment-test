@@ -155,13 +155,30 @@ dl {
 .room-submenu {
   display: grid;
   gap: 2px;
+  max-height: 180px;
+  overflow: hidden;
   padding: 4px 0 4px 16px;
+  animation: submenu-reveal 0.22s ease-out;
 }
 
 .room-submenu button {
   min-height: 38px;
   color: #cbd7e7;
   font-size: 14px;
+}
+
+@keyframes submenu-reveal {
+  from {
+    max-height: 0;
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+
+  to {
+    max-height: 180px;
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .settings-active {
@@ -318,7 +335,7 @@ dl {
 
 .metric-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
 }
 
@@ -870,5 +887,11 @@ dl {
   .metric-grid,
   .room-hub-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .room-submenu {
+    animation: none;
   }
 }

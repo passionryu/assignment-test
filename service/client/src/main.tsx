@@ -393,7 +393,6 @@ function HomeView({
             <UsersRound size={24} />
           </div>
           <div className="metric-grid">
-            <Metric label="참여 방" value={`${rooms.length}개`} />
             <Metric label="멤버" value={selectedRoom ? `${selectedRoom.memberCount}명` : "-"} />
             <Metric label="미확인 채팅" value={selectedRoom ? `${selectedRoom.unreadChatCount}개` : "-"} />
             <Metric label="승인 대기 미션" value={selectedRoom ? `${selectedRoom.pendingMissionCount}개` : "-"} />
