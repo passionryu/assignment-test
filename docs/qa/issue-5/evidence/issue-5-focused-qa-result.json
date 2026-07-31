@@ -1,0 +1,160 @@
+{
+  "status": "PASS",
+  "checkedAt": "2026-07-31T07:36:58.361Z",
+  "target": {
+    "issue": "#5",
+    "branch": "feature-5",
+    "implementationCommit": "dfbf855 feat(rooms): 방 리스트 및 사이드바 구현",
+    "reviewCommit": "db0d2ef docs(review): 이슈 5 코드 리뷰 통과 기록",
+    "qaLevel": "Focused QA",
+    "checkedAtKst": "2026. 7. 31. 오후 4:36:54"
+  },
+  "focusedScope": [
+    "사이드바",
+    "홈",
+    "방 리스트",
+    "선택 방 하위 메뉴",
+    "설정 진입",
+    "방 내부 기능 placeholder"
+  ],
+  "excludedScope": [
+    "채팅/추억/미션/편지 실제 기능",
+    "주문/책 기능",
+    "모바일 상세 QA",
+    "전체 회귀"
+  ],
+  "checks": [
+    {
+      "group": "Screen Spec Match",
+      "name": "사이드바 구조 표시",
+      "passed": true,
+      "detail": "좌측 사이드바와 방 기준 메뉴 구성 확인",
+      "evidence": "evidence/focused-01-home-default-room.png"
+    },
+    {
+      "group": "Focused Function",
+      "name": "앱 실행 및 홈 표시",
+      "passed": true,
+      "detail": "홈 화면 정상 표시",
+      "evidence": "evidence/focused-01-home-default-room.png"
+    },
+    {
+      "group": "Focused Function",
+      "name": "최상단 방 기본 선택",
+      "passed": true,
+      "detail": "우리 둘의 100일이 기본 선택됨",
+      "evidence": "evidence/focused-01-home-default-room.png"
+    },
+    {
+      "group": "Screen Spec Match",
+      "name": "참여 방 목록 표시",
+      "passed": true,
+      "detail": "참여 방 3개가 사이드바에 표시됨",
+      "evidence": "evidence/focused-01-home-default-room.png"
+    },
+    {
+      "group": "Focused Function",
+      "name": "다른 방 선택 후 컨텍스트 변경",
+      "passed": true,
+      "detail": "선택 방과 본문 컨텍스트가 7월 가족으로 변경됨",
+      "evidence": "evidence/focused-02-selected-room-chat-placeholder.png"
+    },
+    {
+      "group": "Focused Function",
+      "name": "채팅 placeholder 이동",
+      "passed": true,
+      "detail": "채팅 골격 화면 표시",
+      "evidence": "evidence/focused-02-selected-room-chat-placeholder.png"
+    },
+    {
+      "group": "Focused Function",
+      "name": "추억 게시판 placeholder 이동",
+      "passed": true,
+      "detail": "추억 게시판 골격 화면 표시 및 선택 방 컨텍스트 유지",
+      "evidence": "evidence/focused-02-selected-room-chat-placeholder.png"
+    },
+    {
+      "group": "Focused Function",
+      "name": "미션 인증 placeholder 이동",
+      "passed": true,
+      "detail": "미션 인증 골격 화면 표시 및 선택 방 컨텍스트 유지",
+      "evidence": "evidence/focused-02-selected-room-chat-placeholder.png"
+    },
+    {
+      "group": "Focused Function",
+      "name": "편지 placeholder 이동",
+      "passed": true,
+      "detail": "편지 골격 화면 표시 및 선택 방 컨텍스트 유지",
+      "evidence": "evidence/focused-02-selected-room-chat-placeholder.png"
+    },
+    {
+      "group": "Screen Spec Match",
+      "name": "방 리스트 페이지 골격",
+      "passed": true,
+      "detail": "방 생성/초대/참여/관리 허브와 참여 방 카드 표시",
+      "evidence": "evidence/focused-03-room-list.png"
+    },
+    {
+      "group": "Focused Function",
+      "name": "방 리스트에서 방 선택 변경",
+      "passed": true,
+      "detail": "방 리스트에서 선택한 방이 사이드바와 홈 본문에 반영됨",
+      "evidence": "evidence/focused-03-room-list.png"
+    },
+    {
+      "group": "Focused Function",
+      "name": "설정 진입 유지",
+      "passed": true,
+      "detail": "Issue #4 설정 화면 골격으로 진입됨",
+      "evidence": "evidence/focused-04-settings-entry.png"
+    },
+    {
+      "group": "Runtime/UI",
+      "name": "앱 console/pageerror 없음",
+      "passed": true,
+      "detail": "favicon.ico 404는 브라우저 기본 부수 요청으로 분리. 앱 JS console error/pageerror 없음",
+      "evidence": ""
+    },
+    {
+      "group": "Runtime/UI",
+      "name": "명백한 UI 깨짐 없음",
+      "passed": true,
+      "detail": "1440px 웹 모니터 기준 가로 overflow 없음",
+      "evidence": "evidence/focused-04-settings-entry.png"
+    }
+  ],
+  "consoleEvents": [
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 404 (Not Found)",
+      "location": {
+        "url": "http://localhost:5173/favicon.ico"
+      },
+      "classification": "non-blocking favicon request"
+    }
+  ],
+  "screenshots": [
+    {
+      "caption": "홈 화면과 최상단 방 기본 선택",
+      "src": "evidence/focused-01-home-default-room.png"
+    },
+    {
+      "caption": "다른 방 선택 후 채팅 placeholder",
+      "src": "evidence/focused-02-selected-room-chat-placeholder.png"
+    },
+    {
+      "caption": "방 리스트 페이지 골격",
+      "src": "evidence/focused-03-room-list.png"
+    },
+    {
+      "caption": "설정 화면 진입",
+      "src": "evidence/focused-04-settings-entry.png"
+    }
+  ],
+  "failureEvidence": [],
+  "evidenceDir": "docs/qa/issue-5/evidence",
+  "nonBlockingNotes": [
+    "브라우저 기본 favicon.ico 요청 404가 1건 있었으나 앱 JS 오류, pageerror, API 오류가 아니므로 Focused QA non-blocking 노이즈로 분리했다.",
+    "성공 케이스이므로 영상과 trace 저장은 생략했다."
+  ]
+}
