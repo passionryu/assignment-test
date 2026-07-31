@@ -2,12 +2,21 @@ import { StrictMode, useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
 import {
   Bell,
+  BookOpen,
+  CheckCircle2,
+  ChevronDown,
+  FileText,
+  Home,
   KeyRound,
+  List,
   LogOut,
   Mail,
+  MessageCircle,
   Phone,
+  Settings,
   ShieldAlert,
   UserRound,
+  UsersRound,
 } from "lucide-react";
 import "./styles.css";
 
@@ -44,6 +53,7 @@ function App() {
   const [passwordForm, setPasswordForm] = useState({ currentPassword: "", newPassword: "" });
   const [message, setMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [profileEditOpen, setProfileEditOpen] = useState(false);
   const [logoutOpen, setLogoutOpen] = useState(false);
 
   const initials = useMemo(() => profile?.displayName.slice(0, 1) ?? "나", [profile]);
@@ -86,7 +96,8 @@ function App() {
         displayName: updatedProfile.displayName,
         profileImageUrl: updatedProfile.profileImageUrl ?? "",
       });
-      setMessage("회원 정보가 수정되었습니다.");
+      setProfileEditOpen(false);
+      setMessage("프로필이 수정되었습니다.");
     } catch (error) {
       setErrorMessage(toMessage(error));
     }
@@ -152,186 +163,203 @@ function App() {
   }
 
   return (
-    <main className="app-shell">
-      <section className="hero-bar">
-        <div>
-          <span className="eyebrow">Lv1 Profile & Settings</span>
-          <h1>내 프로필과 알림 설정</h1>
-          <p>계정 식별 정보는 확인만 하고, 수정 가능한 정보와 알림 정책만 조정합니다.</p>
-        </div>
-        <button className="ghost-button" type="button" onClick={() => void loadInitialData()}>
-          새로고침
-        </button>
-      </section>
+    <main className="workspace">
+      <Sidebar />
 
-      {message ? <div className="notice success">{message}</div> : null}
-      {errorMessage ? <div className="notice error">{errorMessage}</div> : null}
-
-      <section className="content-grid">
-        <article className="profile-card">
-          <div className="section-title">
-            <UserRound size={22} />
-            <h2>프로필</h2>
-          </div>
-          <div className="profile-main">
-            <div className="avatar">{profile?.profileImageUrl ? <img src={profile.profileImageUrl} alt="" /> : initials}</div>
-            <div className="profile-copy">
-              <strong>{profile?.displayName ?? "불러오는 중"}</strong>
-              <span>아이디 {profile?.username ?? "-"}</span>
-            </div>
-          </div>
-          <dl className="profile-meta">
-            <div>
-              <Mail size={18} />
-              <dt>이메일</dt>
-              <dd>{profile?.email ?? "-"}</dd>
-            </div>
-            <div>
-              <Phone size={18} />
-              <dt>전화번호</dt>
-              <dd>{profile?.phoneNumber ?? "-"}</dd>
-            </div>
-          </dl>
-          <div className="profile-actions">
-            <button className="primary-button" type="button" onClick={saveProfile}>
-              회원 정보 수정
-            </button>
-            <button className="outline-button danger-text" type="button" onClick={() => setLogoutOpen(true)}>
-              <LogOut size={17} />
-              로그아웃
-            </button>
-          </div>
-        </article>
-
-        <article className="settings-card">
-          <div className="section-title">
-            <UserRound size={22} />
-            <h2>회원 정보 수정</h2>
-          </div>
-          <label className="field">
-            이름
-            <input
-              value={profileForm.displayName}
-              onChange={(event) => setProfileForm({ ...profileForm, displayName: event.target.value })}
-              placeholder="이름"
-            />
-          </label>
-          <label className="field">
-            프로필 이미지 URL
-            <input
-              value={profileForm.profileImageUrl}
-              onChange={(event) => setProfileForm({ ...profileForm, profileImageUrl: event.target.value })}
-              placeholder="https://example.com/profile.png"
-            />
-          </label>
-          <div className="readonly-grid">
-            <span>아이디, 이메일, 전화번호는 초대와 식별에 사용하므로 수정하지 않습니다.</span>
-          </div>
-          <button className="primary-button compact" type="button" onClick={saveProfile}>
-            저장
-          </button>
-        </article>
-
-        <article className="settings-card">
-          <div className="section-title">
-            <KeyRound size={22} />
-            <h2>비밀번호 변경</h2>
-          </div>
-          <label className="field">
-            현재 비밀번호
-            <input
-              type="password"
-              value={passwordForm.currentPassword}
-              onChange={(event) => setPasswordForm({ ...passwordForm, currentPassword: event.target.value })}
-              placeholder="현재 비밀번호"
-            />
-          </label>
-          <label className="field">
-            새 비밀번호
-            <input
-              type="password"
-              value={passwordForm.newPassword}
-              onChange={(event) => setPasswordForm({ ...passwordForm, newPassword: event.target.value })}
-              placeholder="8자 이상"
-            />
-          </label>
-          <button className="primary-button compact" type="button" onClick={changePassword}>
-            변경
-          </button>
-        </article>
-
-        <article className="settings-card notification-panel">
-          <div className="section-title">
-            <Bell size={22} />
-            <h2>알림 설정</h2>
-          </div>
-          <div className="toggle-row all-toggle">
-            <div>
-              <strong>전체 알림</strong>
-              <span>ON이면 모든 개별 알림이 함께 켜집니다.</span>
-            </div>
-            <Toggle checked={settings?.allEnabled ?? true} onChange={toggleAllNotifications} />
-          </div>
-          <div className="toggle-grid">
-            <ToggleField
-              label="채팅"
-              checked={settings?.chatEnabled ?? true}
-              disabled={settings?.allEnabled ?? true}
-              onChange={(checked) => toggleIndividualNotification("chatEnabled", checked)}
-            />
-            <ToggleField
-              label="편지"
-              checked={settings?.letterEnabled ?? true}
-              disabled={settings?.allEnabled ?? true}
-              onChange={(checked) => toggleIndividualNotification("letterEnabled", checked)}
-            />
-            <ToggleField
-              label="추억"
-              checked={settings?.memoryEnabled ?? true}
-              disabled={settings?.allEnabled ?? true}
-              onChange={(checked) => toggleIndividualNotification("memoryEnabled", checked)}
-            />
-            <ToggleField
-              label="미션"
-              checked={settings?.missionEnabled ?? true}
-              disabled={settings?.allEnabled ?? true}
-              onChange={(checked) => toggleIndividualNotification("missionEnabled", checked)}
-            />
-          </div>
-        </article>
-
-        <article className="policy-card">
+      <section className="settings-page">
+        <header className="page-header">
           <div>
-            <h2>이용약관 / 개인정보 처리방침</h2>
-            <p>Lv1에서는 실제 문서 연결 전 안내 상태로 표시합니다.</p>
+            <h1>설정</h1>
+            <p>내 계정 정보를 먼저 확인한 뒤 필요한 설정을 조정한다.</p>
           </div>
-          <button className="outline-button" type="button">
-            보기
-          </button>
-        </article>
+        </header>
 
-        <article className="danger-card">
-          <div className="section-title danger-text">
-            <ShieldAlert size={22} />
-            <h2>위험 영역</h2>
-          </div>
-          <p>회원 탈퇴는 계정 영향이 크므로 별도 이슈에서 비밀번호 재확인과 최종 확인 흐름으로 구현합니다.</p>
-          <div className="danger-actions">
-            <button className="outline-button danger-text" type="button" onClick={() => setLogoutOpen(true)}>
-              로그아웃
+        {message ? <div className="notice success">{message}</div> : null}
+        {errorMessage ? <div className="notice error">{errorMessage}</div> : null}
+
+        <section className="settings-layout">
+          <article className="profile-panel">
+            <div className="panel-heading">
+              <div>
+                <span>프로필</span>
+                <h2>내 계정 정보</h2>
+              </div>
+              <UserRound size={24} />
+            </div>
+
+            <div className="profile-summary">
+              <div className="avatar">{profile?.profileImageUrl ? <img src={profile.profileImageUrl} alt="" /> : initials}</div>
+              <div>
+                <strong>{profile?.displayName ?? "불러오는 중"}</strong>
+                <span>아이디 {profile?.username ?? "-"}</span>
+              </div>
+            </div>
+
+            <dl className="profile-meta">
+              <div>
+                <Mail size={18} />
+                <dt>이메일</dt>
+                <dd>{profile?.email ?? "-"}</dd>
+              </div>
+              <div>
+                <Phone size={18} />
+                <dt>전화번호</dt>
+                <dd>{profile?.phoneNumber ?? "-"}</dd>
+              </div>
+            </dl>
+
+            <button className="primary-button full-width" type="button" onClick={() => setProfileEditOpen(true)}>
+              프로필 수정
             </button>
-            <button className="outline-button disabled" type="button" aria-disabled="true">
-              회원 탈퇴
-            </button>
-          </div>
-        </article>
+          </article>
+
+          <section className="settings-stack">
+            <article className="settings-row password-row">
+              <div className="row-title">
+                <KeyRound size={22} />
+                <div>
+                  <h2>비밀번호 변경</h2>
+                  <p>새 비밀번호는 8자 이상으로 입력한다.</p>
+                </div>
+              </div>
+              <div className="password-fields">
+                <input
+                  type="password"
+                  value={passwordForm.currentPassword}
+                  onChange={(event) => setPasswordForm({ ...passwordForm, currentPassword: event.target.value })}
+                  placeholder="현재 비밀번호"
+                />
+                <input
+                  type="password"
+                  value={passwordForm.newPassword}
+                  onChange={(event) => setPasswordForm({ ...passwordForm, newPassword: event.target.value })}
+                  placeholder="새 비밀번호"
+                />
+              </div>
+              <button className="primary-button row-button" type="button" onClick={changePassword}>
+                변경
+              </button>
+            </article>
+
+            <article className="settings-card notification-card">
+              <div className="panel-heading">
+                <div>
+                  <span>알림 설정</span>
+                  <h2>받을 알림을 선택</h2>
+                </div>
+                <Bell size={24} />
+              </div>
+
+              <div className="toggle-row all-toggle">
+                <div>
+                  <strong>전체 알림</strong>
+                  <span>ON이면 모든 개별 알림이 함께 켜진다.</span>
+                </div>
+                <Toggle checked={settings?.allEnabled ?? true} onChange={toggleAllNotifications} />
+              </div>
+
+              <div className="notification-grid" aria-label="개별 알림 설정">
+                <ToggleField
+                  label="채팅"
+                  checked={settings?.chatEnabled ?? true}
+                  disabled={settings?.allEnabled ?? true}
+                  onChange={(checked) => toggleIndividualNotification("chatEnabled", checked)}
+                />
+                <ToggleField
+                  label="편지"
+                  checked={settings?.letterEnabled ?? true}
+                  disabled={settings?.allEnabled ?? true}
+                  onChange={(checked) => toggleIndividualNotification("letterEnabled", checked)}
+                />
+                <ToggleField
+                  label="추억"
+                  checked={settings?.memoryEnabled ?? true}
+                  disabled={settings?.allEnabled ?? true}
+                  onChange={(checked) => toggleIndividualNotification("memoryEnabled", checked)}
+                />
+                <ToggleField
+                  label="미션"
+                  checked={settings?.missionEnabled ?? true}
+                  disabled={settings?.allEnabled ?? true}
+                  onChange={(checked) => toggleIndividualNotification("missionEnabled", checked)}
+                />
+              </div>
+            </article>
+
+            <article className="settings-row">
+              <div className="row-title">
+                <FileText size={22} />
+                <div>
+                  <h2>이용약관 / 개인정보 처리방침</h2>
+                  <p>Lv1에서는 문서 연결 전 안내 상태로 표시한다.</p>
+                </div>
+              </div>
+              <button className="outline-button row-button" type="button">
+                보기
+              </button>
+            </article>
+
+            <article className="settings-card danger-card">
+              <div className="panel-heading danger-heading">
+                <div>
+                  <span>위험 영역</span>
+                  <h2>계정 영향이 큰 작업</h2>
+                </div>
+                <ShieldAlert size={24} />
+              </div>
+              <p>회원 탈퇴는 실제 API 없이 자리만 표시하며, 별도 이슈에서 비밀번호 재확인과 최종 확인 흐름을 구현한다.</p>
+              <div className="danger-actions">
+                <button className="outline-button danger-text" type="button" onClick={() => setLogoutOpen(true)}>
+                  <LogOut size={17} />
+                  로그아웃
+                </button>
+                <button className="danger-button" type="button" aria-disabled="true">
+                  회원 탈퇴
+                </button>
+              </div>
+            </article>
+          </section>
+        </section>
       </section>
+
+      {profileEditOpen ? (
+        <div className="modal-backdrop" role="presentation">
+          <section className="modal" role="dialog" aria-modal="true" aria-labelledby="profile-edit-title">
+            <h2 id="profile-edit-title">프로필 수정</h2>
+            <p>이름과 프로필 이미지만 수정할 수 있다. 아이디, 이메일, 전화번호는 초대와 식별에 사용하므로 수정하지 않는다.</p>
+            <label className="field">
+              이름
+              <input
+                value={profileForm.displayName}
+                onChange={(event) => setProfileForm({ ...profileForm, displayName: event.target.value })}
+                placeholder="이름"
+              />
+            </label>
+            <label className="field">
+              프로필 이미지 URL
+              <input
+                value={profileForm.profileImageUrl}
+                onChange={(event) => setProfileForm({ ...profileForm, profileImageUrl: event.target.value })}
+                placeholder="https://example.com/profile.png"
+              />
+            </label>
+            <div className="modal-actions">
+              <button className="outline-button" type="button" onClick={() => setProfileEditOpen(false)}>
+                취소
+              </button>
+              <button className="primary-button" type="button" onClick={saveProfile}>
+                저장
+              </button>
+            </div>
+          </section>
+        </div>
+      ) : null}
 
       {logoutOpen ? (
         <div className="modal-backdrop" role="presentation">
           <section className="modal" role="dialog" aria-modal="true" aria-labelledby="logout-title">
             <h2 id="logout-title">로그아웃할까요?</h2>
-            <p>현재 계정에서 로그아웃됩니다. Lv1에서는 세션 종료 대신 확인 흐름만 제공합니다.</p>
+            <p>현재 계정에서 로그아웃된다. Lv1에서는 세션 종료 대신 확인 흐름만 제공한다.</p>
             <div className="modal-actions">
               <button className="outline-button" type="button" onClick={() => setLogoutOpen(false)}>
                 취소
@@ -344,6 +372,67 @@ function App() {
         </div>
       ) : null}
     </main>
+  );
+}
+
+function Sidebar() {
+  return (
+    <aside className="sidebar" aria-label="기록방 메뉴">
+      <div className="sidebar-brand">
+        <strong>기록방</strong>
+        <span>방 기준 메뉴</span>
+      </div>
+
+      <nav className="nav-list">
+        <a className="nav-item" href="#home">
+          <Home size={18} />
+          홈
+        </a>
+        <a className="nav-item" href="#rooms">
+          <List size={18} />
+          방 리스트
+        </a>
+
+        <div className="selected-room">
+          <button className="room-button" type="button">
+            <span>우리 둘의 100일</span>
+            <ChevronDown size={16} />
+          </button>
+          <div className="room-submenu">
+            <a href="#chat">
+              <MessageCircle size={16} />
+              채팅
+            </a>
+            <a href="#memories">
+              <BookOpen size={16} />
+              추억 게시판
+            </a>
+            <a href="#missions">
+              <CheckCircle2 size={16} />
+              미션 인증
+            </a>
+            <a href="#letters">
+              <Mail size={16} />
+              편지
+            </a>
+          </div>
+        </div>
+
+        <a className="nav-item muted" href="#family">
+          <UsersRound size={18} />
+          7월 가족
+        </a>
+        <a className="nav-item muted" href="#class">
+          <UsersRound size={18} />
+          여름 프로젝트반
+        </a>
+      </nav>
+
+      <a className="nav-item settings-active" href="#settings">
+        <Settings size={18} />
+        설정
+      </a>
+    </aside>
   );
 }
 
