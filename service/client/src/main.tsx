@@ -253,47 +253,116 @@ const demoNotifications: NotificationItem[] = [
 
 const demoCalendar: CalendarResponse = {
   month: currentMonth,
-  selectedDate: todayDateKey(),
+  selectedDate: monthDateKey(1),
   days: [
-    {
-      date: todayDateKey(),
-      totalCount: 4,
-      chatCount: 2,
-      memoryCount: 1,
-      missionCount: 1,
-      letterCount: 0,
-      rooms: [
-        { roomId: 1, roomName: "우리 둘의 100일", totalCount: 3, chatCount: 2, memoryCount: 0, missionCount: 1, letterCount: 0 },
-        { roomId: 2, roomName: "7월 가족", totalCount: 1, chatCount: 0, memoryCount: 1, missionCount: 0, letterCount: 0 },
-      ],
-    },
-    {
-      date: offsetDateKey(-1),
-      totalCount: 4,
-      chatCount: 1,
-      memoryCount: 0,
-      missionCount: 1,
-      letterCount: 2,
-      rooms: [
-        { roomId: 2, roomName: "7월 가족", totalCount: 3, chatCount: 0, memoryCount: 0, missionCount: 1, letterCount: 2 },
-        { roomId: 3, roomName: "여름 프로젝트반", totalCount: 1, chatCount: 1, memoryCount: 0, missionCount: 0, letterCount: 0 },
-      ],
-    },
-    {
-      date: offsetDateKey(-2),
-      totalCount: 4,
-      chatCount: 0,
-      memoryCount: 1,
-      missionCount: 2,
-      letterCount: 1,
-      rooms: [
-        { roomId: 1, roomName: "우리 둘의 100일", totalCount: 1, chatCount: 0, memoryCount: 1, missionCount: 0, letterCount: 0 },
-        { roomId: 2, roomName: "7월 가족", totalCount: 2, chatCount: 0, memoryCount: 0, missionCount: 1, letterCount: 1 },
-        { roomId: 3, roomName: "여름 프로젝트반", totalCount: 1, chatCount: 0, memoryCount: 0, missionCount: 1, letterCount: 0 },
-      ],
-    },
+    demoCalendarDay(1, [
+      demoCalendarRoom(1, "우리 둘의 100일", { chatCount: 2, missionCount: 1 }),
+      demoCalendarRoom(2, "7월 가족", { memoryCount: 1 }),
+    ]),
+    demoCalendarDay(3, [
+      demoCalendarRoom(1, "우리 둘의 100일", { chatCount: 1, missionCount: 1 }),
+      demoCalendarRoom(2, "7월 가족", { chatCount: 1, letterCount: 1 }),
+      demoCalendarRoom(3, "여름 프로젝트반", { memoryCount: 1 }),
+    ]),
+    demoCalendarDay(5, [
+      demoCalendarRoom(1, "우리 둘의 100일", { memoryCount: 1, letterCount: 1 }),
+      demoCalendarRoom(2, "7월 가족", { missionCount: 1 }),
+    ]),
+    demoCalendarDay(7, [
+      demoCalendarRoom(1, "우리 둘의 100일", { chatCount: 1 }),
+      demoCalendarRoom(2, "7월 가족", { memoryCount: 1 }),
+      demoCalendarRoom(3, "여름 프로젝트반", { missionCount: 1, letterCount: 1 }),
+    ]),
+    demoCalendarDay(8, [
+      demoCalendarRoom(2, "7월 가족", { chatCount: 1, letterCount: 1 }),
+    ]),
+    demoCalendarDay(10, [
+      demoCalendarRoom(1, "우리 둘의 100일", { chatCount: 1, memoryCount: 1, missionCount: 1 }),
+      demoCalendarRoom(2, "7월 가족", { chatCount: 1, missionCount: 1 }),
+      demoCalendarRoom(3, "여름 프로젝트반", { memoryCount: 1 }),
+    ]),
+    demoCalendarDay(12, [
+      demoCalendarRoom(1, "우리 둘의 100일", { memoryCount: 1, letterCount: 1 }),
+      demoCalendarRoom(3, "여름 프로젝트반", { chatCount: 1, missionCount: 1 }),
+    ]),
+    demoCalendarDay(14, [
+      demoCalendarRoom(1, "우리 둘의 100일", { chatCount: 1, missionCount: 1 }),
+      demoCalendarRoom(2, "7월 가족", { memoryCount: 1, letterCount: 1 }),
+      demoCalendarRoom(3, "여름 프로젝트반", { letterCount: 1 }),
+    ]),
+    demoCalendarDay(15, [
+      demoCalendarRoom(2, "7월 가족", { chatCount: 1, memoryCount: 1 }),
+    ]),
+    demoCalendarDay(17, [
+      demoCalendarRoom(1, "우리 둘의 100일", { chatCount: 1, memoryCount: 1, missionCount: 1, letterCount: 1 }),
+      demoCalendarRoom(3, "여름 프로젝트반", { missionCount: 1 }),
+    ]),
+    demoCalendarDay(19, [
+      demoCalendarRoom(1, "우리 둘의 100일", { memoryCount: 1 }),
+      demoCalendarRoom(3, "여름 프로젝트반", { chatCount: 1, letterCount: 1 }),
+    ]),
+    demoCalendarDay(21, [
+      demoCalendarRoom(2, "7월 가족", { chatCount: 1, memoryCount: 1, missionCount: 1, letterCount: 1 }),
+      demoCalendarRoom(3, "여름 프로젝트반", { memoryCount: 1 }),
+    ]),
+    demoCalendarDay(22, [
+      demoCalendarRoom(1, "우리 둘의 100일", { chatCount: 1, letterCount: 1 }),
+    ]),
+    demoCalendarDay(24, [
+      demoCalendarRoom(1, "우리 둘의 100일", { memoryCount: 1, missionCount: 1 }),
+      demoCalendarRoom(3, "여름 프로젝트반", { chatCount: 1, letterCount: 1 }),
+    ]),
+    demoCalendarDay(26, [
+      demoCalendarRoom(2, "7월 가족", { chatCount: 1, missionCount: 1, letterCount: 1 }),
+    ]),
+    demoCalendarDay(28, [
+      demoCalendarRoom(1, "우리 둘의 100일", { chatCount: 1, missionCount: 1, letterCount: 1 }),
+      demoCalendarRoom(2, "7월 가족", { memoryCount: 1 }),
+      demoCalendarRoom(3, "여름 프로젝트반", { memoryCount: 1, missionCount: 1 }),
+    ]),
+    demoCalendarDay(29, [
+      demoCalendarRoom(2, "7월 가족", { chatCount: 1, memoryCount: 1 }),
+      demoCalendarRoom(3, "여름 프로젝트반", { memoryCount: 1, letterCount: 1 }),
+    ]),
+    demoCalendarDay(31, [
+      demoCalendarRoom(1, "우리 둘의 100일", { memoryCount: 1, missionCount: 1 }),
+      demoCalendarRoom(3, "여름 프로젝트반", { chatCount: 1, letterCount: 1 }),
+    ]),
   ],
 };
+
+function demoCalendarRoom(
+  roomId: number,
+  roomName: string,
+  counts: Partial<Pick<CalendarRoomActivity, "chatCount" | "memoryCount" | "missionCount" | "letterCount">>,
+): CalendarRoomActivity {
+  const chatCount = counts.chatCount ?? 0;
+  const memoryCount = counts.memoryCount ?? 0;
+  const missionCount = counts.missionCount ?? 0;
+  const letterCount = counts.letterCount ?? 0;
+
+  return {
+    roomId,
+    roomName,
+    totalCount: chatCount + memoryCount + missionCount + letterCount,
+    chatCount,
+    memoryCount,
+    missionCount,
+    letterCount,
+  };
+}
+
+function demoCalendarDay(day: number, rooms: CalendarRoomActivity[]): CalendarDayActivity {
+  return {
+    date: monthDateKey(day),
+    totalCount: rooms.reduce((sum, room) => sum + room.totalCount, 0),
+    chatCount: rooms.reduce((sum, room) => sum + room.chatCount, 0),
+    memoryCount: rooms.reduce((sum, room) => sum + room.memoryCount, 0),
+    missionCount: rooms.reduce((sum, room) => sum + room.missionCount, 0),
+    letterCount: rooms.reduce((sum, room) => sum + room.letterCount, 0),
+    rooms,
+  };
+}
 
 function App() {
   const [profile, setProfile] = useState<MemberProfile | null>(null);
@@ -1547,6 +1616,10 @@ function relativeTime(value: string): string {
 
 function todayDateKey(): string {
   return offsetDateKey(0);
+}
+
+function monthDateKey(day: number): string {
+  return `${currentMonth}-${`${day}`.padStart(2, "0")}`;
 }
 
 function offsetDateKey(offsetDays: number): string {
