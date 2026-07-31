@@ -1,6 +1,8 @@
-package com.recordroom.room
+package com.recordroom.room.service
 
-import com.recordroom.member.MemberService
+import com.recordroom.member.service.MemberService
+import com.recordroom.room.model.RoomsResponse
+import com.recordroom.room.repository.RoomRepository
 import org.springframework.stereotype.Service
 
 @Service

@@ -86,7 +86,6 @@ dl {
 }
 
 .nav-item,
-.room-button,
 .room-submenu button {
   min-height: 44px;
   display: flex;
@@ -120,24 +119,37 @@ dl {
   color: #b9c6d7;
 }
 
-.selected-room {
+.room-entry {
   display: grid;
   gap: 4px;
-  margin: 8px 0;
 }
 
-.room-button {
-  width: 100%;
-  justify-content: space-between;
-  border: 0;
+.selected-room {
+  margin: 4px 0;
+}
+
+.room-list-item {
+  justify-content: flex-start;
+}
+
+.room-list-item span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.room-list-item svg:last-child {
+  margin-left: auto;
+}
+
+.room-list-item.room-selected {
   background: #ffffff;
   color: #263850;
 }
 
-.room-button span {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.room-list-item.room-selected svg {
+  color: #f04f95;
 }
 
 .room-submenu {
@@ -176,7 +188,7 @@ dl {
 }
 
 .settings-active .count-badge,
-.room-button .count-badge {
+.room-list-item .count-badge {
   background: #ffffff;
   color: #f04f95;
 }

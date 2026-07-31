@@ -1,4 +1,4 @@
-package com.recordroom.room
+package com.recordroom.room.model
 
 data class RoomsResponse(
     val rooms: List<RoomSummaryResponse>,

@@ -55,7 +55,7 @@ Lv1의 목표는 외부 인쇄 주문 연동 이전 단계의 콘텐츠 서비�
 | API | REST JSON | curl 1차 검증이 쉽고 과제 범위에 충분하다. |
 | Persistence | PostgreSQL | Docker 환경에서 재현 가능하고 관계형 도메인에 적합하다. |
 | Migration | Flyway | DB 스키마 변경 이력을 명확히 남긴다. |
-| ORM | Spring Data JPA | MVP 범위에서 CRUD와 관계 조회 구현 속도가 빠르다. |
+| ORM / Query | Spring Data JPA, QueryDSL | 단순 저장은 JPA로 처리하고 조인/집계 조회는 QueryDSL로 명확하게 표현한다. |
 | API Docs | springdoc-openapi | API 계약 확인과 추후 README 연결이 쉽다. |
 | Client | React, Vite, TypeScript | 화면 정의서 기반 UI 구현 속도와 타입 안정성 균형이 좋다. |
 | Client Data | TanStack Query | 서버 상태, loading, error, refetch 상태를 일관되게 관리한다. |
@@ -99,6 +99,30 @@ Backend는 다음 계층을 기본으로 한다.
 ```text
 Controller -> Application Service -> Reader / Checker / Recorder / Updater -> Repository
 ```
+
+도메인 패키지는 책임별 하위 패키지로 정리한다.
+
+```text
+com.recordroom.{domain}/
+  controller/
+  service/
+  repository/
+  model/
+```
+
+적용 기준:
+
+- `controller`: HTTP endpoint
+- `service`: 유스케이스 흐름 orchestration
+- `repository`: Spring Data JPA repository, QueryDSL 조회 구현, 저장소 adapter
+- `model`: Entity, request DTO, response DTO, projection
+
+데이터 접근은 JPA + QueryDSL을 기준으로 한다.
+
+- 단순 단건 조회/저장은 Spring Data JPA repository를 사용한다.
+- 조건 조합, 조인, 집계가 필요한 목록 조회는 QueryDSL을 사용한다.
+- Flyway migration은 DB schema source of truth로 유지한다.
+- JPA entity mapping은 Flyway schema와 일치해야 한다.
 
 ### Controller
 

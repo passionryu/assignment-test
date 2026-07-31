@@ -1,4 +1,4 @@
-package com.recordroom.member
+package com.recordroom.member.model
 
 data class MemberProfileResponse(
     val id: Long,

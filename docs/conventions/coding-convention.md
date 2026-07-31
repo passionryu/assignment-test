@@ -26,6 +26,37 @@
 
 Controller에는 비즈니스 규칙, 저장소 호출, 외부 연동, 정책 검증을 넣지 않는다.
 
+## Backend Package Rule
+
+도메인 패키지는 책임별 하위 패키지를 둔다.
+
+```text
+com.recordroom.{domain}/
+  controller/
+  service/
+  repository/
+  model/
+```
+
+적용 기준:
+
+- `controller`: HTTP endpoint와 request/response 연결
+- `service`: 유스케이스 흐름 orchestration
+- `repository`: JPA repository, QueryDSL 조회 구현, 저장소 adapter
+- `model`: Entity, request DTO, response DTO, projection
+
+단순 health check처럼 도메인 모델이 없는 영역은 `controller`만 둘 수 있다.
+
+## Persistence Rule
+
+백엔드 데이터 접근은 JPA + QueryDSL을 기준으로 한다.
+
+- 단순 단건 조회/저장은 Spring Data JPA repository를 우선 사용한다.
+- 조건 조합, 조인, 집계가 필요한 조회는 QueryDSL 기반 repository 구현으로 작성한다.
+- Flyway migration은 유지하며, JPA entity는 migration schema와 일치해야 한다.
+- 고정 seed ID와 런타임 자동 생성 ID가 충돌하지 않도록 identity sequence 보정 기준을 유지한다.
+- 직접 SQL/JdbcTemplate은 migration, seed, health smoke처럼 인프라 성격이 강한 영역에 제한한다.
+
 ## Service Orchestration
 
 Service의 메인 메서드는 유스케이스 흐름이 보이게 작성한다.

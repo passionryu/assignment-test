@@ -1,16 +1,26 @@
-package com.recordroom.member
+package com.recordroom.member.service
 
 import com.recordroom.common.ApiException
+import com.recordroom.member.model.ChangePasswordRequest
+import com.recordroom.member.model.ChangePasswordResponse
+import com.recordroom.member.model.MemberProfileResponse
+import com.recordroom.member.model.NotificationSettingsResponse
+import com.recordroom.member.model.UpdateNotificationSettingsRequest
+import com.recordroom.member.model.UpdateProfileRequest
+import com.recordroom.member.repository.MemberRepository
 import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
 
 @Service
+@Transactional(readOnly = true)
 class MemberService(
     private val memberRepository: MemberRepository,
 ) {
     fun getProfile(memberId: Long): MemberProfileResponse =
         memberRepository.findProfile(memberId) ?: memberNotFound()
 
+    @Transactional
     fun updateProfile(memberId: Long, request: UpdateProfileRequest): MemberProfileResponse {
         val displayName = request.displayName?.trim()
             ?.takeIf { it.isNotEmpty() }
@@ -31,6 +41,7 @@ class MemberService(
         return memberRepository.updateProfile(memberId, displayName, profileImageUrl) ?: memberNotFound()
     }
 
+    @Transactional
     fun changePassword(memberId: Long, request: ChangePasswordRequest): ChangePasswordResponse {
         val currentPassword = request.currentPassword?.trim()
             ?.takeIf { it.isNotEmpty() }
@@ -61,6 +72,7 @@ class MemberService(
             ?: memberRepository.upsertNotificationSettings(memberId, defaultNotificationSettings())
     }
 
+    @Transactional
     fun updateNotificationSettings(
         memberId: Long,
         request: UpdateNotificationSettingsRequest,

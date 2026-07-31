@@ -1,6 +1,8 @@
-package com.recordroom.room
+package com.recordroom.room.controller
 
-import com.recordroom.member.CurrentMemberResolver
+import com.recordroom.member.service.CurrentMemberResolver
+import com.recordroom.room.model.RoomsResponse
+import com.recordroom.room.service.RoomService
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.RequestHeader
 import org.springframework.web.bind.annotation.RequestMapping

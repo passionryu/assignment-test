@@ -279,7 +279,6 @@ function Sidebar({
   onSelectRoom: (roomId: number, nextView?: AppView) => void;
 }) {
   const selectedRoom = rooms.find((room) => room.id === selectedRoomId) ?? rooms[0] ?? null;
-  const otherRooms = rooms.filter((room) => room.id !== selectedRoom?.id);
 
   return (
     <aside className="sidebar" aria-label="기록방 메뉴">
@@ -300,40 +299,41 @@ function Sidebar({
             {pendingInvitationCount > 0 ? <span className="count-badge">{pendingInvitationCount}</span> : null}
           </button>
 
-          {selectedRoom ? (
-            <div className="selected-room">
-              <button className="room-button" type="button" onClick={() => onSelectRoom(selectedRoom.id, "home")}>
-                <span>{selectedRoom.name}</span>
-                <ChevronDown size={16} />
+          {rooms.map((room) => (
+            <div className={`room-entry ${room.id === selectedRoom?.id ? "selected-room" : ""}`} key={room.id}>
+              <button
+                className={`nav-item room-list-item ${room.id === selectedRoom?.id ? "room-selected" : "muted"}`}
+                type="button"
+                onClick={() => onSelectRoom(room.id, "home")}
+              >
+                <UsersRound size={18} />
+                <span>{room.name}</span>
+                {room.id === selectedRoom?.id ? <ChevronDown size={16} /> : null}
               </button>
-              <div className="room-submenu">
-                <button className={activeView === "chat" ? "active" : ""} type="button" onClick={() => onMove("chat")}>
-                  <MessageCircle size={16} />
-                  채팅
-                  {selectedRoom.unreadChatCount > 0 ? <span className="count-badge">{selectedRoom.unreadChatCount}</span> : null}
-                </button>
-                <button className={activeView === "memories" ? "active" : ""} type="button" onClick={() => onMove("memories")}>
-                  <BookOpen size={16} />
-                  추억 게시판
-                </button>
-                <button className={activeView === "missions" ? "active" : ""} type="button" onClick={() => onMove("missions")}>
-                  <CheckCircle2 size={16} />
-                  미션 인증
-                  {selectedRoom.pendingMissionCount > 0 ? <span className="count-badge">{selectedRoom.pendingMissionCount}</span> : null}
-                </button>
-                <button className={activeView === "letters" ? "active" : ""} type="button" onClick={() => onMove("letters")}>
-                  <Mail size={16} />
-                  편지
-                </button>
-              </div>
-            </div>
-          ) : null}
 
-          {otherRooms.map((room) => (
-            <button className="nav-item muted" type="button" key={room.id} onClick={() => onSelectRoom(room.id)}>
-              <UsersRound size={18} />
-              {room.name}
-            </button>
+              {room.id === selectedRoom?.id ? (
+                <div className="room-submenu">
+                  <button className={activeView === "chat" ? "active" : ""} type="button" onClick={() => onMove("chat")}>
+                    <MessageCircle size={16} />
+                    채팅
+                    {room.unreadChatCount > 0 ? <span className="count-badge">{room.unreadChatCount}</span> : null}
+                  </button>
+                  <button className={activeView === "memories" ? "active" : ""} type="button" onClick={() => onMove("memories")}>
+                    <BookOpen size={16} />
+                    추억 게시판
+                  </button>
+                  <button className={activeView === "missions" ? "active" : ""} type="button" onClick={() => onMove("missions")}>
+                    <CheckCircle2 size={16} />
+                    미션 인증
+                    {room.pendingMissionCount > 0 ? <span className="count-badge">{room.pendingMissionCount}</span> : null}
+                  </button>
+                  <button className={activeView === "letters" ? "active" : ""} type="button" onClick={() => onMove("letters")}>
+                    <Mail size={16} />
+                    편지
+                  </button>
+                </div>
+              ) : null}
+            </div>
           ))}
         </nav>
       </div>
