@@ -5,6 +5,7 @@ import {
   BookOpen,
   CheckCircle2,
   ChevronDown,
+  Clock,
   FileText,
   Home,
   KeyRound,
@@ -18,6 +19,7 @@ import {
   ShieldAlert,
   UserRound,
   UsersRound,
+  X,
 } from "lucide-react";
 import "./styles.css";
 
@@ -52,6 +54,30 @@ type RoomSummary = {
 type RoomsResponse = {
   rooms: RoomSummary[];
   pendingInvitationCount: number;
+};
+
+type NotificationType = "CHAT" | "LETTER" | "MEMORY" | "MISSION_APPROVAL_REQUEST" | "MISSION_PROGRESS";
+
+type NotificationTarget = {
+  type: "CHAT" | "LETTER" | "MEMORY" | "MISSION" | null;
+  id: number | null;
+  url: string;
+};
+
+type NotificationItem = {
+  id: number;
+  type: NotificationType;
+  roomId: number | null;
+  roomName: string | null;
+  actorName: string;
+  summary: string;
+  occurredAt: string;
+  read: boolean;
+  target: NotificationTarget;
+};
+
+type NotificationsResponse = {
+  items: NotificationItem[];
 };
 
 type ApiError = {
@@ -115,10 +141,59 @@ const demoRooms: RoomSummary[] = [
   },
 ];
 
+const demoNotifications: NotificationItem[] = [
+  {
+    id: 9001,
+    type: "MISSION_APPROVAL_REQUEST",
+    roomId: 1,
+    roomName: "우리 둘의 100일",
+    actorName: "민지",
+    summary: "미션 인증 동의를 기다립니다.",
+    occurredAt: new Date(Date.now() - 8 * 60 * 1000).toISOString(),
+    read: false,
+    target: { type: "MISSION", id: 101, url: "/rooms/1/missions?targetId=101" },
+  },
+  {
+    id: 9002,
+    type: "CHAT",
+    roomId: 1,
+    roomName: "우리 둘의 100일",
+    actorName: "민지",
+    summary: "새 채팅을 보냈습니다.",
+    occurredAt: new Date(Date.now() - 22 * 60 * 1000).toISOString(),
+    read: false,
+    target: { type: "CHAT", id: 201, url: "/rooms/1/chat?targetId=201" },
+  },
+  {
+    id: 9003,
+    type: "MEMORY",
+    roomId: 2,
+    roomName: "7월 가족",
+    actorName: "아버지",
+    summary: "가족 여행 사진을 올렸습니다.",
+    occurredAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+    read: true,
+    target: { type: "MEMORY", id: 301, url: "/rooms/2/memories?targetId=301" },
+  },
+  {
+    id: 9004,
+    type: "LETTER",
+    roomId: 3,
+    roomName: "여름 프로젝트반",
+    actorName: "지훈",
+    summary: "보낸 편지가 도착했습니다.",
+    occurredAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+    read: false,
+    target: { type: "LETTER", id: 401, url: "/rooms/3/letters?targetId=401" },
+  },
+];
+
 function App() {
   const [profile, setProfile] = useState<MemberProfile | null>(null);
   const [settings, setSettings] = useState<NotificationSettings | null>(null);
   const [rooms, setRooms] = useState<RoomSummary[]>([]);
+  const [latestNotifications, setLatestNotifications] = useState<NotificationItem[]>([]);
+  const [allNotifications, setAllNotifications] = useState<NotificationItem[]>([]);
   const [pendingInvitationCount, setPendingInvitationCount] = useState(0);
   const [selectedRoomId, setSelectedRoomId] = useState<number | null>(null);
   const [activeView, setActiveView] = useState<AppView>("home");
@@ -128,6 +203,7 @@ function App() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [profileEditOpen, setProfileEditOpen] = useState(false);
   const [logoutOpen, setLogoutOpen] = useState(false);
+  const [notificationsModalOpen, setNotificationsModalOpen] = useState(false);
 
   const selectedRoom = useMemo(
     () => rooms.find((room) => room.id === selectedRoomId) ?? rooms[0] ?? null,
@@ -147,10 +223,12 @@ function App() {
         apiGet<NotificationSettings>("/members/me/notification-settings"),
         apiGet<RoomsResponse>("/rooms"),
       ]);
+      const latestResponse = await safeApiGet<NotificationsResponse>("/notifications/latest");
       const visibleRooms = roomsResponse.rooms.length > 0 ? roomsResponse.rooms : demoRooms;
       setProfile(profileResponse);
       setSettings(settingsResponse);
       setRooms(visibleRooms);
+      setLatestNotifications(latestResponse?.items.length ? latestResponse.items : demoNotifications.slice(0, 3));
       setPendingInvitationCount(roomsResponse.pendingInvitationCount);
       setProfileForm({
         displayName: profileResponse.displayName,
@@ -161,6 +239,8 @@ function App() {
       setProfile(demoProfile);
       setSettings(demoSettings);
       setRooms(demoRooms);
+      setLatestNotifications(demoNotifications.slice(0, 3));
+      setAllNotifications(demoNotifications);
       setPendingInvitationCount(1);
       setProfileForm({
         displayName: demoProfile.displayName,
@@ -168,6 +248,40 @@ function App() {
       });
       setSelectedRoomId((currentSelectedRoomId) => currentSelectedRoomId ?? demoRooms[0].id);
     }
+  }
+
+  async function openNotificationsModal() {
+    setNotificationsModalOpen(true);
+    const response = await safeApiGet<NotificationsResponse>("/notifications?page=0&size=20");
+    setAllNotifications(response?.items.length ? response.items : demoNotifications);
+  }
+
+  async function handleNotificationClick(notification: NotificationItem) {
+    setMessage(null);
+    setErrorMessage(null);
+
+    if (notification.id < 9000) {
+      const readResponse = await safeApiRequest<{ read: boolean }>(`/notifications/${notification.id}/read`, { method: "POST" });
+      if (readResponse?.read) {
+        markNotificationAsRead(notification.id);
+      }
+    } else {
+      markNotificationAsRead(notification.id);
+    }
+
+    if (notification.roomId) {
+      setSelectedRoomId(notification.roomId);
+    }
+
+    setActiveView(notificationTargetView(notification));
+    setNotificationsModalOpen(false);
+  }
+
+  function markNotificationAsRead(notificationId: number) {
+    const markAsRead = (item: NotificationItem) => (item.id === notificationId ? { ...item, read: true } : item);
+
+    setLatestNotifications((current) => current.map(markAsRead));
+    setAllNotifications((current) => current.map(markAsRead));
   }
 
   async function saveProfile() {
@@ -278,7 +392,16 @@ function App() {
         {message ? <div className="notice success">{message}</div> : null}
         {errorMessage ? <div className="notice error">{errorMessage}</div> : null}
 
-        {activeView === "home" ? <HomeView profile={profile} selectedRoom={selectedRoom} rooms={rooms} initials={initials} /> : null}
+        {activeView === "home" ? (
+          <HomeView
+            profile={profile}
+            selectedRoom={selectedRoom}
+            initials={initials}
+            latestNotifications={latestNotifications}
+            onOpenNotifications={openNotificationsModal}
+            onNotificationClick={handleNotificationClick}
+          />
+        ) : null}
         {activeView === "rooms" ? (
           <RoomsView
             rooms={rooms}
@@ -318,6 +441,14 @@ function App() {
       ) : null}
 
       {logoutOpen ? <LogoutModal onClose={() => setLogoutOpen(false)} /> : null}
+
+      {notificationsModalOpen ? (
+        <NotificationsModal
+          notifications={allNotifications.length > 0 ? allNotifications : latestNotifications}
+          onNotificationClick={handleNotificationClick}
+          onClose={() => setNotificationsModalOpen(false)}
+        />
+      ) : null}
     </main>
   );
 }
@@ -408,13 +539,17 @@ function Sidebar({
 function HomeView({
   profile,
   selectedRoom,
-  rooms,
   initials,
+  latestNotifications,
+  onOpenNotifications,
+  onNotificationClick,
 }: {
   profile: MemberProfile | null;
   selectedRoom: RoomSummary | null;
-  rooms: RoomSummary[];
   initials: string;
+  latestNotifications: NotificationItem[];
+  onOpenNotifications: () => void;
+  onNotificationClick: (notification: NotificationItem) => void;
 }) {
   return (
     <>
@@ -443,7 +578,21 @@ function HomeView({
           </div>
         </article>
 
-        <article className="dashboard-card">
+        <article className="dashboard-card latest-notification-card">
+          <div className="panel-heading compact-heading">
+            <div>
+              <span>최신 알림</span>
+              <h2>지금 확인할 일</h2>
+            </div>
+            <button className="text-button" type="button" onClick={onOpenNotifications}>
+              전체 보기
+            </button>
+          </div>
+
+          <NotificationList notifications={latestNotifications.slice(0, 3)} onNotificationClick={onNotificationClick} />
+        </article>
+
+        <article className="dashboard-card wide-card">
           <div className="panel-heading">
             <div>
               <span>선택된 방</span>
@@ -828,6 +977,81 @@ function LogoutModal({ onClose }: { onClose: () => void }) {
   );
 }
 
+function NotificationsModal({
+  notifications,
+  onNotificationClick,
+  onClose,
+}: {
+  notifications: NotificationItem[];
+  onNotificationClick: (notification: NotificationItem) => void;
+  onClose: () => void;
+}) {
+  return (
+    <div className="modal-backdrop" role="presentation">
+      <section className="modal notification-modal" role="dialog" aria-modal="true" aria-labelledby="notifications-title">
+        <div className="modal-title-row">
+          <div>
+            <h2 id="notifications-title">전체 알림</h2>
+            <p>방별 채팅, 편지, 추억, 미션 알림을 최신순으로 확인한다.</p>
+          </div>
+          <button className="icon-button" type="button" aria-label="닫기" onClick={onClose}>
+            <X size={18} />
+          </button>
+        </div>
+
+        <NotificationList notifications={notifications} onNotificationClick={onNotificationClick} dense />
+      </section>
+    </div>
+  );
+}
+
+function NotificationList({
+  notifications,
+  onNotificationClick,
+  dense = false,
+}: {
+  notifications: NotificationItem[];
+  onNotificationClick: (notification: NotificationItem) => void;
+  dense?: boolean;
+}) {
+  if (notifications.length === 0) {
+    return (
+      <div className="empty-notifications">
+        <Bell size={22} />
+        <span>확인할 최신 알림이 없습니다.</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className={`notification-list ${dense ? "dense" : ""}`}>
+      {notifications.map((notification) => (
+        <button
+          className={`notification-item ${notification.read ? "read" : "unread"}`}
+          type="button"
+          key={notification.id}
+          onClick={() => onNotificationClick(notification)}
+        >
+          <span className={`notification-type ${notification.type.toLowerCase().replace(/_/g, "-")}`}>
+            {notificationIcon(notification.type)}
+            {notificationTypeLabel(notification.type)}
+          </span>
+          <span className="notification-body">
+            <strong>{notification.roomName ?? "기록방"}</strong>
+            <span>
+              {notification.actorName} · {notification.summary}
+            </span>
+          </span>
+          <span className="notification-time">
+            <Clock size={14} />
+            {relativeTime(notification.occurredAt)}
+          </span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
 function ToggleField({
   label,
   checked,
@@ -917,8 +1141,61 @@ function roomFeatureCopy(kind: Exclude<AppView, "home" | "rooms" | "settings">) 
   };
 }
 
+function notificationTargetView(notification: NotificationItem): AppView {
+  if (notification.type === "CHAT" || notification.target.type === "CHAT") return "chat";
+  if (notification.type === "LETTER" || notification.target.type === "LETTER") return "letters";
+  if (notification.type === "MEMORY" || notification.target.type === "MEMORY") return "memories";
+  return "missions";
+}
+
+function notificationTypeLabel(type: NotificationType): string {
+  if (type === "CHAT") return "채팅";
+  if (type === "LETTER") return "편지";
+  if (type === "MEMORY") return "추억";
+  return "미션";
+}
+
+function notificationIcon(type: NotificationType) {
+  if (type === "CHAT") return <MessageCircle size={14} />;
+  if (type === "LETTER") return <Mail size={14} />;
+  if (type === "MEMORY") return <BookOpen size={14} />;
+  return <CheckCircle2 size={14} />;
+}
+
+function relativeTime(value: string): string {
+  const occurredAt = new Date(value).getTime();
+  const diffMs = Date.now() - occurredAt;
+  if (Number.isNaN(occurredAt) || diffMs < 0) return "방금 전";
+
+  const minutes = Math.floor(diffMs / 60000);
+  if (minutes < 1) return "방금 전";
+  if (minutes < 60) return `${minutes}분 전`;
+
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}시간 전`;
+
+  const days = Math.floor(hours / 24);
+  return `${days}일 전`;
+}
+
 async function apiGet<T>(path: string): Promise<T> {
   return apiRequest<T>(path, { method: "GET" });
+}
+
+async function safeApiGet<T>(path: string): Promise<T | null> {
+  try {
+    return await apiGet<T>(path);
+  } catch {
+    return null;
+  }
+}
+
+async function safeApiRequest<T>(path: string, options: { method: string; body?: unknown }): Promise<T | null> {
+  try {
+    return await apiRequest<T>(path, options);
+  } catch {
+    return null;
+  }
 }
 
 async function apiRequest<T>(path: string, options: { method: string; body?: unknown }): Promise<T> {

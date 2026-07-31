@@ -27,6 +27,7 @@ class LocalSeedRunner(
             seedRooms()
             seedRoomMembers()
             seedNotificationSettings()
+            seedNotifications()
             syncIdentitySequences()
         }.onSuccess {
             log.info("[시드 데이터] 로컬 시드 생성 완료. who=system, what=LocalSeedRunner.run, requestData=profile:local, reason=completed")
@@ -121,9 +122,114 @@ class LocalSeedRunner(
         )
     }
 
+    // 메인 최신 알림과 전체 알림 모달을 확인할 수 있도록 타입별 알림을 준비한다.
+    private fun seedNotifications() {
+        jdbcTemplate.update(
+            """
+            insert into notifications (
+                id,
+                receiver_member_id,
+                room_id,
+                actor_member_id,
+                type,
+                title,
+                message,
+                target_type,
+                target_id,
+                occurred_date,
+                read_at,
+                created_at
+            )
+            values
+                (
+                    1,
+                    1,
+                    1,
+                    2,
+                    'MISSION_APPROVAL_REQUEST',
+                    '미션 인증 요청',
+                    '민지가 미션 인증 동의를 기다립니다.',
+                    'MISSION',
+                    101,
+                    current_date,
+                    null,
+                    now() - interval '8 minutes'
+                ),
+                (
+                    2,
+                    1,
+                    1,
+                    2,
+                    'CHAT',
+                    '새 채팅',
+                    '민지가 새 채팅을 보냈습니다.',
+                    'CHAT',
+                    201,
+                    current_date,
+                    null,
+                    now() - interval '22 minutes'
+                ),
+                (
+                    3,
+                    1,
+                    2,
+                    3,
+                    'MEMORY',
+                    '새 추억',
+                    '아버지가 가족 여행 사진을 올렸습니다.',
+                    'MEMORY',
+                    301,
+                    current_date,
+                    now() - interval '5 minutes',
+                    now() - interval '2 hours'
+                ),
+                (
+                    4,
+                    1,
+                    3,
+                    4,
+                    'LETTER',
+                    '새 편지',
+                    '지훈이 보낸 편지가 도착했습니다.',
+                    'LETTER',
+                    401,
+                    current_date - 1,
+                    null,
+                    now() - interval '1 day'
+                ),
+                (
+                    5,
+                    1,
+                    2,
+                    3,
+                    'MISSION_PROGRESS',
+                    '미션 동의율',
+                    '가족 미션 인증 동의율이 60%입니다.',
+                    'MISSION',
+                    102,
+                    current_date - 1,
+                    null,
+                    now() - interval '1 day 2 hours'
+                )
+            on conflict (id) do update set
+                receiver_member_id = excluded.receiver_member_id,
+                room_id = excluded.room_id,
+                actor_member_id = excluded.actor_member_id,
+                type = excluded.type,
+                title = excluded.title,
+                message = excluded.message,
+                target_type = excluded.target_type,
+                target_id = excluded.target_id,
+                occurred_date = excluded.occurred_date,
+                read_at = excluded.read_at,
+                created_at = excluded.created_at
+            """.trimIndent(),
+        )
+    }
+
     // 고정 ID 시드 이후 런타임 insert가 다음 ID를 자동 생성하도록 identity sequence를 보정한다.
     private fun syncIdentitySequences() {
-        listOf("members", "rooms", "room_members", "room_invitations").forEach { tableName ->
+        listOf("members", "rooms", "room_members", "room_invitations", "notifications").forEach { tableName ->
             jdbcTemplate.execute(
                 """
                 select setval(
