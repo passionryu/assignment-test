@@ -15,3 +15,47 @@ data class RoomSummaryResponse(
     val unreadChatCount: Int,
     val pendingMissionCount: Int,
 )
+
+data class CreateRoomRequest(
+    val name: String?,
+    val description: String?,
+    val type: String?,
+)
+
+data class CreateRoomResponse(
+    val id: Long,
+    val name: String,
+    val type: String,
+    val role: String,
+)
+
+data class CreateRoomInvitationRequest(
+    val email: String?,
+    val phoneNumber: String?,
+)
+
+data class CreateRoomInvitationResponse(
+    val id: Long,
+    val status: String,
+    val expiresAt: String,
+)
+
+data class PendingRoomInvitationsResponse(
+    val items: List<PendingRoomInvitationResponse>,
+)
+
+data class PendingRoomInvitationResponse(
+    val id: Long,
+    val roomId: Long,
+    val roomName: String,
+    val roomType: String,
+    val inviterName: String,
+    val createdAt: String,
+    val expiresAt: String,
+)
+
+data class RespondRoomInvitationResponse(
+    val id: Long,
+    val roomId: Long,
+    val status: String,
+)

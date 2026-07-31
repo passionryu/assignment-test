@@ -1,7 +1,9 @@
 import { StrictMode, useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
 import {
+  BadgeCheck,
   Bell,
+  BookImage,
   BookOpen,
   CalendarDays,
   CheckCircle2,
@@ -14,11 +16,11 @@ import {
   List,
   LogOut,
   Mail,
+  MailPlus,
   MessageCircle,
   PanelLeftClose,
   PanelLeftOpen,
   Phone,
-  Plus,
   Settings,
   ShieldAlert,
   UserRound,
@@ -55,9 +57,42 @@ type RoomSummary = {
   pendingMissionCount: number;
 };
 
+type CreateRoomForm = {
+  name: string;
+  type: RoomSummary["type"];
+  description: string;
+};
+
 type RoomsResponse = {
   rooms: RoomSummary[];
   pendingInvitationCount: number;
+};
+
+type CreateRoomResponse = {
+  id: number;
+  name: string;
+  type: RoomSummary["type"];
+  role: RoomSummary["role"];
+};
+
+type PendingRoomInvitation = {
+  id: number;
+  roomId: number;
+  roomName: string;
+  roomType: RoomSummary["type"];
+  inviterName: string;
+  createdAt: string;
+  expiresAt: string;
+};
+
+type PendingRoomInvitationsResponse = {
+  items: PendingRoomInvitation[];
+};
+
+type RespondRoomInvitationResponse = {
+  id: number;
+  roomId: number;
+  status: "ACCEPTED" | "DECLINED";
 };
 
 type NotificationType = "CHAT" | "LETTER" | "MEMORY" | "MISSION_APPROVAL_REQUEST" | "MISSION_PROGRESS";
@@ -116,7 +151,8 @@ type ApiError = {
   requestId: string;
 };
 
-type AppView = "home" | "rooms" | "chat" | "memories" | "missions" | "letters" | "settings";
+type RoomFeatureKind = "chat" | "memories" | "missions" | "letters";
+type AppView = "home" | "rooms" | "room" | "settings" | RoomFeatureKind;
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8080/api";
 const memberHeader = { "X-Member-Id": "1" };
@@ -169,6 +205,36 @@ const demoRooms: RoomSummary[] = [
     memberCount: 12,
     unreadChatCount: 3,
     pendingMissionCount: 0,
+  },
+];
+
+const demoPendingInvitations: PendingRoomInvitation[] = [
+  {
+    id: 1,
+    roomId: 4,
+    roomName: "민지의 여행 준비방",
+    roomType: "GROUP",
+    inviterName: "민지",
+    createdAt: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
+    expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+  },
+  {
+    id: 2,
+    roomId: 40,
+    roomName: "가족 여행 사진방",
+    roomType: "FAMILY",
+    inviterName: "아버지",
+    createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+    expiresAt: new Date(Date.now() + 6 * 24 * 60 * 60 * 1000).toISOString(),
+  },
+  {
+    id: 3,
+    roomId: 41,
+    roomName: "4학년 1반",
+    roomType: "GROUP",
+    inviterName: "지훈",
+    createdAt: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(),
+    expiresAt: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString(),
   },
 ];
 
@@ -409,6 +475,7 @@ function App() {
   const [rooms, setRooms] = useState<RoomSummary[]>([]);
   const [latestNotifications, setLatestNotifications] = useState<NotificationItem[]>([]);
   const [allNotifications, setAllNotifications] = useState<NotificationItem[]>([]);
+  const [pendingInvitations, setPendingInvitations] = useState<PendingRoomInvitation[]>([]);
   const [calendar, setCalendar] = useState<CalendarResponse | null>(null);
   const [selectedCalendarDate, setSelectedCalendarDate] = useState<string | null>(null);
   const [calendarRoomId, setCalendarRoomId] = useState<number | null>(null);
@@ -419,8 +486,11 @@ function App() {
   const [activeView, setActiveView] = useState<AppView>("home");
   const [profileForm, setProfileForm] = useState({ displayName: "", profileImageUrl: "" });
   const [passwordForm, setPasswordForm] = useState({ currentPassword: "", newPassword: "" });
+  const [createRoomForm, setCreateRoomForm] = useState<CreateRoomForm>({ name: "", type: "COUPLE", description: "" });
+  const [inviteContacts, setInviteContacts] = useState<Record<number, string>>({});
   const [message, setMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [roomFeedbackModal, setRoomFeedbackModal] = useState<{ title: string; message: string } | null>(null);
   const [profileEditOpen, setProfileEditOpen] = useState(false);
   const [logoutOpen, setLogoutOpen] = useState(false);
   const [notificationsModalOpen, setNotificationsModalOpen] = useState(false);
@@ -448,6 +518,7 @@ function App() {
       setSettings(settingsResponse);
       setRooms(visibleRooms);
       await loadLatestNotifications();
+      await loadPendingInvitations();
       await loadCalendarActivities(null);
       setPendingInvitationCount(roomsResponse.pendingInvitationCount);
       setProfileForm({
@@ -459,6 +530,7 @@ function App() {
       setProfile(demoProfile);
       setSettings(demoSettings);
       setRooms(demoRooms);
+      setPendingInvitations(demoPendingInvitations);
       setLatestNotifications(demoNotifications.filter((notification) => !notification.read).slice(0, 3));
       setAllNotifications(demoNotifications);
       setCalendar(demoCalendar);
@@ -475,6 +547,21 @@ function App() {
   async function loadLatestNotifications() {
     const latestResponse = await safeApiGet<NotificationsResponse>("/notifications/latest");
     setLatestNotifications(latestResponse?.items.length ? latestResponse.items : demoNotifications.filter((notification) => !notification.read).slice(0, 3));
+  }
+
+  async function loadRooms() {
+    const roomsResponse = await apiGet<RoomsResponse>("/rooms");
+    const visibleRooms = roomsResponse.rooms.length > 0 ? roomsResponse.rooms : demoRooms;
+    setRooms(visibleRooms);
+    setPendingInvitationCount(roomsResponse.pendingInvitationCount);
+    setSelectedRoomId((currentSelectedRoomId) => currentSelectedRoomId ?? visibleRooms[0]?.id ?? null);
+
+    return visibleRooms;
+  }
+
+  async function loadPendingInvitations() {
+    const response = await safeApiGet<PendingRoomInvitationsResponse>("/room-invitations/pending");
+    setPendingInvitations(response?.items ?? []);
   }
 
   async function loadCalendarActivities(nextRoomId: number | null) {
@@ -589,7 +676,15 @@ function App() {
     setActiveView(nextView);
   }
 
-  function moveToRoomFeature(roomId: number, view: Exclude<AppView, "home" | "rooms" | "settings">) {
+  function openRoomHome(roomId: number) {
+    setMessage(null);
+    setErrorMessage(null);
+    setSelectedRoomId(roomId);
+    setExpandedRoomId(roomId);
+    setActiveView("room");
+  }
+
+  function moveToRoomFeature(roomId: number, view: RoomFeatureKind) {
     setSelectedRoomId(roomId);
     setExpandedRoomId(roomId);
     setActiveView(view);
@@ -640,6 +735,82 @@ function App() {
     });
   }
 
+  async function createRoom() {
+    setMessage(null);
+    setErrorMessage(null);
+    setRoomFeedbackModal(null);
+    try {
+      const createdRoom = await apiRequest<CreateRoomResponse>("/rooms", {
+        method: "POST",
+        body: {
+          name: createRoomForm.name,
+          type: createRoomForm.type,
+          description: createRoomForm.description || null,
+        },
+      });
+      const nextRooms = await loadRooms();
+      await loadCalendarActivities(calendarRoomId);
+      setSelectedRoomId(createdRoom.id);
+      setExpandedRoomId(createdRoom.id);
+      setCreateRoomForm({ name: "", type: "COUPLE", description: "" });
+      setRoomFeedbackModal({
+        title: "방 생성 완료",
+        message: `${nextRooms.find((room) => room.id === createdRoom.id)?.name ?? createdRoom.name} 방을 만들었습니다.`,
+      });
+    } catch (error) {
+      setRoomFeedbackModal({ title: "방 생성 실패", message: toMessage(error) });
+    }
+  }
+
+  async function sendRoomInvitation(roomId: number) {
+    const contact = inviteContacts[roomId]?.trim() ?? "";
+    setMessage(null);
+    setErrorMessage(null);
+    setRoomFeedbackModal(null);
+
+    if (!contact) {
+      setRoomFeedbackModal({ title: "초대 실패", message: "초대할 이메일 또는 전화번호를 입력해 주세요." });
+      return;
+    }
+
+    try {
+      await apiRequest<{ id: number; status: string; expiresAt: string }>(`/rooms/${roomId}/invitations`, {
+        method: "POST",
+        body: contact.includes("@") ? { email: contact, phoneNumber: null } : { email: null, phoneNumber: contact },
+      });
+      setInviteContacts((current) => ({ ...current, [roomId]: "" }));
+      await loadRooms();
+      setRoomFeedbackModal({ title: "초대 완료", message: "초대를 보냈습니다." });
+    } catch (error) {
+      setRoomFeedbackModal({ title: "초대 실패", message: toMessage(error) });
+    }
+  }
+
+  async function respondInvitation(invitationId: number, action: "accept" | "decline") {
+    setMessage(null);
+    setErrorMessage(null);
+    setRoomFeedbackModal(null);
+    try {
+      const response = await apiRequest<RespondRoomInvitationResponse>(`/room-invitations/${invitationId}/${action}`, {
+        method: "POST",
+      });
+      await loadRooms();
+      await loadPendingInvitations();
+      if (action === "accept") {
+        setSelectedRoomId(response.roomId);
+        setExpandedRoomId(response.roomId);
+        setRoomFeedbackModal({
+          title: "초대 수락 완료",
+          message: "초대를 수락했습니다. 방 리스트에 새 방이 추가되었습니다.",
+        });
+      } else {
+        setRoomFeedbackModal({ title: "초대 거절 완료", message: "초대를 거절했습니다." });
+      }
+    } catch (error) {
+      setRoomFeedbackModal({ title: "초대 응답 실패", message: toMessage(error) });
+    }
+  }
+
   return (
     <main className={`workspace ${sidebarCollapsed ? "sidebar-collapsed" : ""}`}>
       <Sidebar
@@ -677,12 +848,29 @@ function App() {
             onLogout={() => setLogoutOpen(true)}
           />
         ) : null}
+        {activeView === "room" ? (
+          <RoomHomeView
+            selectedRoom={selectedRoom}
+            onMoveRoomFeature={(view) => {
+              if (!selectedRoom) return;
+              moveToRoomFeature(selectedRoom.id, view);
+            }}
+          />
+        ) : null}
         {activeView === "rooms" ? (
           <RoomsView
             rooms={rooms}
             selectedRoomId={selectedRoom?.id ?? null}
             pendingInvitationCount={pendingInvitationCount}
-            onSelectRoom={selectRoom}
+            pendingInvitations={pendingInvitations}
+            createRoomForm={createRoomForm}
+            inviteContacts={inviteContacts}
+            onCreateRoomFormChange={setCreateRoomForm}
+            onCreateRoom={createRoom}
+            onInviteContactChange={(roomId, value) => setInviteContacts((current) => ({ ...current, [roomId]: value }))}
+            onSendInvitation={sendRoomInvitation}
+            onRespondInvitation={respondInvitation}
+            onSelectRoom={openRoomHome}
           />
         ) : null}
         {activeView === "chat" ? <RoomFeatureView selectedRoom={selectedRoom} kind="chat" /> : null}
@@ -717,6 +905,10 @@ function App() {
 
       {logoutOpen ? <LogoutModal onClose={() => setLogoutOpen(false)} /> : null}
 
+      {roomFeedbackModal ? (
+        <AlertModal title={roomFeedbackModal.title} message={roomFeedbackModal.message} onClose={() => setRoomFeedbackModal(null)} />
+      ) : null}
+
       {notificationsModalOpen ? (
         <NotificationsModal
           notifications={allNotifications.length > 0 ? allNotifications : latestNotifications}
@@ -748,7 +940,7 @@ function Sidebar({
   pendingInvitationCount: number;
   onMove: (view: AppView) => void;
   onSelectRoom: (roomId: number, nextView?: AppView) => void;
-  onMoveRoomFeature: (roomId: number, view: Exclude<AppView, "home" | "rooms" | "settings">) => void;
+  onMoveRoomFeature: (roomId: number, view: RoomFeatureKind) => void;
   onToggleSidebar: () => void;
 }) {
   const selectedRoom = rooms.find((room) => room.id === selectedRoomId) ?? rooms[0] ?? null;
@@ -791,7 +983,7 @@ function Sidebar({
                   type="button"
                   aria-label={`${room.name} ${isExpanded ? "메뉴 접기" : "메뉴 펼치기"}`}
                   aria-expanded={isExpanded}
-                  onClick={() => onSelectRoom(room.id, "home")}
+                  onClick={() => onSelectRoom(room.id, "room")}
                 >
                   <UsersRound size={18} />
                   <span className="nav-label">{room.name}</span>
@@ -1097,82 +1289,291 @@ function ActivityIcon({ type }: { type: "chat" | "mission" | "memory" | "letter"
   return <Mail className={className} size={16} aria-hidden="true" />;
 }
 
+function isInteractiveTarget(target: EventTarget | null) {
+  return target instanceof HTMLElement && Boolean(target.closest("button, input, select, textarea, a"));
+}
+
+function RoomHomeView({
+  selectedRoom,
+  onMoveRoomFeature,
+}: {
+  selectedRoom: RoomSummary | null;
+  onMoveRoomFeature: (view: RoomFeatureKind) => void;
+}) {
+  if (!selectedRoom) {
+    return (
+      <>
+        <header className="page-header">
+          <div>
+            <h1>방 홈</h1>
+            <p>참여 중인 방을 선택하면 방 기준 기록 흐름을 확인할 수 있다.</p>
+          </div>
+        </header>
+        <section className="placeholder-page">
+          <article className="dashboard-card wide-card">
+            <div className="panel-heading">
+              <div>
+                <span>방 선택 필요</span>
+                <h2>참여 방이 없습니다</h2>
+              </div>
+              <UsersRound size={24} />
+            </div>
+            <p>방 리스트에서 참여 방을 만들거나 초대를 수락해 주세요.</p>
+          </article>
+        </section>
+      </>
+    );
+  }
+
+  return (
+    <>
+      <header className="page-header">
+        <div>
+          <h1>{selectedRoom.name}</h1>
+          <p>최근 대화와 기록 기능을 한 곳에서 확인한다.</p>
+        </div>
+      </header>
+
+      <section className="room-home-page">
+        <article className="room-home-summary">
+          <div>
+            <span>{roomTypeLabel(selectedRoom.type)}</span>
+            <h2>{selectedRoom.name}</h2>
+            <p>{selectedRoom.description ?? "설명 없음"}</p>
+          </div>
+          <dl className="room-home-meta">
+            <div>
+              <dt>역할</dt>
+              <dd>{selectedRoom.role === "OWNER" ? "방장" : "멤버"}</dd>
+            </div>
+            <div>
+              <dt>멤버</dt>
+              <dd>{selectedRoom.memberCount}명</dd>
+            </div>
+          </dl>
+        </article>
+
+        <div className="room-home-content">
+          <article className="room-chat-preview">
+            <div className="room-section-heading">
+              <h2>최근 대화</h2>
+              <p>방의 메인 소통 흐름을 먼저 보여준다.</p>
+            </div>
+            <div className="chat-date-divider">{formatDateLabel(todayDateKey())}</div>
+            <div className="chat-preview-list">
+              <p className="chat-bubble other">민지: 오늘 사진 진짜 잘 나왔다.</p>
+              <p className="chat-bubble mine">류성열: 이날 기록은 나중에 꼭 다시 보자.</p>
+              <p className="chat-bubble other">민지: 편지도 하나 보냈어.</p>
+              <p className="chat-bubble mine">류성열: 미션 인증도 확인할게.</p>
+            </div>
+          </article>
+
+          <article className="room-feature-panel">
+            <div className="room-section-heading">
+              <h2>방 기능</h2>
+              <p>대화에서 파생된 기록을 기능별로 확인한다.</p>
+            </div>
+            <div className="room-feature-list">
+              <button className="room-feature-card memory" type="button" onClick={() => onMoveRoomFeature("memories")}>
+                <span className="room-feature-icon"><BookImage size={32} /></span>
+                <span>
+                  <strong>추억 게시판</strong>
+                  <small>사진과 글로 남긴 추억 보기</small>
+                </span>
+                <span aria-hidden="true">›</span>
+              </button>
+              <button className="room-feature-card mission" type="button" onClick={() => onMoveRoomFeature("missions")}>
+                <span className="room-feature-icon"><BadgeCheck size={32} /></span>
+                <span>
+                  <strong>미션 인증</strong>
+                  <small>인증 요청과 동의 현황 확인</small>
+                </span>
+                <span aria-hidden="true">›</span>
+              </button>
+              <button className="room-feature-card letter" type="button" onClick={() => onMoveRoomFeature("letters")}>
+                <span className="room-feature-icon"><MailPlus size={32} /></span>
+                <span>
+                  <strong>편지</strong>
+                  <small>편지를 작성하거나 받은 편지 보기</small>
+                </span>
+                <span aria-hidden="true">›</span>
+              </button>
+            </div>
+          </article>
+        </div>
+      </section>
+    </>
+  );
+}
+
 function RoomsView({
   rooms,
   selectedRoomId,
   pendingInvitationCount,
+  pendingInvitations,
+  createRoomForm,
+  inviteContacts,
+  onCreateRoomFormChange,
+  onCreateRoom,
+  onInviteContactChange,
+  onSendInvitation,
+  onRespondInvitation,
   onSelectRoom,
 }: {
   rooms: RoomSummary[];
   selectedRoomId: number | null;
   pendingInvitationCount: number;
-  onSelectRoom: (roomId: number, nextView?: AppView) => void;
+  pendingInvitations: PendingRoomInvitation[];
+  createRoomForm: CreateRoomForm;
+  inviteContacts: Record<number, string>;
+  onCreateRoomFormChange: (form: CreateRoomForm) => void;
+  onCreateRoom: () => void;
+  onInviteContactChange: (roomId: number, value: string) => void;
+  onSendInvitation: (roomId: number) => void;
+  onRespondInvitation: (invitationId: number, action: "accept" | "decline") => void;
+  onSelectRoom: (roomId: number) => void;
 }) {
   return (
     <>
       <header className="page-header">
         <div>
           <h1>방 리스트</h1>
-          <p>방 생성, 초대 받은 방 조회, 참여 방 조회, 방 관리 진입을 한 곳에서 확인한다.</p>
+          <p>방을 만들고, 초대를 보내고, 받은 초대를 수락하거나 거절한다.</p>
         </div>
-        <button className="primary-button" type="button">
-          <Plus size={18} />
-          방 생성
-        </button>
       </header>
 
       <section className="room-hub-grid">
-        <article className="hub-card">
+        <article className="hub-card room-create-card">
+          <span>새 방 만들기</span>
+          <div className="room-form-grid">
+            <label className="field compact-field">
+              방 이름
+              <input
+                value={createRoomForm.name}
+                onChange={(event) => onCreateRoomFormChange({ ...createRoomForm, name: event.target.value })}
+                placeholder="예: 우리 둘의 200일"
+              />
+            </label>
+            <label className="field compact-field">
+              방 타입
+              <select
+                value={createRoomForm.type}
+                onChange={(event) => onCreateRoomFormChange({ ...createRoomForm, type: event.target.value as RoomSummary["type"] })}
+              >
+                <option value="COUPLE">커플</option>
+                <option value="FAMILY">가족</option>
+                <option value="GROUP">학급/동아리</option>
+              </select>
+            </label>
+          </div>
+          <label className="field compact-field">
+            방 설명
+            <input
+              value={createRoomForm.description}
+              onChange={(event) => onCreateRoomFormChange({ ...createRoomForm, description: event.target.value })}
+              placeholder="방의 목적을 짧게 적는다"
+            />
+          </label>
+          <button className="primary-button full-width compact-submit" type="button" onClick={onCreateRoom}>
+            방 생성
+          </button>
+        </article>
+
+        <article className="hub-card invitation-card">
           <span>초대 받은 방</span>
           <strong>{pendingInvitationCount}개</strong>
-          <p>초대 수락/거절은 이후 상세 이슈에서 구현한다.</p>
+          {pendingInvitations.length > 0 ? (
+            <div className="pending-invitation-list">
+              {pendingInvitations.map((invitation) => (
+                <div className="pending-invitation-item" key={invitation.id}>
+                  <div>
+                    <strong>{invitation.roomName}</strong>
+                    <p>{invitation.inviterName}님이 초대했습니다. {roomTypeLabel(invitation.roomType)}</p>
+                  </div>
+                  <div className="inline-actions">
+                    <button className="primary-button small-button" type="button" onClick={() => onRespondInvitation(invitation.id, "accept")}>
+                      수락
+                    </button>
+                    <button className="outline-button small-button" type="button" onClick={() => onRespondInvitation(invitation.id, "decline")}>
+                      거절
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p>현재 처리할 초대가 없습니다.</p>
+          )}
         </article>
+
         <article className="hub-card">
           <span>참여 방</span>
           <strong>{rooms.length}개</strong>
           <p>현재 멤버가 참여 중인 기록방 목록이다.</p>
-        </article>
-        <article className="hub-card">
-          <span>방 관리</span>
-          <strong>진입 골격</strong>
-          <p>방 이름, 설명, 초대 관리는 이후 상세 화면으로 확장한다.</p>
+          <p>방장인 방에서는 이메일 또는 전화번호로 바로 초대할 수 있다.</p>
         </article>
       </section>
 
       <section className="joined-room-list">
-        {rooms.map((room) => (
-          <article className={`room-card ${room.id === selectedRoomId ? "selected" : ""}`} key={room.id}>
-            <div>
-              <span>{roomTypeLabel(room.type)}</span>
-              <h2>{room.name}</h2>
-              <p>{room.description ?? "설명 없음"}</p>
-            </div>
-            <dl className="room-meta">
+        {rooms.map((room) => {
+          const canInvite = room.role === "OWNER";
+
+          return (
+            <article
+              className={`room-card ${room.id === selectedRoomId ? "selected" : ""}`}
+              key={room.id}
+              role="button"
+              tabIndex={0}
+              aria-label={`${room.name} 방으로 이동`}
+              onClick={(event) => {
+                if (isInteractiveTarget(event.target)) return;
+                onSelectRoom(room.id);
+              }}
+              onKeyDown={(event) => {
+                if (isInteractiveTarget(event.target)) return;
+                if (event.key !== "Enter" && event.key !== " ") return;
+                event.preventDefault();
+                onSelectRoom(room.id);
+              }}
+            >
               <div>
-                <dt>역할</dt>
-                <dd>{room.role === "OWNER" ? "방장" : "멤버"}</dd>
+                <span>{roomTypeLabel(room.type)}</span>
+                <h2>{room.name}</h2>
+                <p>{room.description ?? "설명 없음"}</p>
               </div>
-              <div>
-                <dt>멤버</dt>
-                <dd>{room.memberCount}명</dd>
+              <dl className="room-meta">
+                <div>
+                  <dt>역할</dt>
+                  <dd>{canInvite ? "방장" : "멤버"}</dd>
+                </div>
+                <div>
+                  <dt>멤버</dt>
+                  <dd>{room.memberCount}명</dd>
+                </div>
+              </dl>
+              <div className="room-card-actions">
+                <div className={`invite-inline-form ${canInvite ? "" : "is-disabled"}`}>
+                  <input
+                    value={canInvite ? inviteContacts[room.id] ?? "" : ""}
+                    onChange={(event) => onInviteContactChange(room.id, event.target.value)}
+                    placeholder={canInvite ? "이메일 또는 전화번호" : "방장만 초대할 수 있습니다"}
+                    aria-label={`${room.name} 초대 연락처`}
+                    disabled={!canInvite}
+                  />
+                  <button className="primary-button" type="button" onClick={() => onSendInvitation(room.id)} disabled={!canInvite}>
+                    초대
+                  </button>
+                </div>
               </div>
-            </dl>
-            <div className="room-card-actions">
-              <button className="outline-button" type="button" onClick={() => onSelectRoom(room.id, "home")}>
-                선택
-              </button>
-              <button className="outline-button" type="button">
-                관리
-              </button>
-            </div>
-          </article>
-        ))}
+            </article>
+          );
+        })}
       </section>
     </>
   );
 }
 
-function RoomFeatureView({ selectedRoom, kind }: { selectedRoom: RoomSummary | null; kind: Exclude<AppView, "home" | "rooms" | "settings"> }) {
+function RoomFeatureView({ selectedRoom, kind }: { selectedRoom: RoomSummary | null; kind: RoomFeatureKind }) {
   const copy = roomFeatureCopy(kind);
 
   return (
@@ -1450,6 +1851,22 @@ function LogoutModal({ onClose }: { onClose: () => void }) {
   );
 }
 
+function AlertModal({ title, message, onClose }: { title: string; message: string; onClose: () => void }) {
+  return (
+    <div className="modal-backdrop" role="presentation">
+      <section className="modal" role="alertdialog" aria-modal="true" aria-labelledby="alert-title">
+        <h2 id="alert-title">{title}</h2>
+        <p>{message}</p>
+        <div className="modal-actions">
+          <button className="primary-button" type="button" onClick={onClose}>
+            확인
+          </button>
+        </div>
+      </section>
+    </div>
+  );
+}
+
 function NotificationsModal({
   notifications,
   onNotificationClick,
@@ -1583,7 +2000,7 @@ function roomTypeLabel(type: RoomSummary["type"]): string {
   return "학급/동아리";
 }
 
-function roomFeatureCopy(kind: Exclude<AppView, "home" | "rooms" | "settings">) {
+function roomFeatureCopy(kind: RoomFeatureKind) {
   if (kind === "chat") {
     return {
       title: "채팅",
@@ -1597,7 +2014,7 @@ function roomFeatureCopy(kind: Exclude<AppView, "home" | "rooms" | "settings">) 
       title: "추억 게시판",
       description: "추억 게시판 화면 골격이다.",
       body: "사진과 글 카드 피드, 댓글, 작성 화면은 이후 추억 게시판 기능 이슈에서 구현한다.",
-      icon: <BookOpen size={24} />,
+      icon: <BookImage size={24} />,
     };
   }
   if (kind === "missions") {
@@ -1605,14 +2022,14 @@ function roomFeatureCopy(kind: Exclude<AppView, "home" | "rooms" | "settings">) 
       title: "미션 인증",
       description: "미션 인증 화면 골격이다.",
       body: "진행중, 승인 대기, 완료 탭과 동의율은 이후 미션 인증 기능 이슈에서 구현한다.",
-      icon: <CheckCircle2 size={24} />,
+      icon: <BadgeCheck size={24} />,
     };
   }
   return {
     title: "편지",
     description: "편지 화면 골격이다.",
     body: "받은 편지함, 보낸 편지함, 편지 쓰기는 이후 편지 기능 이슈에서 구현한다.",
-    icon: <Mail size={24} />,
+    icon: <MailPlus size={24} />,
   };
 }
 
@@ -1717,7 +2134,7 @@ function activitySummaryText(activity: Pick<CalendarDayActivity, "chatCount" | "
   return parts.length > 0 ? parts.join(" · ") : "기록 없음";
 }
 
-function calendarTarget(day: CalendarDayActivity, roomId?: number): { roomId: number; view: Exclude<AppView, "home" | "rooms" | "settings"> } | null {
+function calendarTarget(day: CalendarDayActivity, roomId?: number): { roomId: number; view: RoomFeatureKind } | null {
   const room = roomId
     ? day.rooms.find((candidate) => candidate.roomId === roomId && candidate.totalCount > 0)
     : day.rooms.find((candidate) => candidate.totalCount > 0);
