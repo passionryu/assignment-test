@@ -36,6 +36,7 @@ QA Agent는 다음을 검토하지 않는다.
 - 구현 대상 commit
 - `docs/plan/screen-spec/v*/screen-spec.md`
 - `docs/plan/screen-spec/v*/user-flow.md`
+- 승인된 화면 정의서 PDF 또는 이미지 evidence
 - `docs/dev-spec/DEV-*.md`
 - Review/Security PASS 결과
 - 로컬 실행 URL
@@ -44,6 +45,9 @@ QA Agent는 다음을 검토하지 않는다.
 
 ## Responsibilities
 
+- 승인된 화면 정의서를 기준으로 실제 브라우저 화면이 같은 구조와 흐름으로 구현되었는지 검증한다.
+- 실제 화면 스크린샷과 화면 정의서를 비교해 주요 영역, 사이드바, 카드 배치, 버튼 위치, 모달 표현 방식의 일치 여부를 확인한다.
+- 기능이 정상 동작하더라도 화면 정의서의 핵심 레이아웃과 다르면 FAIL로 판정한다.
 - Playwright로 실제 브라우저를 열어 사용자 흐름을 검증한다.
 - 클릭, 입력, 이동, 저장, 조회, 상태 변경 결과를 확인한다.
 - 화면 문구, 상태, 결과값이 기대와 일치하는지 확인한다.
@@ -113,6 +117,21 @@ QA Agent는 매 실행마다 사람이 확인 가능한 evidence를 남긴다.
 - Playwright HTML Report:
 - Evidence Directory:
 
+## Screen Spec Match
+
+- 기준 화면 정의서:
+- 비교 대상 실제 화면:
+- 일치 여부: PASS / FAIL
+
+| 항목 | 화면 정의서 | 실제 구현 | 판정 |
+| --- | --- | --- | --- |
+| 전체 레이아웃 |  |  | PASS / FAIL |
+| 사이드바 / 내비게이션 |  |  | PASS / FAIL |
+| 주요 카드 배치 |  |  | PASS / FAIL |
+| 주요 버튼 위치 |  |  | PASS / FAIL |
+| 모달 / 오버레이 표현 |  |  | PASS / FAIL |
+| 화면 문구와 정보 우선순위 |  |  | PASS / FAIL |
+
 ## Happy Case 결과
 
 | Case ID | Scenario | Result | Video | Screenshot |
@@ -157,6 +176,8 @@ QA Agent는 `AI QA` 단계에서 활동한다.
 - `CONDITIONAL_PASS`: 알려진 제한사항을 PM/PO Agent가 수용할지 판단
 - `FAIL`: Implement 단계로 되돌림
 
+화면 정의서 일치 검증은 PASS의 필수 조건이다. 브라우저 기능 검증이 모두 통과해도 승인된 화면 정의서의 핵심 구조와 다르면 FAIL로 판정한다.
+
 FAIL일 때는 반드시 재현 절차와 evidence를 남긴다.
 
 ## Evidence
@@ -172,6 +193,8 @@ Evidence 필드에는 다음을 남긴다.
 
 ## Done Criteria
 
+- 승인된 화면 정의서와 실제 브라우저 화면의 일치 여부를 검증했다.
+- `Screen Spec Match` 결과가 `docs/qa/issue-{issueNumber}/qa-report.md`에 기록되어 있다.
 - Playwright로 핵심 사용자 흐름을 실행했다.
 - `docs/qa/issue-{issueNumber}/qa-report.md`에 결과가 기록되어 있다.
 - 최신 HTML report가 `test-results/playwright/latest/index.html`에 생성되어 있다.
