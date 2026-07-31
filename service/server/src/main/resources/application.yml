@@ -1,0 +1,28 @@
+server:
+  port: ${SERVER_PORT:8080}
+
+spring:
+  application:
+    name: record-room-server
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/assignment_test}
+    username: ${SPRING_DATASOURCE_USERNAME:assignment_user}
+    password: ${SPRING_DATASOURCE_PASSWORD:assignment_password}
+  flyway:
+    enabled: true
+  jackson:
+    time-zone: Asia/Seoul
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+app:
+  seed:
+    enabled: ${SEED_ENABLED:true}
+
+logging:
+  pattern:
+    level: "%5p [requestId:%X{requestId:-none}]"

@@ -1,0 +1,21 @@
+{
+  "titleText": true,
+  "serverCard": true,
+  "databaseCard": true,
+  "seedMemberCard": true,
+  "serverUpText": true,
+  "bodyText": "Lv1 Workspace\n기록방 서비스 실행 골격\n\n서버, 클라이언트, DB, Docker 실행 흐름을 확인하기 위한 첫 화면입니다.\n\nServer\nUP\nDatabase\nUP\nSeed Member\nX-Member-Id: 1",
+  "bodyHtmlLength": 1805,
+  "screenshot": "issue-3-client-home.png",
+  "url": "http://localhost:5173/",
+  "consoleMessages": [
+    "debug: [vite] connecting...",
+    "debug: [vite] connected.",
+    "info: %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold",
+    "error: Failed to load resource: the server responded with a status of 404 (Not Found)"
+  ],
+  "pageErrors": [],
+  "upCount": 2,
+  "databaseUp": true,
+  "nonBlank": true
+}

@@ -1,0 +1,49 @@
+services:
+  app-db:
+    image: postgres:16-alpine
+    container_name: assignment-test-db
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-assignment_test}
+      POSTGRES_USER: ${POSTGRES_USER:-assignment_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-assignment_password}
+    ports:
+      - "5432:5432"
+    volumes:
+      - app-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  app-server:
+    build:
+      context: ../..
+      dockerfile: service/infra/server.Dockerfile
+    container_name: assignment-test-server
+    environment:
+      SERVER_PORT: 8080
+      SPRING_DATASOURCE_URL: jdbc:postgresql://app-db:5432/${POSTGRES_DB:-assignment_test}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-assignment_user}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-assignment_password}
+      SEED_ENABLED: "true"
+    ports:
+      - "8080:8080"
+    depends_on:
+      app-db:
+        condition: service_healthy
+
+  app-client:
+    build:
+      context: ../..
+      dockerfile: service/infra/client.Dockerfile
+    container_name: assignment-test-client
+    environment:
+      VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:8080/api}
+    ports:
+      - "5173:5173"
+    depends_on:
+      - app-server
+
+volumes:
+  app-db-data:

@@ -46,8 +46,8 @@ Tech Lead Agent는 승인된 기획과 화면 정의를 기술 설계로 변환�
 - `docs/dev-spec/DEV-002-order-flow.md`
 - `docs/dev-spec/DEV-003-admin-orders.md`
 - `docs/dev-spec/DEV-004-docker-seed.md`
-- `docs/qa/curl-test-cases.md`
-- `docs/qa/tech-verification-report.md`
+- `docs/qa/issue-{issueNumber}/curl-test-cases.md`
+- `docs/qa/issue-{issueNumber}/tech-verification-report.md`
 
 ## Technical Design Rules
 

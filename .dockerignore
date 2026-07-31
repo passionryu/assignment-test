@@ -1,0 +1,12 @@
+.git
+.idea
+.DS_Store
+
+service/client/node_modules
+service/client/dist
+service/client/*.tsbuildinfo
+service/server/.gradle
+
+test-results
+docs/plan/screen-spec/**/*.png
+docs/plan/screen-spec/**/*.pdf
