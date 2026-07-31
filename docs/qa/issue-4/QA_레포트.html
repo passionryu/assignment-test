@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Issue #4 QA 레포트</title>
+  <style>
+    :root { color: #253248; background: #f6f8fc; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    body { margin: 0; }
+    main { width: min(1180px, calc(100% - 48px)); margin: 0 auto; padding: 38px 0 60px; }
+    h1 { margin: 0; font-size: 34px; letter-spacing: 0; }
+    h2 { margin: 0 0 14px; font-size: 24px; }
+    p { line-height: 1.65; }
+    .hero, .card, .failure-card { border: 1px solid #dfe7f2; border-radius: 8px; background: #fff; box-shadow: 0 12px 36px rgba(49,70,107,.08); padding: 24px; }
+    .hero { background: linear-gradient(135deg, #fff 0%, #fff7fb 55%, #eef8ff 100%); }
+    .status { display: inline-flex; align-items: center; border-radius: 999px; padding: 7px 13px; font-weight: 900; margin-top: 16px; }
+    .status.pass { color: #147a3d; background: #eaf8ef; border: 1px solid #bfe8cf; }
+    .status.fail { color: #b42318; background: #fff1f1; border: 1px solid #ffd0d0; }
+    .grid { display: grid; gap: 18px; margin-top: 18px; }
+    .meta { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 16px; margin-top: 18px; }
+    .meta div { border: 1px solid #e4ebf5; border-radius: 8px; padding: 12px; }
+    table { width: 100%; border-collapse: collapse; overflow: hidden; border-radius: 8px; }
+    th, td { border-bottom: 1px solid #e4ebf5; padding: 12px; text-align: left; vertical-align: top; }
+    th { background: #f3f6fb; color: #42526b; }
+    tr.pass td:nth-child(2) { color: #147a3d; font-weight: 900; }
+    tr.fail td:nth-child(2) { color: #b42318; font-weight: 900; }
+    .shots { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+    figure { margin: 0; border: 1px solid #e4ebf5; border-radius: 8px; overflow: hidden; background: #fff; }
+    figcaption { padding: 10px 12px; font-weight: 850; background: #f8fafc; }
+    img { display: block; width: 100%; height: auto; }
+    a { color: #1463ff; font-weight: 800; }
+    .empty { color: #667085; }
+    .failure-card { background: #fffafa; border-color: #ffd8d8; }
+    @media (max-width: 820px) { .meta, .shots { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <main>
+    <section class="hero">
+      <h1>Issue #4 QA 레포트</h1>
+      <p>Human QA FAIL 수정본에 대해 화면 정의서 일치와 기능 E2E를 재검증했다.</p>
+      <div class="status pass">최종 판정: PASS</div>
+      <div class="meta">
+        <div><strong>대상 브랜치</strong><br />feature-4</div>
+        <div><strong>수정 커밋</strong><br />c3694be fix(profile): 설정 화면 정의서 레이아웃 반영</div>
+        <div><strong>리뷰 커밋</strong><br />77fa3a7 docs(review): 이슈 4 설정 화면 수정 재검토</div>
+        <div><strong>검증 시각</strong><br />2026. 7. 31. 오후 3:49:17</div>
+      </div>
+    </section>
+
+    <section class="grid">
+      <article class="card">
+        <h2>Screen Spec Match</h2>
+        <table>
+          <thead><tr><th>검증 항목</th><th>결과</th><th>상세</th><th>증거</th></tr></thead>
+          <tbody>
+    <tr class="pass">
+      <td>좌측 사이드바 존재</td>
+      <td>PASS</td>
+      <td>x=0, width=270</td>
+      <td><a href="evidence/recheck-01-settings-screen-spec-match-1440.png">evidence</a></td>
+    </tr>
+    <tr class="pass">
+      <td>사이드바 메뉴 구성 표시</td>
+      <td>PASS</td>
+      <td>방 리스트와 다른 방 항목, 설정 active 확인</td>
+      <td><a href="evidence/recheck-01-settings-screen-spec-match-1440.png">evidence</a></td>
+    </tr>
+    <tr class="pass">
+      <td>메인 콘텐츠가 설정 화면으로 표시</td>
+      <td>PASS</td>
+      <td>설정 제목/설명 표시</td>
+      <td><a href="evidence/recheck-01-settings-screen-spec-match-1440.png">evidence</a></td>
+    </tr>
+    <tr class="pass">
+      <td>좌측 본문 프로필 우선 카드</td>
+      <td>PASS</td>
+      <td>프로필 카드가 좌측 첫 영역에 배치됨</td>
+      <td><a href="evidence/recheck-01-settings-screen-spec-match-1440.png">evidence</a></td>
+    </tr>
+    <tr class="pass">
+      <td>우측 설정 구조 배치</td>
+      <td>PASS</td>
+      <td>비밀번호/알림/정책/위험 영역 순서 확인</td>
+      <td><a href="evidence/recheck-01-settings-screen-spec-match-1440.png">evidence</a></td>
+    </tr>
+    <tr class="pass">
+      <td>로그아웃/회원 탈퇴 위험 영역 분리</td>
+      <td>PASS</td>
+      <td>위험 영역 내 두 액션 분리 표시</td>
+      <td><a href="evidence/recheck-01-settings-screen-spec-match-1440.png">evidence</a></td>
+    </tr>
+    <tr class="pass">
+      <td>노트북/웹 모니터 레이아웃 무결성</td>
+      <td>PASS</td>
+      <td>viewport 1440x900, horizontal overflow 없음</td>
+      <td><a href="evidence/recheck-01-settings-screen-spec-match-1440.png">evidence</a></td>
+    </tr>
+    <tr class="pass">
+      <td>1366x768 화면 깨짐 없음</td>
+      <td>PASS</td>
+      <td>노트북 폭에서도 가로 overflow 없이 2열 유지</td>
+      <td><a href="evidence/recheck-02-settings-screen-spec-match-1366.png">evidence</a></td>
+    </tr></tbody>
+        </table>
+      </article>
+
+      <article class="card">
+        <h2>Functional E2E</h2>
+        <table>
+          <thead><tr><th>검증 항목</th><th>결과</th><th>상세</th><th>증거</th></tr></thead>
+          <tbody>
+    <tr class="pass">
+      <td>프로필 정보 표시</td>
+      <td>PASS</td>
+      <td>이름/아이디/이메일/전화번호 표시</td>
+      <td><a href="evidence/recheck-01-settings-screen-spec-match-1440.png">evidence</a></td>
+    </tr>
+    <tr class="pass">
+      <td>프로필 수정 모달 표시</td>
+      <td>PASS</td>
+      <td>프로필 수정 모달과 수정 가능 범위 안내 표시</td>
+      <td><a href="evidence/recheck-03-profile-edit-modal.png">evidence</a></td>
+    </tr>
+    <tr class="pass">
+      <td>이메일/전화번호 수정 불가</td>
+      <td>PASS</td>
+      <td>모달에는 이름/프로필 이미지 URL만 입력 가능</td>
+      <td><a href="evidence/recheck-03-profile-edit-modal.png">evidence</a></td>
+    </tr>
+    <tr class="pass">
+      <td>프로필 수정 성공</td>
+      <td>PASS</td>
+      <td>이름과 이미지 URL 반영</td>
+      <td><a href="evidence/recheck-04-profile-update-success.png">evidence</a></td>
+    </tr>
+    <tr class="pass">
+      <td>빈 이름 실패 케이스</td>
+      <td>PASS</td>
+      <td>빈 이름 저장 거부</td>
+      <td><a href="evidence/recheck-05-profile-empty-name-error.png">evidence</a></td>
+    </tr>
+    <tr class="pass">
+      <td>짧은 비밀번호 실패</td>
+      <td>PASS</td>
+      <td>8자 이상 검증 오류 표시</td>
+      <td><a href="evidence/recheck-06-password-short-error.png">evidence</a></td>
+    </tr>
+    <tr class="pass">
+      <td>비밀번호 변경 성공</td>
+      <td>PASS</td>
+      <td>정상 피드백 표시</td>
+      <td><a href="evidence/recheck-06-password-short-error.png">evidence</a></td>
+    </tr>
+    <tr class="pass">
+      <td>전체 알림 ON 정책</td>
+      <td>PASS</td>
+      <td>전체 ON 시 채팅/편지/추억/미션 모두 ON</td>
+      <td><a href="evidence/recheck-07-notification-all-on.png">evidence</a></td>
+    </tr>
+    <tr class="pass">
+      <td>전체 OFF 후 개별 알림 조정 및 유지</td>
+      <td>PASS</td>
+      <td>새로고침 후에도 개별 알림 상태 유지</td>
+      <td><a href="evidence/recheck-08-notification-persisted.png">evidence</a></td>
+    </tr>
+    <tr class="pass">
+      <td>로그아웃 모달</td>
+      <td>PASS</td>
+      <td>확인/취소 흐름 표시</td>
+      <td><a href="evidence/recheck-09-logout-modal.png">evidence</a></td>
+    </tr>
+    <tr class="pass">
+      <td>회원 탈퇴 placeholder</td>
+      <td>PASS</td>
+      <td>실제 탈퇴 API 없이 위험 액션 안내와 placeholder 표시</td>
+      <td><a href="evidence/recheck-10-withdraw-placeholder.png">evidence</a></td>
+    </tr></tbody>
+        </table>
+      </article>
+
+      <article class="card">
+        <h2>Failure / Reproduction</h2>
+        <p class="empty">재현해야 할 FAIL/BLOCKER/CRITICAL 이슈 없음.</p>
+      </article>
+
+      <article class="card">
+        <h2>Evidence</h2>
+        <p>영상과 trace: <a href="evidence/issue-4-recheck-e2e.webm">E2E video</a>, <a href="evidence/issue-4-recheck-trace.zip">Playwright trace</a>, <a href="evidence/issue-4-recheck-result.json">result JSON</a></p>
+        <div class="shots">
+          <figure><figcaption>기준 화면 정의서 13페이지 설정 화면</figcaption><img src="../../plan/screen-spec/v1.0/screens/SCREEN-003-settings-page-final.png" alt="기준 화면 정의서 13페이지 설정 화면" /></figure>
+<figure><figcaption>실제 설정 화면 1440x900</figcaption><img src="evidence/recheck-01-settings-screen-spec-match-1440.png" alt="실제 설정 화면 1440x900" /></figure>
+<figure><figcaption>실제 설정 화면 1366x768</figcaption><img src="evidence/recheck-02-settings-screen-spec-match-1366.png" alt="실제 설정 화면 1366x768" /></figure>
+<figure><figcaption>프로필 수정 모달</figcaption><img src="evidence/recheck-03-profile-edit-modal.png" alt="프로필 수정 모달" /></figure>
+<figure><figcaption>프로필 수정 성공</figcaption><img src="evidence/recheck-04-profile-update-success.png" alt="프로필 수정 성공" /></figure>
+<figure><figcaption>빈 이름 실패 케이스</figcaption><img src="evidence/recheck-05-profile-empty-name-error.png" alt="빈 이름 실패 케이스" /></figure>
+<figure><figcaption>짧은 비밀번호 실패 케이스</figcaption><img src="evidence/recheck-06-password-short-error.png" alt="짧은 비밀번호 실패 케이스" /></figure>
+<figure><figcaption>알림 전체 ON</figcaption><img src="evidence/recheck-07-notification-all-on.png" alt="알림 전체 ON" /></figure>
+<figure><figcaption>알림 개별 조정 후 새로고침 유지</figcaption><img src="evidence/recheck-08-notification-persisted.png" alt="알림 개별 조정 후 새로고침 유지" /></figure>
+<figure><figcaption>로그아웃 모달</figcaption><img src="evidence/recheck-09-logout-modal.png" alt="로그아웃 모달" /></figure>
+<figure><figcaption>회원 탈퇴 placeholder</figcaption><img src="evidence/recheck-10-withdraw-placeholder.png" alt="회원 탈퇴 placeholder" /></figure>
+        </div>
+      </article>
+    </section>
+  </main>
+</body>
+</html>
