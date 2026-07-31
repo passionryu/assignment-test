@@ -59,6 +59,20 @@ New AI QA runs use `docs/qa/issue-{issueNumber}/QA_레포트.html` as the primar
 
 ## Execution
 
+OpenAI API key is managed outside git. Copy `.env.example` to `.env` at the repository root and fill in your key:
+
+```bash
+cp .env.example .env
+```
+
+```text
+OPENAI_API_KEY=your_api_key_here
+OPENAI_CHAT_MODEL=gpt-4o-mini
+OPENAI_CHAT_TEMPERATURE=0.4
+```
+
+The `.env` file is ignored by git and must not be committed.
+
 Run the local workspace with Docker:
 
 ```bash

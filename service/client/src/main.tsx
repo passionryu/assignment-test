@@ -1,4 +1,4 @@
-import { StrictMode, useEffect, useMemo, useState } from "react";
+import { StrictMode, useEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import {
   BadgeCheck,
@@ -143,6 +143,44 @@ type CalendarResponse = {
   month: string;
   selectedDate: string | null;
   days: CalendarDayActivity[];
+};
+
+type ChatMessage = {
+  id: number;
+  roomId: number;
+  senderMemberId: number;
+  senderName: string;
+  senderType: "MEMBER" | "ASSISTANT";
+  body: string;
+  sentAt: string;
+  occurredDate: string;
+  mine: boolean;
+};
+
+type ChatMessagesResponse = {
+  roomId: number;
+  roomName: string;
+  date: string | null;
+  messages: ChatMessage[];
+};
+
+type SendChatMessageResponse = {
+  roomId: number;
+  createdMessages: ChatMessage[];
+};
+
+type ChatSearchResult = {
+  messageId: number;
+  senderName: string;
+  body: string;
+  sentAt: string;
+  occurredDate: string;
+};
+
+type ChatSearchResponse = {
+  roomId: number;
+  keyword: string;
+  results: ChatSearchResult[];
 };
 
 type ApiError = {
@@ -484,6 +522,11 @@ function App() {
   const [expandedRoomId, setExpandedRoomId] = useState<number | null>(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [activeView, setActiveView] = useState<AppView>("home");
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [chatDraft, setChatDraft] = useState("");
+  const [chatSearchKeyword, setChatSearchKeyword] = useState("");
+  const [chatSearchResults, setChatSearchResults] = useState<ChatSearchResult[]>([]);
+  const [chatLoading, setChatLoading] = useState(false);
   const [profileForm, setProfileForm] = useState({ displayName: "", profileImageUrl: "" });
   const [passwordForm, setPasswordForm] = useState({ currentPassword: "", newPassword: "" });
   const [createRoomForm, setCreateRoomForm] = useState<CreateRoomForm>({ name: "", type: "COUPLE", description: "" });
@@ -504,6 +547,12 @@ function App() {
   useEffect(() => {
     void loadInitialData();
   }, []);
+
+  useEffect(() => {
+    if (activeView !== "chat" || !selectedRoom) return;
+
+    void loadChatMessages(selectedRoom.id);
+  }, [activeView, selectedRoom?.id]);
 
   async function loadInitialData() {
     setErrorMessage(null);
@@ -690,6 +739,57 @@ function App() {
     setActiveView(view);
   }
 
+  async function loadChatMessages(roomId: number) {
+    setChatLoading(true);
+    const response = await safeApiGet<ChatMessagesResponse>(`/rooms/${roomId}/chat/messages`);
+    setChatMessages(response?.messages ?? demoChatMessages(roomId));
+    setChatLoading(false);
+  }
+
+  async function sendChatMessage() {
+    if (!selectedRoom) return;
+
+    const body = chatDraft.trim();
+    if (!body) {
+      setErrorMessage("메시지를 입력해 주세요.");
+      return;
+    }
+
+    setMessage(null);
+    setErrorMessage(null);
+    try {
+      const response = await apiRequest<SendChatMessageResponse>(`/rooms/${selectedRoom.id}/chat/messages`, {
+        method: "POST",
+        body: { body },
+      });
+      setChatMessages((current) => [...current, ...response.createdMessages]);
+      setChatDraft("");
+      await loadCalendarActivities(calendarRoomId);
+    } catch (error) {
+      setErrorMessage(toMessage(error));
+    }
+  }
+
+  async function searchChatMessages() {
+    if (!selectedRoom) return;
+
+    const keyword = chatSearchKeyword.trim();
+    if (!keyword) {
+      setChatSearchResults([]);
+      return;
+    }
+
+    const response = await safeApiGet<ChatSearchResponse>(`/rooms/${selectedRoom.id}/chat/search?keyword=${encodeURIComponent(keyword)}`);
+    setChatSearchResults(response?.results ?? searchDemoChatMessages(selectedRoom.id, keyword));
+  }
+
+  function moveToChatMessage(messageId: number) {
+    const element = document.getElementById(`chat-message-${messageId}`);
+    element?.scrollIntoView({ block: "center", behavior: "smooth" });
+    element?.classList.add("is-targeted");
+    window.setTimeout(() => element?.classList.remove("is-targeted"), 1200);
+  }
+
   function changeCalendarRoomFilter(nextRoomId: number | null) {
     setCalendarRoomId(nextRoomId);
     void loadCalendarActivities(nextRoomId);
@@ -873,7 +973,21 @@ function App() {
             onSelectRoom={openRoomHome}
           />
         ) : null}
-        {activeView === "chat" ? <RoomFeatureView selectedRoom={selectedRoom} kind="chat" /> : null}
+        {activeView === "chat" ? (
+          <ChatView
+            selectedRoom={selectedRoom}
+            messages={chatMessages}
+            draft={chatDraft}
+            searchKeyword={chatSearchKeyword}
+            searchResults={chatSearchResults}
+            loading={chatLoading}
+            onDraftChange={setChatDraft}
+            onSend={sendChatMessage}
+            onSearchKeywordChange={setChatSearchKeyword}
+            onSearch={searchChatMessages}
+            onMoveToMessage={moveToChatMessage}
+          />
+        ) : null}
         {activeView === "memories" ? <RoomFeatureView selectedRoom={selectedRoom} kind="memories" /> : null}
         {activeView === "missions" ? <RoomFeatureView selectedRoom={selectedRoom} kind="missions" /> : null}
         {activeView === "letters" ? <RoomFeatureView selectedRoom={selectedRoom} kind="letters" /> : null}
@@ -1573,6 +1687,134 @@ function RoomsView({
   );
 }
 
+function ChatView({
+  selectedRoom,
+  messages,
+  draft,
+  searchKeyword,
+  searchResults,
+  loading,
+  onDraftChange,
+  onSend,
+  onSearchKeywordChange,
+  onSearch,
+  onMoveToMessage,
+}: {
+  selectedRoom: RoomSummary | null;
+  messages: ChatMessage[];
+  draft: string;
+  searchKeyword: string;
+  searchResults: ChatSearchResult[];
+  loading: boolean;
+  onDraftChange: (value: string) => void;
+  onSend: () => void;
+  onSearchKeywordChange: (value: string) => void;
+  onSearch: () => void;
+  onMoveToMessage: (messageId: number) => void;
+}) {
+  const endRef = useRef<HTMLDivElement | null>(null);
+  const groupedMessages = useMemo(() => groupChatMessagesByDate(messages), [messages]);
+
+  useEffect(() => {
+    endRef.current?.scrollIntoView({ block: "end" });
+  }, [messages.length]);
+
+  return (
+    <>
+      <header className="page-header">
+        <div>
+          <h1>채팅</h1>
+          <p>{selectedRoom ? `${selectedRoom.name}의 날짜별 대화 기록을 확인하고 새 메시지를 남긴다.` : "선택된 방이 없습니다."}</p>
+        </div>
+      </header>
+
+      <section className="chat-page">
+        <article className="chat-window">
+          <div className="chat-window-header">
+            <div>
+              <span>{selectedRoom ? roomTypeLabel(selectedRoom.type) : "방 없음"}</span>
+              <h2>{selectedRoom?.name ?? "참여 방 없음"}</h2>
+            </div>
+            <MessageCircle size={24} />
+          </div>
+
+          <div className="chat-message-area" aria-live="polite">
+            {loading ? <p className="chat-empty">대화를 불러오는 중입니다.</p> : null}
+            {!loading && groupedMessages.length === 0 ? <p className="chat-empty">아직 남긴 대화가 없습니다.</p> : null}
+            {groupedMessages.map((group) => (
+              <div className="chat-day-group" key={group.date}>
+                <div className="chat-date-divider">{formatDateLabel(group.date)}</div>
+                {group.messages.map((message) => (
+                  <div
+                    className={`chat-message-row ${message.mine ? "mine" : ""} ${message.senderType === "ASSISTANT" ? "assistant" : ""}`}
+                    id={`chat-message-${message.id}`}
+                    key={message.id}
+                  >
+                    <div className="chat-message-meta">
+                      <strong>{message.senderName}</strong>
+                      <span>{formatChatTime(message.sentAt)}</span>
+                    </div>
+                    <p className="chat-message-bubble">{message.body}</p>
+                  </div>
+                ))}
+              </div>
+            ))}
+            <div ref={endRef} />
+          </div>
+
+          <div className="chat-input-row">
+            <textarea
+              value={draft}
+              onChange={(event) => onDraftChange(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key !== "Enter" || event.shiftKey) return;
+                event.preventDefault();
+                onSend();
+              }}
+              placeholder="메시지를 입력하면 기록방 AI가 짧게 응답합니다."
+              rows={2}
+            />
+            <button className="primary-button" type="button" onClick={onSend} disabled={!selectedRoom}>
+              보내기
+            </button>
+          </div>
+        </article>
+
+        <aside className="chat-search-panel">
+          <div className="room-section-heading">
+            <h2>대화 검색</h2>
+            <p>검색 결과를 누르면 해당 메시지 위치로 이동한다.</p>
+          </div>
+          <div className="chat-search-form">
+            <input
+              value={searchKeyword}
+              onChange={(event) => onSearchKeywordChange(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key !== "Enter") return;
+                onSearch();
+              }}
+              placeholder="검색어 입력"
+            />
+            <button className="outline-button" type="button" onClick={onSearch}>
+              검색
+            </button>
+          </div>
+          <div className="chat-search-results">
+            {searchResults.length === 0 ? <p>검색 결과가 여기에 표시됩니다.</p> : null}
+            {searchResults.map((result) => (
+              <button type="button" key={result.messageId} onClick={() => onMoveToMessage(result.messageId)}>
+                <strong>{result.senderName}</strong>
+                <span>{formatDateLabel(result.occurredDate)} · {formatChatTime(result.sentAt)}</span>
+                <p>{result.body}</p>
+              </button>
+            ))}
+          </div>
+        </aside>
+      </section>
+    </>
+  );
+}
+
 function RoomFeatureView({ selectedRoom, kind }: { selectedRoom: RoomSummary | null; kind: RoomFeatureKind }) {
   const copy = roomFeatureCopy(kind);
 
@@ -2031,6 +2273,86 @@ function roomFeatureCopy(kind: RoomFeatureKind) {
     body: "받은 편지함, 보낸 편지함, 편지 쓰기는 이후 편지 기능 이슈에서 구현한다.",
     icon: <MailPlus size={24} />,
   };
+}
+
+function demoChatMessages(roomId: number): ChatMessage[] {
+  const room = demoRooms.find((candidate) => candidate.id === roomId) ?? demoRooms[0];
+  const baseDate = todayDateKey();
+  const yesterday = offsetDateKey(-1);
+
+  return [
+    {
+      id: 8001,
+      roomId: room.id,
+      senderMemberId: room.id === 1 ? 2 : 3,
+      senderName: room.id === 1 ? "민지" : room.id === 2 ? "아버지" : "지훈",
+      senderType: "MEMBER",
+      body: `${room.name}에 오늘 기록 남겨둘게.`,
+      sentAt: `${yesterday}T20:10:00+09:00`,
+      occurredDate: yesterday,
+      mine: false,
+    },
+    {
+      id: 8002,
+      roomId: room.id,
+      senderMemberId: 1,
+      senderName: "류성열",
+      senderType: "MEMBER",
+      body: "좋아. 나중에 책에 담을 수 있게 대화도 잘 남겨보자.",
+      sentAt: `${yesterday}T20:12:00+09:00`,
+      occurredDate: yesterday,
+      mine: true,
+    },
+    {
+      id: 8003,
+      roomId: room.id,
+      senderMemberId: 99,
+      senderName: "기록방 AI",
+      senderType: "ASSISTANT",
+      body: "이 대화는 날짜별 기록으로 남겨두면 다시 돌아보기 좋겠어요.",
+      sentAt: `${baseDate}T09:05:00+09:00`,
+      occurredDate: baseDate,
+      mine: false,
+    },
+  ];
+}
+
+function searchDemoChatMessages(roomId: number, keyword: string): ChatSearchResult[] {
+  return demoChatMessages(roomId)
+    .filter((message) => message.body.toLowerCase().includes(keyword.toLowerCase()))
+    .map((message) => ({
+      messageId: message.id,
+      senderName: message.senderName,
+      body: message.body,
+      sentAt: message.sentAt,
+      occurredDate: message.occurredDate,
+    }));
+}
+
+function groupChatMessagesByDate(messages: ChatMessage[]): Array<{ date: string; messages: ChatMessage[] }> {
+  const groups = new Map<string, ChatMessage[]>();
+
+  messages.forEach((message) => {
+    const date = message.occurredDate;
+    groups.set(date, [...(groups.get(date) ?? []), message]);
+  });
+
+  return Array.from(groups.entries()).map(([date, groupedMessages]) => ({
+    date,
+    messages: groupedMessages,
+  }));
+}
+
+function formatChatTime(value: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  return date.toLocaleTimeString("ko-KR", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 
 function notificationTargetView(notification: NotificationItem): AppView {
