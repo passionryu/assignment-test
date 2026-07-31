@@ -161,7 +161,15 @@ class LocalSeedRunner(
                 (221, 2, 3, '할머니 생신 준비 이야기입니다.', date_trunc('month', now() at time zone 'Asia/Seoul')::date + 25, now() - interval '17 hours'),
                 (222, 1, 2, '이번 달 마지막 산책 기록하자.', date_trunc('month', now() at time zone 'Asia/Seoul')::date + 27, now() - interval '18 hours'),
                 (223, 2, 3, '가족 사진 인화 후보를 골랐어요.', date_trunc('month', now() at time zone 'Asia/Seoul')::date + 28, now() - interval '19 hours'),
-                (224, 3, 4, '프로젝트 마무리 소감 남깁니다.', date_trunc('month', now() at time zone 'Asia/Seoul')::date + 30, now() - interval '20 hours')
+                (224, 3, 4, '프로젝트 마무리 소감 남깁니다.', date_trunc('month', now() at time zone 'Asia/Seoul')::date + 30, now() - interval '20 hours'),
+                (225, 1, 2, '일요일 아침 산책 기록을 남겼어.', date_trunc('month', now() at time zone 'Asia/Seoul')::date + 1, now() - interval '21 hours'),
+                (226, 2, 3, '화요일 가족 일정 다시 확인해요.', date_trunc('month', now() at time zone 'Asia/Seoul')::date + 3, now() - interval '22 hours'),
+                (227, 3, 4, '일요일 팀 체크인 남깁니다.', date_trunc('month', now() at time zone 'Asia/Seoul')::date + 8, now() - interval '23 hours'),
+                (228, 1, 2, '화요일 저녁 메뉴 후보를 골랐어.', date_trunc('month', now() at time zone 'Asia/Seoul')::date + 10, now() - interval '24 hours'),
+                (229, 1, 2, '목요일 짧은 통화 기록 남겨둘게.', date_trunc('month', now() at time zone 'Asia/Seoul')::date + 19, now() - interval '25 hours'),
+                (230, 3, 4, '일요일 프로젝트 준비 상황 공유합니다.', date_trunc('month', now() at time zone 'Asia/Seoul')::date + 22, now() - interval '26 hours'),
+                (231, 2, 3, '목요일 가족 사진 후보를 다시 골랐어요.', date_trunc('month', now() at time zone 'Asia/Seoul')::date + 26, now() - interval '27 hours'),
+                (232, 3, 4, '월말 일요일 마무리 채팅입니다.', date_trunc('month', now() at time zone 'Asia/Seoul')::date + 29, now() - interval '28 hours')
             on conflict (id) do update set
                 room_id = excluded.room_id,
                 sender_member_id = excluded.sender_member_id,
@@ -208,7 +216,15 @@ class LocalSeedRunner(
                 (316, 1, 2, '주말 영화 티켓', '함께 본 영화 티켓 기록', null, 1, date_trunc('month', now() at time zone 'Asia/Seoul')::date + 23, now() - interval '13 hours', now() - interval '13 hours'),
                 (317, 2, 3, '가족 앨범 후보', '앨범에 넣을 사진 후보', null, 5, date_trunc('month', now() at time zone 'Asia/Seoul')::date + 27, now() - interval '14 hours', now() - interval '14 hours'),
                 (318, 3, 4, '최종 발표 사진', '최종 발표 날의 기록', null, 4, date_trunc('month', now() at time zone 'Asia/Seoul')::date + 28, now() - interval '15 hours', now() - interval '15 hours'),
-                (319, 1, 2, '월말 산책 사진', '월말에 남긴 산책 기록', null, 2, date_trunc('month', now() at time zone 'Asia/Seoul')::date + 30, now() - interval '16 hours', now() - interval '16 hours')
+                (319, 1, 2, '월말 산책 사진', '월말에 남긴 산책 기록', null, 2, date_trunc('month', now() at time zone 'Asia/Seoul')::date + 30, now() - interval '16 hours', now() - interval '16 hours'),
+                (320, 2, 3, '일요일 가족 브런치', '일요일에 함께 먹은 브런치 기록', null, 2, date_trunc('month', now() at time zone 'Asia/Seoul')::date + 1, now() - interval '17 hours', now() - interval '17 hours'),
+                (321, 3, 4, '화요일 회의 사진', '화요일 회의에서 남긴 사진', null, 1, date_trunc('month', now() at time zone 'Asia/Seoul')::date + 3, now() - interval '18 hours', now() - interval '18 hours'),
+                (322, 1, 2, '일요일 카페 기록', '일요일 카페에서 남긴 추억', null, 3, date_trunc('month', now() at time zone 'Asia/Seoul')::date + 8, now() - interval '19 hours', now() - interval '19 hours'),
+                (323, 3, 4, '화요일 발표 준비', '화요일 발표 준비 사진', null, 2, date_trunc('month', now() at time zone 'Asia/Seoul')::date + 10, now() - interval '20 hours', now() - interval '20 hours'),
+                (324, 2, 3, '목요일 가족 간식', '목요일 가족 간식 사진', null, 2, date_trunc('month', now() at time zone 'Asia/Seoul')::date + 19, now() - interval '21 hours', now() - interval '21 hours'),
+                (325, 1, 2, '일요일 영화 기록', '일요일에 함께 본 영화 기록', null, 1, date_trunc('month', now() at time zone 'Asia/Seoul')::date + 22, now() - interval '22 hours', now() - interval '22 hours'),
+                (326, 3, 4, '목요일 최종 점검', '목요일 최종 점검 사진', null, 2, date_trunc('month', now() at time zone 'Asia/Seoul')::date + 26, now() - interval '23 hours', now() - interval '23 hours'),
+                (327, 2, 3, '월말 가족 기록', '월말 가족 모임 사진', null, 4, date_trunc('month', now() at time zone 'Asia/Seoul')::date + 29, now() - interval '24 hours', now() - interval '24 hours')
             on conflict (id) do update set
                 room_id = excluded.room_id,
                 author_member_id = excluded.author_member_id,
@@ -279,7 +295,12 @@ class LocalSeedRunner(
                 (121, 103, 2, '주말 데이트 인증', null, date_trunc('month', now() at time zone 'Asia/Seoul')::date + 23, now() - interval '15 hours'),
                 (122, 102, 3, '가족 앨범 정리 인증', null, date_trunc('month', now() at time zone 'Asia/Seoul')::date + 25, now() - interval '16 hours'),
                 (123, 107, 4, '프로젝트 마무리 인증', null, date_trunc('month', now() at time zone 'Asia/Seoul')::date + 28, now() - interval '17 hours'),
-                (124, 106, 2, '월말 산책 인증', null, date_trunc('month', now() at time zone 'Asia/Seoul')::date + 30, now() - interval '18 hours')
+                (124, 106, 2, '월말 산책 인증', null, date_trunc('month', now() at time zone 'Asia/Seoul')::date + 30, now() - interval '18 hours'),
+                (125, 101, 2, '화요일 산책 인증', null, date_trunc('month', now() at time zone 'Asia/Seoul')::date + 3, now() - interval '19 hours'),
+                (126, 104, 3, '일요일 가족 미션 인증', null, date_trunc('month', now() at time zone 'Asia/Seoul')::date + 8, now() - interval '20 hours'),
+                (127, 108, 4, '목요일 발표 점검 인증', null, date_trunc('month', now() at time zone 'Asia/Seoul')::date + 19, now() - interval '21 hours'),
+                (128, 107, 4, '목요일 팀 응원 인증', null, date_trunc('month', now() at time zone 'Asia/Seoul')::date + 26, now() - interval '22 hours'),
+                (129, 102, 3, '월말 가족 미션 인증', null, date_trunc('month', now() at time zone 'Asia/Seoul')::date + 29, now() - interval '23 hours')
             on conflict (id) do update set
                 mission_id = excluded.mission_id,
                 submitter_member_id = excluded.submitter_member_id,
@@ -327,7 +348,13 @@ class LocalSeedRunner(
                 (418, 2, 3, 1, '가족 모임 편지', '가족 모임 후 남기는 마음', date_trunc('month', now() at time zone 'Asia/Seoul')::date + 25, now() - interval '15 hours', null),
                 (419, 1, 2, 1, '월말 편지', '이번 달을 정리하는 편지', date_trunc('month', now() at time zone 'Asia/Seoul')::date + 27, now() - interval '16 hours', null),
                 (420, 3, 4, 1, '최종 발표 편지', '최종 발표 후 고마움을 담은 편지', date_trunc('month', now() at time zone 'Asia/Seoul')::date + 28, now() - interval '17 hours', null),
-                (421, 2, 3, 1, '월말 가족 편지', '8월 가족 기록을 마무리하는 편지', date_trunc('month', now() at time zone 'Asia/Seoul')::date + 30, now() - interval '18 hours', null)
+                (421, 2, 3, 1, '월말 가족 편지', '8월 가족 기록을 마무리하는 편지', date_trunc('month', now() at time zone 'Asia/Seoul')::date + 30, now() - interval '18 hours', null),
+                (422, 3, 4, 1, '일요일 팀 편지', '일요일 팀원에게 남긴 짧은 편지', date_trunc('month', now() at time zone 'Asia/Seoul')::date + 1, now() - interval '19 hours', null),
+                (423, 2, 3, 1, '화요일 가족 편지', '화요일 가족에게 남긴 편지', date_trunc('month', now() at time zone 'Asia/Seoul')::date + 3, now() - interval '20 hours', null),
+                (424, 1, 2, 1, '일요일 데이트 편지', '일요일 데이트 후 남긴 편지', date_trunc('month', now() at time zone 'Asia/Seoul')::date + 8, now() - interval '21 hours', null),
+                (425, 2, 3, 1, '화요일 가족 응원', '화요일 가족에게 보내는 응원 편지', date_trunc('month', now() at time zone 'Asia/Seoul')::date + 10, now() - interval '22 hours', null),
+                (426, 3, 4, 1, '일요일 프로젝트 편지', '일요일 프로젝트 준비 응원 편지', date_trunc('month', now() at time zone 'Asia/Seoul')::date + 22, now() - interval '23 hours', null),
+                (427, 1, 2, 1, '목요일 고마움 편지', '목요일에 남긴 고마운 마음', date_trunc('month', now() at time zone 'Asia/Seoul')::date + 26, now() - interval '24 hours', null)
             on conflict (id) do update set
                 room_id = excluded.room_id,
                 sender_member_id = excluded.sender_member_id,

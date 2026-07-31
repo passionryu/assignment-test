@@ -259,8 +259,18 @@ const demoCalendar: CalendarResponse = {
       demoCalendarRoom(1, "우리 둘의 100일", { chatCount: 2, missionCount: 1 }),
       demoCalendarRoom(2, "7월 가족", { memoryCount: 1 }),
     ]),
+    demoCalendarDay(2, [
+      demoCalendarRoom(1, "우리 둘의 100일", { chatCount: 1 }),
+      demoCalendarRoom(2, "7월 가족", { memoryCount: 1 }),
+      demoCalendarRoom(3, "여름 프로젝트반", { letterCount: 1 }),
+    ]),
     demoCalendarDay(3, [
       demoCalendarRoom(1, "우리 둘의 100일", { chatCount: 1, missionCount: 1 }),
+      demoCalendarRoom(2, "7월 가족", { chatCount: 1, letterCount: 1 }),
+      demoCalendarRoom(3, "여름 프로젝트반", { memoryCount: 1 }),
+    ]),
+    demoCalendarDay(4, [
+      demoCalendarRoom(1, "우리 둘의 100일", { missionCount: 1 }),
       demoCalendarRoom(2, "7월 가족", { chatCount: 1, letterCount: 1 }),
       demoCalendarRoom(3, "여름 프로젝트반", { memoryCount: 1 }),
     ]),
@@ -276,9 +286,19 @@ const demoCalendar: CalendarResponse = {
     demoCalendarDay(8, [
       demoCalendarRoom(2, "7월 가족", { chatCount: 1, letterCount: 1 }),
     ]),
+    demoCalendarDay(9, [
+      demoCalendarRoom(1, "우리 둘의 100일", { memoryCount: 1, letterCount: 1 }),
+      demoCalendarRoom(2, "7월 가족", { missionCount: 1 }),
+      demoCalendarRoom(3, "여름 프로젝트반", { chatCount: 1 }),
+    ]),
     demoCalendarDay(10, [
       demoCalendarRoom(1, "우리 둘의 100일", { chatCount: 1, memoryCount: 1, missionCount: 1 }),
       demoCalendarRoom(2, "7월 가족", { chatCount: 1, missionCount: 1 }),
+      demoCalendarRoom(3, "여름 프로젝트반", { memoryCount: 1 }),
+    ]),
+    demoCalendarDay(11, [
+      demoCalendarRoom(1, "우리 둘의 100일", { chatCount: 1 }),
+      demoCalendarRoom(2, "7월 가족", { letterCount: 1 }),
       demoCalendarRoom(3, "여름 프로젝트반", { memoryCount: 1 }),
     ]),
     demoCalendarDay(12, [
@@ -301,6 +321,11 @@ const demoCalendar: CalendarResponse = {
       demoCalendarRoom(1, "우리 둘의 100일", { memoryCount: 1 }),
       demoCalendarRoom(3, "여름 프로젝트반", { chatCount: 1, letterCount: 1 }),
     ]),
+    demoCalendarDay(20, [
+      demoCalendarRoom(1, "우리 둘의 100일", { chatCount: 1 }),
+      demoCalendarRoom(2, "7월 가족", { memoryCount: 1 }),
+      demoCalendarRoom(3, "여름 프로젝트반", { missionCount: 1 }),
+    ]),
     demoCalendarDay(21, [
       demoCalendarRoom(2, "7월 가족", { chatCount: 1, memoryCount: 1, missionCount: 1, letterCount: 1 }),
       demoCalendarRoom(3, "여름 프로젝트반", { memoryCount: 1 }),
@@ -308,12 +333,22 @@ const demoCalendar: CalendarResponse = {
     demoCalendarDay(22, [
       demoCalendarRoom(1, "우리 둘의 100일", { chatCount: 1, letterCount: 1 }),
     ]),
+    demoCalendarDay(23, [
+      demoCalendarRoom(1, "우리 둘의 100일", { memoryCount: 1 }),
+      demoCalendarRoom(2, "7월 가족", { letterCount: 1 }),
+      demoCalendarRoom(3, "여름 프로젝트반", { chatCount: 1 }),
+    ]),
     demoCalendarDay(24, [
       demoCalendarRoom(1, "우리 둘의 100일", { memoryCount: 1, missionCount: 1 }),
       demoCalendarRoom(3, "여름 프로젝트반", { chatCount: 1, letterCount: 1 }),
     ]),
     demoCalendarDay(26, [
       demoCalendarRoom(2, "7월 가족", { chatCount: 1, missionCount: 1, letterCount: 1 }),
+    ]),
+    demoCalendarDay(27, [
+      demoCalendarRoom(1, "우리 둘의 100일", { letterCount: 1 }),
+      demoCalendarRoom(2, "7월 가족", { chatCount: 1 }),
+      demoCalendarRoom(3, "여름 프로젝트반", { memoryCount: 1, missionCount: 1 }),
     ]),
     demoCalendarDay(28, [
       demoCalendarRoom(1, "우리 둘의 100일", { chatCount: 1, missionCount: 1, letterCount: 1 }),
@@ -323,6 +358,10 @@ const demoCalendar: CalendarResponse = {
     demoCalendarDay(29, [
       demoCalendarRoom(2, "7월 가족", { chatCount: 1, memoryCount: 1 }),
       demoCalendarRoom(3, "여름 프로젝트반", { memoryCount: 1, letterCount: 1 }),
+    ]),
+    demoCalendarDay(30, [
+      demoCalendarRoom(2, "7월 가족", { memoryCount: 1, missionCount: 1 }),
+      demoCalendarRoom(3, "여름 프로젝트반", { chatCount: 1 }),
     ]),
     demoCalendarDay(31, [
       demoCalendarRoom(1, "우리 둘의 100일", { memoryCount: 1, missionCount: 1 }),
