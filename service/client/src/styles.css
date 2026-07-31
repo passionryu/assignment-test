@@ -971,7 +971,7 @@ dl {
 
 .room-chat-preview,
 .room-feature-panel {
-  height: 450px;
+  height: 500px;
   padding: 24px;
 }
 
@@ -1040,6 +1040,8 @@ dl {
   display: grid;
   gap: 16px;
   flex: 1;
+  min-height: 0;
+  padding-bottom: 12px;
 }
 
 .room-feature-card {
