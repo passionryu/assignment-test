@@ -27,6 +27,7 @@ class LocalSeedRunner(
             seedRooms()
             seedRoomMembers()
             seedNotificationSettings()
+            seedContents()
             seedNotifications()
             syncIdentitySequences()
         }.onSuccess {
@@ -122,6 +123,253 @@ class LocalSeedRunner(
         )
     }
 
+    // 메인 캘린더가 날짜별 채팅/추억/미션/편지 흐름을 바로 보여주도록 콘텐츠 시드를 준비한다.
+    private fun seedContents() {
+        seedChatMessages()
+        seedMemoryPosts()
+        seedMissions()
+        seedMissionSubmissions()
+        seedLetters()
+    }
+
+    // 채팅 탭과 캘린더의 날짜별 채팅 점 표시를 위한 메시지를 준비한다.
+    private fun seedChatMessages() {
+        jdbcTemplate.update(
+            """
+            insert into chat_messages (id, room_id, sender_member_id, body, occurred_date, sent_at)
+            values
+                (201, 1, 2, '오늘 점심 사진 이야기 남겼어.', ((now() at time zone 'Asia/Seoul')::date), now() - interval '22 minutes'),
+                (202, 1, 2, '카페에서 찍은 사진도 책에 넣자.', ((now() at time zone 'Asia/Seoul')::date), now() - interval '2 hours'),
+                (203, 3, 4, '프로젝트 공지 확인해줘.', ((now() at time zone 'Asia/Seoul')::date) - 1, now() - interval '1 day 1 hour'),
+                (204, 1, 2, '저녁 약속 시간 다시 정하자.', ((now() at time zone 'Asia/Seoul')::date) - 3, now() - interval '3 days 2 hours'),
+                (205, 2, 3, '가족 모임 시간 공유합니다.', ((now() at time zone 'Asia/Seoul')::date) - 4, now() - interval '4 days 2 hours'),
+                (206, 2, 3, '이번 달 가족 모임 날짜를 정했어요.', date_trunc('month', now() at time zone 'Asia/Seoul')::date + 9, now() - interval '30 minutes'),
+                (207, 1, 2, '월초 계획을 같이 정리했어.', date_trunc('month', now() at time zone 'Asia/Seoul')::date + 2, now() - interval '3 hours'),
+                (208, 2, 3, '가족 일정 공유합니다.', date_trunc('month', now() at time zone 'Asia/Seoul')::date + 2, now() - interval '4 hours'),
+                (209, 3, 4, '자료 조사 진행 상황 남깁니다.', date_trunc('month', now() at time zone 'Asia/Seoul')::date + 4, now() - interval '5 hours'),
+                (210, 1, 2, '퇴근 후 산책 이야기 남겼어.', date_trunc('month', now() at time zone 'Asia/Seoul')::date + 6, now() - interval '6 hours'),
+                (211, 2, 3, '주말 식사 후보를 골라봤어요.', date_trunc('month', now() at time zone 'Asia/Seoul')::date + 7, now() - interval '7 hours'),
+                (212, 1, 2, '오늘도 사진 정리하자.', date_trunc('month', now() at time zone 'Asia/Seoul')::date + 9, now() - interval '8 hours'),
+                (213, 3, 4, '중간 발표 피드백 공유합니다.', date_trunc('month', now() at time zone 'Asia/Seoul')::date + 11, now() - interval '9 hours'),
+                (214, 1, 2, '금요일 데이트 후보 정리했어.', date_trunc('month', now() at time zone 'Asia/Seoul')::date + 13, now() - interval '10 hours'),
+                (215, 2, 3, '가족 앨범에 넣을 사진 골라주세요.', date_trunc('month', now() at time zone 'Asia/Seoul')::date + 14, now() - interval '11 hours'),
+                (216, 1, 2, '기념일 편지 초안 봐줘.', date_trunc('month', now() at time zone 'Asia/Seoul')::date + 16, now() - interval '12 hours'),
+                (217, 3, 4, '회고 질문 리스트 공유합니다.', date_trunc('month', now() at time zone 'Asia/Seoul')::date + 18, now() - interval '13 hours'),
+                (218, 2, 3, '가족 미션 인증 확인해주세요.', date_trunc('month', now() at time zone 'Asia/Seoul')::date + 20, now() - interval '14 hours'),
+                (219, 1, 2, '주말 계획을 다시 정리했어.', date_trunc('month', now() at time zone 'Asia/Seoul')::date + 21, now() - interval '15 hours'),
+                (220, 3, 4, '팀 회식 후보 날짜 투표합니다.', date_trunc('month', now() at time zone 'Asia/Seoul')::date + 23, now() - interval '16 hours'),
+                (221, 2, 3, '할머니 생신 준비 이야기입니다.', date_trunc('month', now() at time zone 'Asia/Seoul')::date + 25, now() - interval '17 hours'),
+                (222, 1, 2, '이번 달 마지막 산책 기록하자.', date_trunc('month', now() at time zone 'Asia/Seoul')::date + 27, now() - interval '18 hours'),
+                (223, 2, 3, '가족 사진 인화 후보를 골랐어요.', date_trunc('month', now() at time zone 'Asia/Seoul')::date + 28, now() - interval '19 hours'),
+                (224, 3, 4, '프로젝트 마무리 소감 남깁니다.', date_trunc('month', now() at time zone 'Asia/Seoul')::date + 30, now() - interval '20 hours'),
+                (225, 1, 2, '일요일 아침 산책 기록을 남겼어.', date_trunc('month', now() at time zone 'Asia/Seoul')::date + 1, now() - interval '21 hours'),
+                (226, 2, 3, '화요일 가족 일정 다시 확인해요.', date_trunc('month', now() at time zone 'Asia/Seoul')::date + 3, now() - interval '22 hours'),
+                (227, 3, 4, '일요일 팀 체크인 남깁니다.', date_trunc('month', now() at time zone 'Asia/Seoul')::date + 8, now() - interval '23 hours'),
+                (228, 1, 2, '화요일 저녁 메뉴 후보를 골랐어.', date_trunc('month', now() at time zone 'Asia/Seoul')::date + 10, now() - interval '24 hours'),
+                (229, 1, 2, '목요일 짧은 통화 기록 남겨둘게.', date_trunc('month', now() at time zone 'Asia/Seoul')::date + 19, now() - interval '25 hours'),
+                (230, 3, 4, '일요일 프로젝트 준비 상황 공유합니다.', date_trunc('month', now() at time zone 'Asia/Seoul')::date + 22, now() - interval '26 hours'),
+                (231, 2, 3, '목요일 가족 사진 후보를 다시 골랐어요.', date_trunc('month', now() at time zone 'Asia/Seoul')::date + 26, now() - interval '27 hours'),
+                (232, 3, 4, '월말 일요일 마무리 채팅입니다.', date_trunc('month', now() at time zone 'Asia/Seoul')::date + 29, now() - interval '28 hours')
+            on conflict (id) do update set
+                room_id = excluded.room_id,
+                sender_member_id = excluded.sender_member_id,
+                body = excluded.body,
+                occurred_date = excluded.occurred_date,
+                sent_at = excluded.sent_at,
+                deleted_at = null
+            """.trimIndent(),
+        )
+    }
+
+    // 추억 게시판과 캘린더의 추억 점 표시를 위한 게시글을 준비한다.
+    private fun seedMemoryPosts() {
+        jdbcTemplate.update(
+            """
+            insert into memory_posts (
+                id,
+                room_id,
+                author_member_id,
+                title,
+                body,
+                representative_image_url,
+                image_count,
+                occurred_date,
+                created_at,
+                updated_at
+            )
+            values
+                (301, 2, 3, '가족 여행 사진', '가족 여행에서 남긴 사진 기록', null, 3, ((now() at time zone 'Asia/Seoul')::date), now() - interval '2 hours', now() - interval '2 hours'),
+                (302, 3, 4, '프로젝트 회고 사진', '프로젝트반 회고 날의 기록', null, 2, ((now() at time zone 'Asia/Seoul')::date) - 1, now() - interval '1 day 8 hours', now() - interval '1 day 8 hours'),
+                (303, 1, 2, '카페에서 찍은 사진', '둘이 다녀온 카페 기록', null, 2, ((now() at time zone 'Asia/Seoul')::date) - 2, now() - interval '2 days', now() - interval '2 days'),
+                (304, 2, 3, '주말 장보기', '주말 장보기와 가족 식사 준비', null, 1, ((now() at time zone 'Asia/Seoul')::date) - 3, now() - interval '3 days', now() - interval '3 days'),
+                (305, 1, 2, '기념일 후보 사진', '책에 담고 싶은 이번 달 사진 기록', null, 4, date_trunc('month', now() at time zone 'Asia/Seoul')::date + 16, now() - interval '1 hour', now() - interval '1 hour'),
+                (306, 3, 4, '월초 팀 사진', '월초 회의에서 남긴 팀 사진', null, 2, date_trunc('month', now() at time zone 'Asia/Seoul')::date + 2, now() - interval '3 hours', now() - interval '3 hours'),
+                (307, 1, 2, '퇴근길 하늘', '같이 본 하늘 사진 기록', null, 1, date_trunc('month', now() at time zone 'Asia/Seoul')::date + 4, now() - interval '4 hours', now() - interval '4 hours'),
+                (308, 2, 3, '가족 저녁상', '가족이 함께 먹은 저녁 기록', null, 2, date_trunc('month', now() at time zone 'Asia/Seoul')::date + 6, now() - interval '5 hours', now() - interval '5 hours'),
+                (309, 3, 4, '중간 발표 사진', '중간 발표 준비 현장', null, 3, date_trunc('month', now() at time zone 'Asia/Seoul')::date + 9, now() - interval '6 hours', now() - interval '6 hours'),
+                (310, 1, 2, '카페 영수증과 사진', '둘이 고른 디저트 기록', null, 2, date_trunc('month', now() at time zone 'Asia/Seoul')::date + 11, now() - interval '7 hours', now() - interval '7 hours'),
+                (311, 2, 3, '가족 산책 사진', '공원 산책 중 남긴 사진', null, 4, date_trunc('month', now() at time zone 'Asia/Seoul')::date + 13, now() - interval '8 hours', now() - interval '8 hours'),
+                (312, 3, 4, '회고 보드 사진', '프로젝트 회고 보드 기록', null, 1, date_trunc('month', now() at time zone 'Asia/Seoul')::date + 14, now() - interval '9 hours', now() - interval '9 hours'),
+                (313, 1, 2, '기념일 산책 사진', '기념일 주간 산책 기록', null, 3, date_trunc('month', now() at time zone 'Asia/Seoul')::date + 18, now() - interval '10 hours', now() - interval '10 hours'),
+                (314, 2, 3, '생신 준비 사진', '생신 준비 과정 기록', null, 2, date_trunc('month', now() at time zone 'Asia/Seoul')::date + 20, now() - interval '11 hours', now() - interval '11 hours'),
+                (315, 3, 4, '팀 회식 후보 장소', '후보 장소를 사진으로 남김', null, 2, date_trunc('month', now() at time zone 'Asia/Seoul')::date + 21, now() - interval '12 hours', now() - interval '12 hours'),
+                (316, 1, 2, '주말 영화 티켓', '함께 본 영화 티켓 기록', null, 1, date_trunc('month', now() at time zone 'Asia/Seoul')::date + 23, now() - interval '13 hours', now() - interval '13 hours'),
+                (317, 2, 3, '가족 앨범 후보', '앨범에 넣을 사진 후보', null, 5, date_trunc('month', now() at time zone 'Asia/Seoul')::date + 27, now() - interval '14 hours', now() - interval '14 hours'),
+                (318, 3, 4, '최종 발표 사진', '최종 발표 날의 기록', null, 4, date_trunc('month', now() at time zone 'Asia/Seoul')::date + 28, now() - interval '15 hours', now() - interval '15 hours'),
+                (319, 1, 2, '월말 산책 사진', '월말에 남긴 산책 기록', null, 2, date_trunc('month', now() at time zone 'Asia/Seoul')::date + 30, now() - interval '16 hours', now() - interval '16 hours'),
+                (320, 2, 3, '일요일 가족 브런치', '일요일에 함께 먹은 브런치 기록', null, 2, date_trunc('month', now() at time zone 'Asia/Seoul')::date + 1, now() - interval '17 hours', now() - interval '17 hours'),
+                (321, 3, 4, '화요일 회의 사진', '화요일 회의에서 남긴 사진', null, 1, date_trunc('month', now() at time zone 'Asia/Seoul')::date + 3, now() - interval '18 hours', now() - interval '18 hours'),
+                (322, 1, 2, '일요일 카페 기록', '일요일 카페에서 남긴 추억', null, 3, date_trunc('month', now() at time zone 'Asia/Seoul')::date + 8, now() - interval '19 hours', now() - interval '19 hours'),
+                (323, 3, 4, '화요일 발표 준비', '화요일 발표 준비 사진', null, 2, date_trunc('month', now() at time zone 'Asia/Seoul')::date + 10, now() - interval '20 hours', now() - interval '20 hours'),
+                (324, 2, 3, '목요일 가족 간식', '목요일 가족 간식 사진', null, 2, date_trunc('month', now() at time zone 'Asia/Seoul')::date + 19, now() - interval '21 hours', now() - interval '21 hours'),
+                (325, 1, 2, '일요일 영화 기록', '일요일에 함께 본 영화 기록', null, 1, date_trunc('month', now() at time zone 'Asia/Seoul')::date + 22, now() - interval '22 hours', now() - interval '22 hours'),
+                (326, 3, 4, '목요일 최종 점검', '목요일 최종 점검 사진', null, 2, date_trunc('month', now() at time zone 'Asia/Seoul')::date + 26, now() - interval '23 hours', now() - interval '23 hours'),
+                (327, 2, 3, '월말 가족 기록', '월말 가족 모임 사진', null, 4, date_trunc('month', now() at time zone 'Asia/Seoul')::date + 29, now() - interval '24 hours', now() - interval '24 hours')
+            on conflict (id) do update set
+                room_id = excluded.room_id,
+                author_member_id = excluded.author_member_id,
+                title = excluded.title,
+                body = excluded.body,
+                representative_image_url = excluded.representative_image_url,
+                image_count = excluded.image_count,
+                occurred_date = excluded.occurred_date,
+                created_at = excluded.created_at,
+                updated_at = excluded.updated_at,
+                deleted_at = null
+            """.trimIndent(),
+        )
+    }
+
+    // 미션 인증과 캘린더의 미션 점 표시를 위한 미션을 준비한다.
+    private fun seedMissions() {
+        jdbcTemplate.update(
+            """
+            insert into missions (id, room_id, title, description, status, created_by_member_id, created_at, completed_at)
+            values
+                (101, 1, '오늘의 산책 인증', '함께 산책한 순간을 남긴다.', 'IN_PROGRESS', 1, now() - interval '5 days', null),
+                (102, 2, '가족 산책', '가족이 함께 산책한 기록을 남긴다.', 'IN_PROGRESS', 1, now() - interval '5 days', null),
+                (103, 1, '함께 먹은 점심', '점심 사진과 짧은 글을 남긴다.', 'IN_PROGRESS', 1, now() - interval '5 days', null),
+                (104, 2, '가족 여행 회고', '여행에서 좋았던 순간을 인증한다.', 'IN_PROGRESS', 1, now() - interval '5 days', null),
+                (105, 3, '프로젝트 회고', '프로젝트 회고 내용을 남긴다.', 'IN_PROGRESS', 1, now() - interval '5 days', null),
+                (106, 1, '저녁 약속 인증', '저녁 약속을 짧게 기록한다.', 'IN_PROGRESS', 1, now() - interval '5 days', null),
+                (107, 3, '팀 응원 미션', '팀원에게 응원 메시지를 남긴다.', 'IN_PROGRESS', 1, now() - interval '5 days', null),
+                (108, 3, '발표 준비 인증', '발표 준비 상황을 인증한다.', 'IN_PROGRESS', 1, now() - interval '5 days', null)
+            on conflict (id) do update set
+                room_id = excluded.room_id,
+                title = excluded.title,
+                description = excluded.description,
+                status = excluded.status,
+                created_by_member_id = excluded.created_by_member_id,
+                created_at = excluded.created_at,
+                completed_at = excluded.completed_at
+            """.trimIndent(),
+        )
+    }
+
+    // 미션 인증 제출 기록을 날짜별 기록으로 집계할 수 있게 준비한다.
+    private fun seedMissionSubmissions() {
+        jdbcTemplate.update(
+            """
+            insert into mission_submissions (id, mission_id, submitter_member_id, body, image_url, occurred_date, submitted_at)
+            values
+                (101, 101, 2, '오늘 산책 인증 완료', null, ((now() at time zone 'Asia/Seoul')::date), now() - interval '8 minutes'),
+                (102, 102, 3, '가족 산책 인증', null, ((now() at time zone 'Asia/Seoul')::date) - 1, now() - interval '1 day 2 hours'),
+                (103, 103, 2, '점심 사진 인증', null, ((now() at time zone 'Asia/Seoul')::date) - 1, now() - interval '1 day 10 hours'),
+                (104, 104, 3, '가족 여행 회고 인증', null, ((now() at time zone 'Asia/Seoul')::date) - 2, now() - interval '2 days'),
+                (105, 105, 4, '프로젝트 회고 인증', null, ((now() at time zone 'Asia/Seoul')::date) - 2, now() - interval '2 days 2 hours'),
+                (106, 106, 2, '저녁 약속 인증', null, ((now() at time zone 'Asia/Seoul')::date) - 3, now() - interval '3 days 4 hours'),
+                (107, 107, 4, '팀 응원 미션 인증', null, ((now() at time zone 'Asia/Seoul')::date) - 4, now() - interval '4 days 5 hours'),
+                (108, 108, 4, '발표 준비 인증', null, date_trunc('month', now() at time zone 'Asia/Seoul')::date + 27, now() - interval '1 hour'),
+                (109, 101, 2, '월초 산책 다시 인증', null, date_trunc('month', now() at time zone 'Asia/Seoul')::date + 2, now() - interval '3 hours'),
+                (110, 102, 3, '가족 일정 미션 인증', null, date_trunc('month', now() at time zone 'Asia/Seoul')::date + 4, now() - interval '4 hours'),
+                (111, 105, 4, '팀 회고 미션 인증', null, date_trunc('month', now() at time zone 'Asia/Seoul')::date + 6, now() - interval '5 hours'),
+                (112, 103, 2, '점심 기록 추가 인증', null, date_trunc('month', now() at time zone 'Asia/Seoul')::date + 7, now() - interval '6 hours'),
+                (113, 104, 3, '가족 여행 사진 인증', null, date_trunc('month', now() at time zone 'Asia/Seoul')::date + 9, now() - interval '7 hours'),
+                (114, 108, 4, '발표 자료 점검 인증', null, date_trunc('month', now() at time zone 'Asia/Seoul')::date + 11, now() - interval '8 hours'),
+                (115, 106, 2, '저녁 약속 미션 인증', null, date_trunc('month', now() at time zone 'Asia/Seoul')::date + 13, now() - interval '9 hours'),
+                (116, 102, 3, '가족 산책 추가 인증', null, date_trunc('month', now() at time zone 'Asia/Seoul')::date + 14, now() - interval '10 hours'),
+                (117, 107, 4, '팀 응원 추가 인증', null, date_trunc('month', now() at time zone 'Asia/Seoul')::date + 16, now() - interval '11 hours'),
+                (118, 101, 2, '기념일 산책 인증', null, date_trunc('month', now() at time zone 'Asia/Seoul')::date + 18, now() - interval '12 hours'),
+                (119, 104, 3, '생신 준비 미션 인증', null, date_trunc('month', now() at time zone 'Asia/Seoul')::date + 20, now() - interval '13 hours'),
+                (120, 108, 4, '회식 후보 조사 인증', null, date_trunc('month', now() at time zone 'Asia/Seoul')::date + 21, now() - interval '14 hours'),
+                (121, 103, 2, '주말 데이트 인증', null, date_trunc('month', now() at time zone 'Asia/Seoul')::date + 23, now() - interval '15 hours'),
+                (122, 102, 3, '가족 앨범 정리 인증', null, date_trunc('month', now() at time zone 'Asia/Seoul')::date + 25, now() - interval '16 hours'),
+                (123, 107, 4, '프로젝트 마무리 인증', null, date_trunc('month', now() at time zone 'Asia/Seoul')::date + 28, now() - interval '17 hours'),
+                (124, 106, 2, '월말 산책 인증', null, date_trunc('month', now() at time zone 'Asia/Seoul')::date + 30, now() - interval '18 hours'),
+                (125, 101, 2, '화요일 산책 인증', null, date_trunc('month', now() at time zone 'Asia/Seoul')::date + 3, now() - interval '19 hours'),
+                (126, 104, 3, '일요일 가족 미션 인증', null, date_trunc('month', now() at time zone 'Asia/Seoul')::date + 8, now() - interval '20 hours'),
+                (127, 108, 4, '목요일 발표 점검 인증', null, date_trunc('month', now() at time zone 'Asia/Seoul')::date + 19, now() - interval '21 hours'),
+                (128, 107, 4, '목요일 팀 응원 인증', null, date_trunc('month', now() at time zone 'Asia/Seoul')::date + 26, now() - interval '22 hours'),
+                (129, 102, 3, '월말 가족 미션 인증', null, date_trunc('month', now() at time zone 'Asia/Seoul')::date + 29, now() - interval '23 hours')
+            on conflict (id) do update set
+                mission_id = excluded.mission_id,
+                submitter_member_id = excluded.submitter_member_id,
+                body = excluded.body,
+                image_url = excluded.image_url,
+                occurred_date = excluded.occurred_date,
+                submitted_at = excluded.submitted_at
+            """.trimIndent(),
+        )
+    }
+
+    // 편지 화면과 캘린더의 편지 점 표시를 위한 편지를 준비한다.
+    private fun seedLetters() {
+        jdbcTemplate.update(
+            """
+            insert into letters (
+                id,
+                room_id,
+                sender_member_id,
+                receiver_member_id,
+                title,
+                body,
+                occurred_date,
+                sent_at,
+                read_at
+            )
+            values
+                (401, 3, 4, 1, '프로젝트 응원 편지', '지훈이 보낸 응원 편지', ((now() at time zone 'Asia/Seoul')::date) - 1, now() - interval '1 day', null),
+                (402, 2, 3, 1, '고마운 마음', '아버지가 남긴 고마운 마음', ((now() at time zone 'Asia/Seoul')::date) - 1, now() - interval '1 day 6 hours', null),
+                (403, 2, 3, 1, '여행 후기', '가족 여행 후기를 편지로 남겼습니다.', ((now() at time zone 'Asia/Seoul')::date) - 2, now() - interval '2 days', null),
+                (404, 3, 4, 1, '팀원 응원', '팀원들에게 보내는 응원 편지', ((now() at time zone 'Asia/Seoul')::date) - 3, now() - interval '3 days', null),
+                (405, 1, 2, 1, '기념일 편지', '이번 달 기념일에 남기는 편지', date_trunc('month', now() at time zone 'Asia/Seoul')::date + 16, now() - interval '2 hours', null),
+                (406, 2, 3, 1, '월초 가족 편지', '월초에 남기는 가족 편지', date_trunc('month', now() at time zone 'Asia/Seoul')::date + 2, now() - interval '3 hours', null),
+                (407, 1, 2, 1, '고마운 하루', '오늘 고마웠던 마음', date_trunc('month', now() at time zone 'Asia/Seoul')::date + 4, now() - interval '4 hours', null),
+                (408, 3, 4, 1, '팀 응원 편지', '팀원에게 보내는 응원', date_trunc('month', now() at time zone 'Asia/Seoul')::date + 6, now() - interval '5 hours', null),
+                (409, 2, 3, 1, '주말 가족 편지', '주말 준비를 고마워하는 마음', date_trunc('month', now() at time zone 'Asia/Seoul')::date + 7, now() - interval '6 hours', null),
+                (410, 1, 2, 1, '기록을 부탁하는 편지', '사진을 같이 고르자는 편지', date_trunc('month', now() at time zone 'Asia/Seoul')::date + 11, now() - interval '7 hours', null),
+                (411, 3, 4, 1, '발표 응원', '발표를 앞둔 응원 편지', date_trunc('month', now() at time zone 'Asia/Seoul')::date + 13, now() - interval '8 hours', null),
+                (412, 2, 3, 1, '생신 준비 편지', '생신 준비 고마움을 담은 편지', date_trunc('month', now() at time zone 'Asia/Seoul')::date + 14, now() - interval '9 hours', null),
+                (413, 1, 2, 1, '기념일 전날 편지', '기념일을 기다리는 마음', date_trunc('month', now() at time zone 'Asia/Seoul')::date + 15, now() - interval '10 hours', null),
+                (414, 3, 4, 1, '회고 감사 편지', '프로젝트 회고에 대한 감사', date_trunc('month', now() at time zone 'Asia/Seoul')::date + 18, now() - interval '11 hours', null),
+                (415, 2, 3, 1, '가족 앨범 편지', '앨범 정리에 대한 편지', date_trunc('month', now() at time zone 'Asia/Seoul')::date + 20, now() - interval '12 hours', null),
+                (416, 1, 2, 1, '주말 데이트 편지', '주말 약속에 대한 편지', date_trunc('month', now() at time zone 'Asia/Seoul')::date + 21, now() - interval '13 hours', null),
+                (417, 3, 4, 1, '마무리 응원 편지', '프로젝트 마무리 응원', date_trunc('month', now() at time zone 'Asia/Seoul')::date + 23, now() - interval '14 hours', null),
+                (418, 2, 3, 1, '가족 모임 편지', '가족 모임 후 남기는 마음', date_trunc('month', now() at time zone 'Asia/Seoul')::date + 25, now() - interval '15 hours', null),
+                (419, 1, 2, 1, '월말 편지', '이번 달을 정리하는 편지', date_trunc('month', now() at time zone 'Asia/Seoul')::date + 27, now() - interval '16 hours', null),
+                (420, 3, 4, 1, '최종 발표 편지', '최종 발표 후 고마움을 담은 편지', date_trunc('month', now() at time zone 'Asia/Seoul')::date + 28, now() - interval '17 hours', null),
+                (421, 2, 3, 1, '월말 가족 편지', '8월 가족 기록을 마무리하는 편지', date_trunc('month', now() at time zone 'Asia/Seoul')::date + 30, now() - interval '18 hours', null),
+                (422, 3, 4, 1, '일요일 팀 편지', '일요일 팀원에게 남긴 짧은 편지', date_trunc('month', now() at time zone 'Asia/Seoul')::date + 1, now() - interval '19 hours', null),
+                (423, 2, 3, 1, '화요일 가족 편지', '화요일 가족에게 남긴 편지', date_trunc('month', now() at time zone 'Asia/Seoul')::date + 3, now() - interval '20 hours', null),
+                (424, 1, 2, 1, '일요일 데이트 편지', '일요일 데이트 후 남긴 편지', date_trunc('month', now() at time zone 'Asia/Seoul')::date + 8, now() - interval '21 hours', null),
+                (425, 2, 3, 1, '화요일 가족 응원', '화요일 가족에게 보내는 응원 편지', date_trunc('month', now() at time zone 'Asia/Seoul')::date + 10, now() - interval '22 hours', null),
+                (426, 3, 4, 1, '일요일 프로젝트 편지', '일요일 프로젝트 준비 응원 편지', date_trunc('month', now() at time zone 'Asia/Seoul')::date + 22, now() - interval '23 hours', null),
+                (427, 1, 2, 1, '목요일 고마움 편지', '목요일에 남긴 고마운 마음', date_trunc('month', now() at time zone 'Asia/Seoul')::date + 26, now() - interval '24 hours', null)
+            on conflict (id) do update set
+                room_id = excluded.room_id,
+                sender_member_id = excluded.sender_member_id,
+                receiver_member_id = excluded.receiver_member_id,
+                title = excluded.title,
+                body = excluded.body,
+                occurred_date = excluded.occurred_date,
+                sent_at = excluded.sent_at,
+                read_at = excluded.read_at,
+                deleted_by_sender_at = null,
+                deleted_by_receiver_at = null
+            """.trimIndent(),
+        )
+    }
+
     // 메인 최신 알림과 전체 알림 모달을 확인할 수 있도록 타입별 알림을 준비한다.
     private fun seedNotifications() {
         jdbcTemplate.update(
@@ -151,7 +399,7 @@ class LocalSeedRunner(
                     '민지가 미션 인증 동의를 기다립니다.',
                     'MISSION',
                     101,
-                    current_date,
+                    ((now() at time zone 'Asia/Seoul')::date),
                     null,
                     now() - interval '8 minutes'
                 ),
@@ -165,7 +413,7 @@ class LocalSeedRunner(
                     '민지가 새 채팅을 보냈습니다.',
                     'CHAT',
                     201,
-                    current_date,
+                    ((now() at time zone 'Asia/Seoul')::date),
                     null,
                     now() - interval '22 minutes'
                 ),
@@ -179,7 +427,7 @@ class LocalSeedRunner(
                     '아버지가 가족 여행 사진을 올렸습니다.',
                     'MEMORY',
                     301,
-                    current_date,
+                    ((now() at time zone 'Asia/Seoul')::date),
                     now() - interval '5 minutes',
                     now() - interval '2 hours'
                 ),
@@ -193,7 +441,7 @@ class LocalSeedRunner(
                     '지훈이 보낸 편지가 도착했습니다.',
                     'LETTER',
                     401,
-                    current_date - 1,
+                    ((now() at time zone 'Asia/Seoul')::date) - 1,
                     null,
                     now() - interval '1 day'
                 ),
@@ -207,7 +455,7 @@ class LocalSeedRunner(
                     '가족 미션 인증 동의율이 60%입니다.',
                     'MISSION',
                     102,
-                    current_date - 1,
+                    ((now() at time zone 'Asia/Seoul')::date) - 1,
                     null,
                     now() - interval '1 day 2 hours'
                 ),
@@ -221,7 +469,7 @@ class LocalSeedRunner(
                     '민지가 오늘 점심 사진 이야기를 남겼습니다.',
                     'CHAT',
                     202,
-                    current_date,
+                    ((now() at time zone 'Asia/Seoul')::date),
                     null,
                     now() - interval '1 day 4 hours'
                 ),
@@ -235,7 +483,7 @@ class LocalSeedRunner(
                     '아버지가 고마운 마음을 담은 편지를 보냈습니다.',
                     'LETTER',
                     402,
-                    current_date - 1,
+                    ((now() at time zone 'Asia/Seoul')::date) - 1,
                     null,
                     now() - interval '1 day 6 hours'
                 ),
@@ -249,7 +497,7 @@ class LocalSeedRunner(
                     '지훈이 프로젝트 회고 사진을 올렸습니다.',
                     'MEMORY',
                     302,
-                    current_date - 1,
+                    ((now() at time zone 'Asia/Seoul')::date) - 1,
                     null,
                     now() - interval '1 day 8 hours'
                 ),
@@ -263,7 +511,7 @@ class LocalSeedRunner(
                     '우리 둘의 100일 미션 동의율이 50%입니다.',
                     'MISSION',
                     103,
-                    current_date - 1,
+                    ((now() at time zone 'Asia/Seoul')::date) - 1,
                     null,
                     now() - interval '1 day 10 hours'
                 ),
@@ -277,7 +525,7 @@ class LocalSeedRunner(
                     '아버지가 가족 산책 미션 인증 동의를 기다립니다.',
                     'MISSION',
                     104,
-                    current_date - 2,
+                    ((now() at time zone 'Asia/Seoul')::date) - 2,
                     null,
                     now() - interval '1 day 12 hours'
                 ),
@@ -291,7 +539,7 @@ class LocalSeedRunner(
                     '지훈이 프로젝트 공지 채팅을 남겼습니다.',
                     'CHAT',
                     203,
-                    current_date - 2,
+                    ((now() at time zone 'Asia/Seoul')::date) - 2,
                     null,
                     now() - interval '1 day 14 hours'
                 ),
@@ -305,7 +553,7 @@ class LocalSeedRunner(
                     '민지가 카페에서 찍은 사진을 올렸습니다.',
                     'MEMORY',
                     303,
-                    current_date - 2,
+                    ((now() at time zone 'Asia/Seoul')::date) - 2,
                     now() - interval '20 minutes',
                     now() - interval '1 day 16 hours'
                 ),
@@ -319,7 +567,7 @@ class LocalSeedRunner(
                     '아버지가 가족 여행 후기를 편지로 남겼습니다.',
                     'LETTER',
                     403,
-                    current_date - 2,
+                    ((now() at time zone 'Asia/Seoul')::date) - 2,
                     null,
                     now() - interval '1 day 18 hours'
                 ),
@@ -333,7 +581,7 @@ class LocalSeedRunner(
                     '여름 프로젝트반 미션 동의율이 75%입니다.',
                     'MISSION',
                     105,
-                    current_date - 2,
+                    ((now() at time zone 'Asia/Seoul')::date) - 2,
                     null,
                     now() - interval '1 day 20 hours'
                 ),
@@ -347,7 +595,7 @@ class LocalSeedRunner(
                     '민지가 저녁 약속 채팅을 남겼습니다.',
                     'CHAT',
                     204,
-                    current_date - 3,
+                    ((now() at time zone 'Asia/Seoul')::date) - 3,
                     null,
                     now() - interval '1 day 22 hours'
                 ),
@@ -361,7 +609,7 @@ class LocalSeedRunner(
                     '아버지가 주말 장보기 사진을 올렸습니다.',
                     'MEMORY',
                     304,
-                    current_date - 3,
+                    ((now() at time zone 'Asia/Seoul')::date) - 3,
                     null,
                     now() - interval '2 days'
                 ),
@@ -375,7 +623,7 @@ class LocalSeedRunner(
                     '지훈이 팀원들에게 응원 편지를 보냈습니다.',
                     'LETTER',
                     404,
-                    current_date - 3,
+                    ((now() at time zone 'Asia/Seoul')::date) - 3,
                     null,
                     now() - interval '2 days 2 hours'
                 ),
@@ -389,7 +637,7 @@ class LocalSeedRunner(
                     '민지가 산책 인증 동의를 기다립니다.',
                     'MISSION',
                     106,
-                    current_date - 3,
+                    ((now() at time zone 'Asia/Seoul')::date) - 3,
                     null,
                     now() - interval '2 days 4 hours'
                 ),
@@ -403,7 +651,7 @@ class LocalSeedRunner(
                     '아버지가 가족 모임 시간을 공유했습니다.',
                     'CHAT',
                     205,
-                    current_date - 4,
+                    ((now() at time zone 'Asia/Seoul')::date) - 4,
                     null,
                     now() - interval '2 days 6 hours'
                 ),
@@ -417,7 +665,7 @@ class LocalSeedRunner(
                     '프로젝트 회고 미션 동의율이 90%입니다.',
                     'MISSION',
                     107,
-                    current_date - 4,
+                    ((now() at time zone 'Asia/Seoul')::date) - 4,
                     null,
                     now() - interval '2 days 8 hours'
                 )
@@ -439,7 +687,18 @@ class LocalSeedRunner(
 
     // 고정 ID 시드 이후 런타임 insert가 다음 ID를 자동 생성하도록 identity sequence를 보정한다.
     private fun syncIdentitySequences() {
-        listOf("members", "rooms", "room_members", "room_invitations", "notifications").forEach { tableName ->
+        listOf(
+            "members",
+            "rooms",
+            "room_members",
+            "room_invitations",
+            "chat_messages",
+            "memory_posts",
+            "missions",
+            "mission_submissions",
+            "letters",
+            "notifications",
+        ).forEach { tableName ->
             jdbcTemplate.execute(
                 """
                 select setval(
