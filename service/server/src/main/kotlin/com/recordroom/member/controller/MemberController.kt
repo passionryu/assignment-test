@@ -1,5 +1,13 @@
-package com.recordroom.member
+package com.recordroom.member.controller
 
+import com.recordroom.member.model.ChangePasswordRequest
+import com.recordroom.member.model.ChangePasswordResponse
+import com.recordroom.member.model.MemberProfileResponse
+import com.recordroom.member.model.NotificationSettingsResponse
+import com.recordroom.member.model.UpdateNotificationSettingsRequest
+import com.recordroom.member.model.UpdateProfileRequest
+import com.recordroom.member.service.CurrentMemberResolver
+import com.recordroom.member.service.MemberService
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PatchMapping
 import org.springframework.web.bind.annotation.PostMapping

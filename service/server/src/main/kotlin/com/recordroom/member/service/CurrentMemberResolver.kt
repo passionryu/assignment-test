@@ -1,4 +1,4 @@
-package com.recordroom.member
+package com.recordroom.member.service
 
 import com.recordroom.common.ApiException
 import org.springframework.http.HttpStatus

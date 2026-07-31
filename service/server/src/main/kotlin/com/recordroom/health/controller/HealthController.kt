@@ -1,4 +1,4 @@
-package com.recordroom.health
+package com.recordroom.health.controller
 
 import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.web.bind.annotation.GetMapping
