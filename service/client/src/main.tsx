@@ -5,6 +5,7 @@ import {
   BookOpen,
   CheckCircle2,
   ChevronDown,
+  Clock,
   FileText,
   Home,
   KeyRound,
@@ -12,12 +13,15 @@ import {
   LogOut,
   Mail,
   MessageCircle,
+  PanelLeftClose,
+  PanelLeftOpen,
   Phone,
   Plus,
   Settings,
   ShieldAlert,
   UserRound,
   UsersRound,
+  X,
 } from "lucide-react";
 import "./styles.css";
 
@@ -52,6 +56,30 @@ type RoomSummary = {
 type RoomsResponse = {
   rooms: RoomSummary[];
   pendingInvitationCount: number;
+};
+
+type NotificationType = "CHAT" | "LETTER" | "MEMORY" | "MISSION_APPROVAL_REQUEST" | "MISSION_PROGRESS";
+
+type NotificationTarget = {
+  type: "CHAT" | "LETTER" | "MEMORY" | "MISSION" | null;
+  id: number | null;
+  url: string;
+};
+
+type NotificationItem = {
+  id: number;
+  type: NotificationType;
+  roomId: number | null;
+  roomName: string | null;
+  actorName: string;
+  summary: string;
+  occurredAt: string;
+  read: boolean;
+  target: NotificationTarget;
+};
+
+type NotificationsResponse = {
+  items: NotificationItem[];
 };
 
 type ApiError = {
@@ -115,12 +143,95 @@ const demoRooms: RoomSummary[] = [
   },
 ];
 
+const demoNotifications: NotificationItem[] = [
+  {
+    id: 9001,
+    type: "MISSION_APPROVAL_REQUEST",
+    roomId: 1,
+    roomName: "우리 둘의 100일",
+    actorName: "민지",
+    summary: "미션 인증 동의를 기다립니다.",
+    occurredAt: new Date(Date.now() - 8 * 60 * 1000).toISOString(),
+    read: false,
+    target: { type: "MISSION", id: 101, url: "/rooms/1/missions?targetId=101" },
+  },
+  {
+    id: 9002,
+    type: "CHAT",
+    roomId: 1,
+    roomName: "우리 둘의 100일",
+    actorName: "민지",
+    summary: "새 채팅을 보냈습니다.",
+    occurredAt: new Date(Date.now() - 22 * 60 * 1000).toISOString(),
+    read: false,
+    target: { type: "CHAT", id: 201, url: "/rooms/1/chat?targetId=201" },
+  },
+  {
+    id: 9003,
+    type: "MEMORY",
+    roomId: 2,
+    roomName: "7월 가족",
+    actorName: "아버지",
+    summary: "가족 여행 사진을 올렸습니다.",
+    occurredAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+    read: true,
+    target: { type: "MEMORY", id: 301, url: "/rooms/2/memories?targetId=301" },
+  },
+  {
+    id: 9004,
+    type: "LETTER",
+    roomId: 3,
+    roomName: "여름 프로젝트반",
+    actorName: "지훈",
+    summary: "보낸 편지가 도착했습니다.",
+    occurredAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+    read: false,
+    target: { type: "LETTER", id: 401, url: "/rooms/3/letters?targetId=401" },
+  },
+  {
+    id: 9005,
+    type: "MISSION_PROGRESS",
+    roomId: 2,
+    roomName: "7월 가족",
+    actorName: "아버지",
+    summary: "가족 미션 동의율이 60%입니다.",
+    occurredAt: new Date(Date.now() - 26 * 60 * 60 * 1000).toISOString(),
+    read: false,
+    target: { type: "MISSION", id: 402, url: "/rooms/2/missions?targetId=402" },
+  },
+  ...Array.from({ length: 15 }, (_, index) => {
+    const id = 9006 + index;
+    const typeCycle: NotificationType[] = ["CHAT", "LETTER", "MEMORY", "MISSION_APPROVAL_REQUEST", "MISSION_PROGRESS"];
+    const type = typeCycle[index % typeCycle.length];
+    const room = demoRooms[index % demoRooms.length];
+    const actorNames = ["민지", "아버지", "지훈"];
+    const targetType: NotificationTarget["type"] = type === "CHAT" ? "CHAT" : type === "LETTER" ? "LETTER" : type === "MEMORY" ? "MEMORY" : "MISSION";
+    const feature = targetType === "CHAT" ? "chat" : targetType === "LETTER" ? "letters" : targetType === "MEMORY" ? "memories" : "missions";
+
+    return {
+      id,
+      type,
+      roomId: room.id,
+      roomName: room.name,
+      actorName: actorNames[index % actorNames.length],
+      summary: `${notificationTypeLabel(type)} 알림 예시 ${index + 1}`,
+      occurredAt: new Date(Date.now() - (30 + index * 18) * 60 * 1000).toISOString(),
+      read: index % 6 === 0,
+      target: { type: targetType, id: 500 + index, url: `/rooms/${room.id}/${feature}?targetId=${500 + index}` },
+    };
+  }),
+];
+
 function App() {
   const [profile, setProfile] = useState<MemberProfile | null>(null);
   const [settings, setSettings] = useState<NotificationSettings | null>(null);
   const [rooms, setRooms] = useState<RoomSummary[]>([]);
+  const [latestNotifications, setLatestNotifications] = useState<NotificationItem[]>([]);
+  const [allNotifications, setAllNotifications] = useState<NotificationItem[]>([]);
   const [pendingInvitationCount, setPendingInvitationCount] = useState(0);
   const [selectedRoomId, setSelectedRoomId] = useState<number | null>(null);
+  const [expandedRoomId, setExpandedRoomId] = useState<number | null>(null);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [activeView, setActiveView] = useState<AppView>("home");
   const [profileForm, setProfileForm] = useState({ displayName: "", profileImageUrl: "" });
   const [passwordForm, setPasswordForm] = useState({ currentPassword: "", newPassword: "" });
@@ -128,6 +239,7 @@ function App() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [profileEditOpen, setProfileEditOpen] = useState(false);
   const [logoutOpen, setLogoutOpen] = useState(false);
+  const [notificationsModalOpen, setNotificationsModalOpen] = useState(false);
 
   const selectedRoom = useMemo(
     () => rooms.find((room) => room.id === selectedRoomId) ?? rooms[0] ?? null,
@@ -151,6 +263,7 @@ function App() {
       setProfile(profileResponse);
       setSettings(settingsResponse);
       setRooms(visibleRooms);
+      await loadLatestNotifications();
       setPendingInvitationCount(roomsResponse.pendingInvitationCount);
       setProfileForm({
         displayName: profileResponse.displayName,
@@ -161,6 +274,8 @@ function App() {
       setProfile(demoProfile);
       setSettings(demoSettings);
       setRooms(demoRooms);
+      setLatestNotifications(demoNotifications.filter((notification) => !notification.read).slice(0, 3));
+      setAllNotifications(demoNotifications);
       setPendingInvitationCount(1);
       setProfileForm({
         displayName: demoProfile.displayName,
@@ -168,6 +283,43 @@ function App() {
       });
       setSelectedRoomId((currentSelectedRoomId) => currentSelectedRoomId ?? demoRooms[0].id);
     }
+  }
+
+  async function loadLatestNotifications() {
+    const latestResponse = await safeApiGet<NotificationsResponse>("/notifications/latest");
+    setLatestNotifications(latestResponse?.items.length ? latestResponse.items : demoNotifications.filter((notification) => !notification.read).slice(0, 3));
+  }
+
+  async function openNotificationsModal() {
+    setNotificationsModalOpen(true);
+    const response = await safeApiGet<NotificationsResponse>("/notifications?page=0&size=20");
+    setAllNotifications(response?.items.length ? response.items : demoNotifications);
+  }
+
+  async function handleNotificationClick(notification: NotificationItem) {
+    setMessage(null);
+    setErrorMessage(null);
+
+    markNotificationAsRead(notification.id);
+
+    if (notification.id < 9000) {
+      void safeApiRequest<{ read: boolean }>(`/notifications/${notification.id}/read`, { method: "POST" });
+    }
+
+    if (notification.roomId) {
+      setSelectedRoomId(notification.roomId);
+      setExpandedRoomId(notification.roomId);
+    }
+
+    setActiveView(notificationTargetView(notification));
+    setNotificationsModalOpen(false);
+  }
+
+  function markNotificationAsRead(notificationId: number) {
+    const markAsRead = (item: NotificationItem) => (item.id === notificationId ? { ...item, read: true } : item);
+
+    setLatestNotifications((current) => current.map(markAsRead));
+    setAllNotifications((current) => current.map(markAsRead));
   }
 
   async function saveProfile() {
@@ -231,7 +383,14 @@ function App() {
 
   function selectRoom(roomId: number, nextView: AppView = activeView === "rooms" || activeView === "settings" ? "home" : activeView) {
     setSelectedRoomId(roomId);
+    setExpandedRoomId((currentExpandedRoomId) => (currentExpandedRoomId === roomId ? null : roomId));
     setActiveView(nextView);
+  }
+
+  function moveToRoomFeature(roomId: number, view: Exclude<AppView, "home" | "rooms" | "settings">) {
+    setSelectedRoomId(roomId);
+    setExpandedRoomId(roomId);
+    setActiveView(view);
   }
 
   function toggleAllNotifications(checked: boolean) {
@@ -264,21 +423,35 @@ function App() {
   }
 
   return (
-    <main className="workspace">
+    <main className={`workspace ${sidebarCollapsed ? "sidebar-collapsed" : ""}`}>
       <Sidebar
         activeView={activeView}
         rooms={rooms}
         selectedRoomId={selectedRoom?.id ?? null}
+        expandedRoomId={expandedRoomId}
+        collapsed={sidebarCollapsed}
         pendingInvitationCount={pendingInvitationCount}
         onMove={moveToView}
         onSelectRoom={selectRoom}
+        onMoveRoomFeature={moveToRoomFeature}
+        onToggleSidebar={() => setSidebarCollapsed((current) => !current)}
       />
 
       <section className="app-page">
         {message ? <div className="notice success">{message}</div> : null}
         {errorMessage ? <div className="notice error">{errorMessage}</div> : null}
 
-        {activeView === "home" ? <HomeView profile={profile} selectedRoom={selectedRoom} rooms={rooms} initials={initials} /> : null}
+        {activeView === "home" ? (
+          <HomeView
+            profile={profile}
+            initials={initials}
+            latestNotifications={latestNotifications}
+            onOpenNotifications={openNotificationsModal}
+            onNotificationClick={handleNotificationClick}
+            onOpenProfileEdit={() => setProfileEditOpen(true)}
+            onLogout={() => setLogoutOpen(true)}
+          />
+        ) : null}
         {activeView === "rooms" ? (
           <RoomsView
             rooms={rooms}
@@ -318,6 +491,14 @@ function App() {
       ) : null}
 
       {logoutOpen ? <LogoutModal onClose={() => setLogoutOpen(false)} /> : null}
+
+      {notificationsModalOpen ? (
+        <NotificationsModal
+          notifications={allNotifications.length > 0 ? allNotifications : latestNotifications}
+          onNotificationClick={handleNotificationClick}
+          onClose={() => setNotificationsModalOpen(false)}
+        />
+      ) : null}
     </main>
   );
 }
@@ -326,80 +507,101 @@ function Sidebar({
   activeView,
   rooms,
   selectedRoomId,
+  expandedRoomId,
+  collapsed,
   pendingInvitationCount,
   onMove,
   onSelectRoom,
+  onMoveRoomFeature,
+  onToggleSidebar,
 }: {
   activeView: AppView;
   rooms: RoomSummary[];
   selectedRoomId: number | null;
+  expandedRoomId: number | null;
+  collapsed: boolean;
   pendingInvitationCount: number;
   onMove: (view: AppView) => void;
   onSelectRoom: (roomId: number, nextView?: AppView) => void;
+  onMoveRoomFeature: (roomId: number, view: Exclude<AppView, "home" | "rooms" | "settings">) => void;
+  onToggleSidebar: () => void;
 }) {
   const selectedRoom = rooms.find((room) => room.id === selectedRoomId) ?? rooms[0] ?? null;
 
   return (
-    <aside className="sidebar" aria-label="기록방 메뉴">
+    <aside className={`sidebar ${collapsed ? "is-collapsed" : ""}`} aria-label="기록방 메뉴">
       <div>
         <div className="sidebar-brand">
-          <strong>기록방</strong>
-          <span>방 기준 메뉴</span>
+          <div className="sidebar-brand-text">
+            <strong>기록방</strong>
+            <span>방 기준 메뉴</span>
+          </div>
+          <span className="sidebar-brand-mark" aria-hidden="true">
+            기
+          </span>
+          <button className="sidebar-toggle" type="button" aria-label={collapsed ? "사이드바 펼치기" : "사이드바 접기"} onClick={onToggleSidebar}>
+            {collapsed ? <PanelLeftOpen size={20} /> : <PanelLeftClose size={20} />}
+          </button>
         </div>
 
         <nav className="nav-list">
-          <button className={`nav-item ${activeView === "home" ? "active" : ""}`} type="button" onClick={() => onMove("home")}>
+          <button className={`nav-item ${activeView === "home" ? "active" : ""}`} type="button" aria-label="홈" onClick={() => onMove("home")}>
             <Home size={18} />
-            홈
+            <span className="nav-label">홈</span>
           </button>
-          <button className={`nav-item ${activeView === "rooms" ? "active" : ""}`} type="button" onClick={() => onMove("rooms")}>
+          <button className={`nav-item ${activeView === "rooms" ? "active" : ""}`} type="button" aria-label="방 리스트" onClick={() => onMove("rooms")}>
             <List size={18} />
-            방 리스트
+            <span className="nav-label">방 리스트</span>
             {pendingInvitationCount > 0 ? <span className="count-badge">{pendingInvitationCount}</span> : null}
           </button>
 
-          {rooms.map((room) => (
-            <div className={`room-entry ${room.id === selectedRoom?.id ? "selected-room" : ""}`} key={room.id}>
-              <button
-                className={`nav-item room-list-item ${room.id === selectedRoom?.id ? "room-selected" : "muted"}`}
-                type="button"
-                onClick={() => onSelectRoom(room.id, "home")}
-              >
-                <UsersRound size={18} />
-                <span>{room.name}</span>
-                {room.id === selectedRoom?.id ? <ChevronDown size={16} /> : null}
-              </button>
+          {rooms.map((room) => {
+            const isSelected = room.id === selectedRoom?.id;
+            const isExpanded = room.id === expandedRoomId && !collapsed;
 
-              {room.id === selectedRoom?.id ? (
-                <div className="room-submenu">
-                  <button className={activeView === "chat" ? "active" : ""} type="button" onClick={() => onMove("chat")}>
+            return (
+              <div className={`room-entry ${isSelected ? "selected-room" : ""}`} key={room.id}>
+                <button
+                  className={`nav-item room-list-item ${isSelected ? "room-selected" : "muted"} ${isExpanded ? "is-expanded" : ""}`}
+                  type="button"
+                  aria-label={`${room.name} ${isExpanded ? "메뉴 접기" : "메뉴 펼치기"}`}
+                  aria-expanded={isExpanded}
+                  onClick={() => onSelectRoom(room.id, "home")}
+                >
+                  <UsersRound size={18} />
+                  <span className="nav-label">{room.name}</span>
+                  <ChevronDown size={16} />
+                </button>
+
+                <div className={`room-submenu ${isExpanded ? "is-open" : ""}`} aria-hidden={!isExpanded}>
+                  <button className={activeView === "chat" && isSelected ? "active" : ""} type="button" tabIndex={isExpanded ? 0 : -1} onClick={() => onMoveRoomFeature(room.id, "chat")}>
                     <MessageCircle size={16} />
-                    채팅
+                    <span className="nav-label">채팅</span>
                     {room.unreadChatCount > 0 ? <span className="count-badge">{room.unreadChatCount}</span> : null}
                   </button>
-                  <button className={activeView === "memories" ? "active" : ""} type="button" onClick={() => onMove("memories")}>
+                  <button className={activeView === "memories" && isSelected ? "active" : ""} type="button" tabIndex={isExpanded ? 0 : -1} onClick={() => onMoveRoomFeature(room.id, "memories")}>
                     <BookOpen size={16} />
-                    추억 게시판
+                    <span className="nav-label">추억 게시판</span>
                   </button>
-                  <button className={activeView === "missions" ? "active" : ""} type="button" onClick={() => onMove("missions")}>
+                  <button className={activeView === "missions" && isSelected ? "active" : ""} type="button" tabIndex={isExpanded ? 0 : -1} onClick={() => onMoveRoomFeature(room.id, "missions")}>
                     <CheckCircle2 size={16} />
-                    미션 인증
+                    <span className="nav-label">미션 인증</span>
                     {room.pendingMissionCount > 0 ? <span className="count-badge">{room.pendingMissionCount}</span> : null}
                   </button>
-                  <button className={activeView === "letters" ? "active" : ""} type="button" onClick={() => onMove("letters")}>
+                  <button className={activeView === "letters" && isSelected ? "active" : ""} type="button" tabIndex={isExpanded ? 0 : -1} onClick={() => onMoveRoomFeature(room.id, "letters")}>
                     <Mail size={16} />
-                    편지
+                    <span className="nav-label">편지</span>
                   </button>
                 </div>
-              ) : null}
-            </div>
-          ))}
+              </div>
+            );
+          })}
         </nav>
       </div>
 
-      <button className={`nav-item settings-active ${activeView === "settings" ? "active" : ""}`} type="button" onClick={() => onMove("settings")}>
+      <button className={`nav-item settings-active ${activeView === "settings" ? "active" : ""}`} type="button" aria-label="설정" onClick={() => onMove("settings")}>
         <Settings size={18} />
-        설정
+        <span className="nav-label">설정</span>
       </button>
     </aside>
   );
@@ -407,55 +609,83 @@ function Sidebar({
 
 function HomeView({
   profile,
-  selectedRoom,
-  rooms,
   initials,
+  latestNotifications,
+  onOpenNotifications,
+  onNotificationClick,
+  onOpenProfileEdit,
+  onLogout,
 }: {
   profile: MemberProfile | null;
-  selectedRoom: RoomSummary | null;
-  rooms: RoomSummary[];
   initials: string;
+  latestNotifications: NotificationItem[];
+  onOpenNotifications: () => void;
+  onNotificationClick: (notification: NotificationItem) => void;
+  onOpenProfileEdit: () => void;
+  onLogout: () => void;
 }) {
   return (
     <>
       <header className="page-header">
         <div>
-          <h1>홈</h1>
-          <p>최상단 기록방이 자동 선택되며, 선택 방 기준으로 사이드바 기능을 사용할 수 있다.</p>
+          <h1>메인 페이지</h1>
+          <p>방 기준 사이드바로 이동하고, 프로필/알림/캘린더에서 오늘의 흐름을 확인한다.</p>
         </div>
       </header>
 
       <section className="home-grid">
-        <article className="profile-panel compact-panel">
-          <div className="panel-heading">
+        <article className="profile-panel compact-panel home-profile-card">
+          <div className="panel-heading compact-heading">
             <div>
               <span>프로필</span>
-              <h2>{profile?.displayName ?? "불러오는 중"}</h2>
+              <h2>내 정보</h2>
             </div>
             <UserRound size={24} />
           </div>
-          <div className="profile-summary">
+          <div className="profile-summary home-profile-summary">
             <div className="avatar">{profile?.profileImageUrl ? <img src={profile.profileImageUrl} alt="" /> : initials}</div>
-            <div>
+            <div className="home-profile-info">
               <strong>{profile?.displayName ?? "-"}</strong>
-              <span>아이디 {profile?.username ?? "-"}</span>
+              <dl className="profile-username">
+                <div>
+                  <dt>아이디</dt>
+                  <dd>{profile?.username ?? "-"}</dd>
+                </div>
+              </dl>
             </div>
+            <dl className="home-profile-detail">
+              <div>
+                <dt>이메일</dt>
+                <dd>{profile?.email ?? "-"}</dd>
+              </div>
+              <div>
+                <dt>전화번호</dt>
+                <dd>{profile?.phoneNumber ?? "-"}</dd>
+              </div>
+            </dl>
+          </div>
+          <div className="profile-actions">
+            <button className="primary-button" type="button" onClick={onOpenProfileEdit}>
+              회원 정보 수정
+            </button>
+            <button className="outline-button" type="button" onClick={onLogout}>
+              로그아웃
+            </button>
           </div>
         </article>
 
-        <article className="dashboard-card">
-          <div className="panel-heading">
+        <article className="dashboard-card latest-notification-card">
+          <div className="panel-heading compact-heading">
             <div>
-              <span>선택된 방</span>
-              <h2>{selectedRoom?.name ?? "참여 방 없음"}</h2>
+              <span>최신 알림</span>
+              <h2>지금 확인할 일</h2>
             </div>
-            <UsersRound size={24} />
+            <button className="text-button" type="button" onClick={onOpenNotifications}>
+              전체 보기
+            </button>
           </div>
-          <div className="metric-grid">
-            <Metric label="멤버" value={selectedRoom ? `${selectedRoom.memberCount}명` : "-"} />
-            <Metric label="미확인 채팅" value={selectedRoom ? `${selectedRoom.unreadChatCount}개` : "-"} />
-            <Metric label="승인 대기 미션" value={selectedRoom ? `${selectedRoom.pendingMissionCount}개` : "-"} />
-          </div>
+
+          <NotificationList notifications={latestNotifications.slice(0, 3)} onNotificationClick={onNotificationClick} />
         </article>
 
         <article className="dashboard-card wide-card">
@@ -828,6 +1058,83 @@ function LogoutModal({ onClose }: { onClose: () => void }) {
   );
 }
 
+function NotificationsModal({
+  notifications,
+  onNotificationClick,
+  onClose,
+}: {
+  notifications: NotificationItem[];
+  onNotificationClick: (notification: NotificationItem) => void;
+  onClose: () => void;
+}) {
+  return (
+    <div className="modal-backdrop" role="presentation">
+      <section className="modal notification-modal" role="dialog" aria-modal="true" aria-labelledby="notifications-title">
+        <div className="modal-title-row">
+          <div>
+            <h2 id="notifications-title">전체 알림</h2>
+            <p>방별 채팅, 편지, 추억, 미션 알림을 최신순으로 확인한다.</p>
+          </div>
+          <button className="icon-button" type="button" aria-label="닫기" onClick={onClose}>
+            <X size={18} />
+          </button>
+        </div>
+
+        <NotificationList notifications={notifications} onNotificationClick={onNotificationClick} dense />
+      </section>
+    </div>
+  );
+}
+
+function NotificationList({
+  notifications,
+  onNotificationClick,
+  dense = false,
+}: {
+  notifications: NotificationItem[];
+  onNotificationClick: (notification: NotificationItem) => void;
+  dense?: boolean;
+}) {
+  if (notifications.length === 0) {
+    return (
+      <div className="empty-notifications">
+        <Bell size={22} />
+        <span>확인할 최신 알림이 없습니다.</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className={`notification-list ${dense ? "dense" : ""}`}>
+      {notifications.map((notification) => (
+        <button
+          className={`notification-item ${notification.read ? "read" : "unread"}`}
+          type="button"
+          key={notification.id}
+          onClick={() => onNotificationClick(notification)}
+        >
+          {!notification.read ? <span className="notification-new-dot" aria-hidden="true" /> : null}
+          <span className={`notification-type ${notification.type.toLowerCase().replace(/_/g, "-")}`}>
+            {notificationIcon(notification.type)}
+            {notificationTypeLabel(notification.type)}
+          </span>
+          <span className="notification-body">
+            <strong>{notification.roomName ?? "기록방"}</strong>
+            <span>
+              {notification.actorName} · {notification.summary}
+            </span>
+          </span>
+          <span className="notification-time">
+            {!notification.read ? <span className="new-badge">NEW</span> : null}
+            <Clock size={14} />
+            {relativeTime(notification.occurredAt)}
+          </span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
 function ToggleField({
   label,
   checked,
@@ -917,8 +1224,61 @@ function roomFeatureCopy(kind: Exclude<AppView, "home" | "rooms" | "settings">) 
   };
 }
 
+function notificationTargetView(notification: NotificationItem): AppView {
+  if (notification.type === "CHAT" || notification.target.type === "CHAT") return "chat";
+  if (notification.type === "LETTER" || notification.target.type === "LETTER") return "letters";
+  if (notification.type === "MEMORY" || notification.target.type === "MEMORY") return "memories";
+  return "missions";
+}
+
+function notificationTypeLabel(type: NotificationType): string {
+  if (type === "CHAT") return "채팅";
+  if (type === "LETTER") return "편지";
+  if (type === "MEMORY") return "추억";
+  return "미션";
+}
+
+function notificationIcon(type: NotificationType) {
+  if (type === "CHAT") return <MessageCircle size={14} />;
+  if (type === "LETTER") return <Mail size={14} />;
+  if (type === "MEMORY") return <BookOpen size={14} />;
+  return <CheckCircle2 size={14} />;
+}
+
+function relativeTime(value: string): string {
+  const occurredAt = new Date(value).getTime();
+  const diffMs = Date.now() - occurredAt;
+  if (Number.isNaN(occurredAt) || diffMs < 0) return "방금 전";
+
+  const minutes = Math.floor(diffMs / 60000);
+  if (minutes < 1) return "방금 전";
+  if (minutes < 60) return `${minutes}분 전`;
+
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}시간 전`;
+
+  const days = Math.floor(hours / 24);
+  return `${days}일 전`;
+}
+
 async function apiGet<T>(path: string): Promise<T> {
   return apiRequest<T>(path, { method: "GET" });
+}
+
+async function safeApiGet<T>(path: string): Promise<T | null> {
+  try {
+    return await apiGet<T>(path);
+  } catch {
+    return null;
+  }
+}
+
+async function safeApiRequest<T>(path: string, options: { method: string; body?: unknown }): Promise<T | null> {
+  try {
+    return await apiRequest<T>(path, options);
+  } catch {
+    return null;
+  }
 }
 
 async function apiRequest<T>(path: string, options: { method: string; body?: unknown }): Promise<T> {

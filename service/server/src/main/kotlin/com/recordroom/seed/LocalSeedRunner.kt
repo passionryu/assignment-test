@@ -27,6 +27,7 @@ class LocalSeedRunner(
             seedRooms()
             seedRoomMembers()
             seedNotificationSettings()
+            seedNotifications()
             syncIdentitySequences()
         }.onSuccess {
             log.info("[시드 데이터] 로컬 시드 생성 완료. who=system, what=LocalSeedRunner.run, requestData=profile:local, reason=completed")
@@ -121,9 +122,324 @@ class LocalSeedRunner(
         )
     }
 
+    // 메인 최신 알림과 전체 알림 모달을 확인할 수 있도록 타입별 알림을 준비한다.
+    private fun seedNotifications() {
+        jdbcTemplate.update(
+            """
+            insert into notifications (
+                id,
+                receiver_member_id,
+                room_id,
+                actor_member_id,
+                type,
+                title,
+                message,
+                target_type,
+                target_id,
+                occurred_date,
+                read_at,
+                created_at
+            )
+            values
+                (
+                    1,
+                    1,
+                    1,
+                    2,
+                    'MISSION_APPROVAL_REQUEST',
+                    '미션 인증 요청',
+                    '민지가 미션 인증 동의를 기다립니다.',
+                    'MISSION',
+                    101,
+                    current_date,
+                    null,
+                    now() - interval '8 minutes'
+                ),
+                (
+                    2,
+                    1,
+                    1,
+                    2,
+                    'CHAT',
+                    '새 채팅',
+                    '민지가 새 채팅을 보냈습니다.',
+                    'CHAT',
+                    201,
+                    current_date,
+                    null,
+                    now() - interval '22 minutes'
+                ),
+                (
+                    3,
+                    1,
+                    2,
+                    3,
+                    'MEMORY',
+                    '새 추억',
+                    '아버지가 가족 여행 사진을 올렸습니다.',
+                    'MEMORY',
+                    301,
+                    current_date,
+                    now() - interval '5 minutes',
+                    now() - interval '2 hours'
+                ),
+                (
+                    4,
+                    1,
+                    3,
+                    4,
+                    'LETTER',
+                    '새 편지',
+                    '지훈이 보낸 편지가 도착했습니다.',
+                    'LETTER',
+                    401,
+                    current_date - 1,
+                    null,
+                    now() - interval '1 day'
+                ),
+                (
+                    5,
+                    1,
+                    2,
+                    3,
+                    'MISSION_PROGRESS',
+                    '미션 동의율',
+                    '가족 미션 인증 동의율이 60%입니다.',
+                    'MISSION',
+                    102,
+                    current_date - 1,
+                    null,
+                    now() - interval '1 day 2 hours'
+                ),
+                (
+                    6,
+                    1,
+                    1,
+                    2,
+                    'CHAT',
+                    '새 채팅',
+                    '민지가 오늘 점심 사진 이야기를 남겼습니다.',
+                    'CHAT',
+                    202,
+                    current_date,
+                    null,
+                    now() - interval '1 day 4 hours'
+                ),
+                (
+                    7,
+                    1,
+                    2,
+                    3,
+                    'LETTER',
+                    '새 편지',
+                    '아버지가 고마운 마음을 담은 편지를 보냈습니다.',
+                    'LETTER',
+                    402,
+                    current_date - 1,
+                    null,
+                    now() - interval '1 day 6 hours'
+                ),
+                (
+                    8,
+                    1,
+                    3,
+                    4,
+                    'MEMORY',
+                    '새 추억',
+                    '지훈이 프로젝트 회고 사진을 올렸습니다.',
+                    'MEMORY',
+                    302,
+                    current_date - 1,
+                    null,
+                    now() - interval '1 day 8 hours'
+                ),
+                (
+                    9,
+                    1,
+                    1,
+                    2,
+                    'MISSION_PROGRESS',
+                    '미션 동의율',
+                    '우리 둘의 100일 미션 동의율이 50%입니다.',
+                    'MISSION',
+                    103,
+                    current_date - 1,
+                    null,
+                    now() - interval '1 day 10 hours'
+                ),
+                (
+                    10,
+                    1,
+                    2,
+                    3,
+                    'MISSION_APPROVAL_REQUEST',
+                    '미션 인증 요청',
+                    '아버지가 가족 산책 미션 인증 동의를 기다립니다.',
+                    'MISSION',
+                    104,
+                    current_date - 2,
+                    null,
+                    now() - interval '1 day 12 hours'
+                ),
+                (
+                    11,
+                    1,
+                    3,
+                    4,
+                    'CHAT',
+                    '새 채팅',
+                    '지훈이 프로젝트 공지 채팅을 남겼습니다.',
+                    'CHAT',
+                    203,
+                    current_date - 2,
+                    null,
+                    now() - interval '1 day 14 hours'
+                ),
+                (
+                    12,
+                    1,
+                    1,
+                    2,
+                    'MEMORY',
+                    '새 추억',
+                    '민지가 카페에서 찍은 사진을 올렸습니다.',
+                    'MEMORY',
+                    303,
+                    current_date - 2,
+                    now() - interval '20 minutes',
+                    now() - interval '1 day 16 hours'
+                ),
+                (
+                    13,
+                    1,
+                    2,
+                    3,
+                    'LETTER',
+                    '새 편지',
+                    '아버지가 가족 여행 후기를 편지로 남겼습니다.',
+                    'LETTER',
+                    403,
+                    current_date - 2,
+                    null,
+                    now() - interval '1 day 18 hours'
+                ),
+                (
+                    14,
+                    1,
+                    3,
+                    4,
+                    'MISSION_PROGRESS',
+                    '미션 동의율',
+                    '여름 프로젝트반 미션 동의율이 75%입니다.',
+                    'MISSION',
+                    105,
+                    current_date - 2,
+                    null,
+                    now() - interval '1 day 20 hours'
+                ),
+                (
+                    15,
+                    1,
+                    1,
+                    2,
+                    'CHAT',
+                    '새 채팅',
+                    '민지가 저녁 약속 채팅을 남겼습니다.',
+                    'CHAT',
+                    204,
+                    current_date - 3,
+                    null,
+                    now() - interval '1 day 22 hours'
+                ),
+                (
+                    16,
+                    1,
+                    2,
+                    3,
+                    'MEMORY',
+                    '새 추억',
+                    '아버지가 주말 장보기 사진을 올렸습니다.',
+                    'MEMORY',
+                    304,
+                    current_date - 3,
+                    null,
+                    now() - interval '2 days'
+                ),
+                (
+                    17,
+                    1,
+                    3,
+                    4,
+                    'LETTER',
+                    '새 편지',
+                    '지훈이 팀원들에게 응원 편지를 보냈습니다.',
+                    'LETTER',
+                    404,
+                    current_date - 3,
+                    null,
+                    now() - interval '2 days 2 hours'
+                ),
+                (
+                    18,
+                    1,
+                    1,
+                    2,
+                    'MISSION_APPROVAL_REQUEST',
+                    '미션 인증 요청',
+                    '민지가 산책 인증 동의를 기다립니다.',
+                    'MISSION',
+                    106,
+                    current_date - 3,
+                    null,
+                    now() - interval '2 days 4 hours'
+                ),
+                (
+                    19,
+                    1,
+                    2,
+                    3,
+                    'CHAT',
+                    '새 채팅',
+                    '아버지가 가족 모임 시간을 공유했습니다.',
+                    'CHAT',
+                    205,
+                    current_date - 4,
+                    null,
+                    now() - interval '2 days 6 hours'
+                ),
+                (
+                    20,
+                    1,
+                    3,
+                    4,
+                    'MISSION_PROGRESS',
+                    '미션 동의율',
+                    '프로젝트 회고 미션 동의율이 90%입니다.',
+                    'MISSION',
+                    107,
+                    current_date - 4,
+                    null,
+                    now() - interval '2 days 8 hours'
+                )
+            on conflict (id) do update set
+                receiver_member_id = excluded.receiver_member_id,
+                room_id = excluded.room_id,
+                actor_member_id = excluded.actor_member_id,
+                type = excluded.type,
+                title = excluded.title,
+                message = excluded.message,
+                target_type = excluded.target_type,
+                target_id = excluded.target_id,
+                occurred_date = excluded.occurred_date,
+                read_at = excluded.read_at,
+                created_at = excluded.created_at
+            """.trimIndent(),
+        )
+    }
+
     // 고정 ID 시드 이후 런타임 insert가 다음 ID를 자동 생성하도록 identity sequence를 보정한다.
     private fun syncIdentitySequences() {
-        listOf("members", "rooms", "room_members", "room_invitations").forEach { tableName ->
+        listOf("members", "rooms", "room_members", "room_invitations", "notifications").forEach { tableName ->
             jdbcTemplate.execute(
                 """
                 select setval(
