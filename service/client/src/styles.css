@@ -782,9 +782,9 @@ dl {
 
 .home-profile-summary {
   display: grid;
-  grid-template-columns: minmax(120px, 0.9fr) minmax(0, 1fr);
+  grid-template-columns: minmax(180px, 1.18fr) minmax(0, 0.82fr);
   align-items: start;
-  gap: 18px;
+  gap: 16px;
   background: #fbfcff;
   padding: 16px;
   flex: 0 0 auto;
@@ -828,7 +828,9 @@ dl {
 
 .home-profile-detail div {
   display: grid;
-  gap: 3px;
+  grid-template-columns: 48px minmax(0, 1fr);
+  align-items: baseline;
+  gap: 8px;
 }
 
 .home-profile-detail dt {
@@ -841,7 +843,7 @@ dl {
   min-width: 0;
   margin: 0;
   color: #4c5a6f;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 850;
   overflow-wrap: anywhere;
 }

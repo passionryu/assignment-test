@@ -318,7 +318,7 @@ function App() {
   function markNotificationAsRead(notificationId: number) {
     const markAsRead = (item: NotificationItem) => (item.id === notificationId ? { ...item, read: true } : item);
 
-    setLatestNotifications((current) => current.map(markAsRead).filter((item) => !item.read));
+    setLatestNotifications((current) => current.map(markAsRead));
     setAllNotifications((current) => current.map(markAsRead));
   }
 
