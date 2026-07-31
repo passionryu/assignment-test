@@ -486,7 +486,7 @@ function App() {
   const [inviteContacts, setInviteContacts] = useState<Record<number, string>>({});
   const [message, setMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [inviteErrorMessage, setInviteErrorMessage] = useState<string | null>(null);
+  const [roomFeedbackModal, setRoomFeedbackModal] = useState<{ title: string; message: string } | null>(null);
   const [profileEditOpen, setProfileEditOpen] = useState(false);
   const [logoutOpen, setLogoutOpen] = useState(false);
   const [notificationsModalOpen, setNotificationsModalOpen] = useState(false);
@@ -726,6 +726,7 @@ function App() {
   async function createRoom() {
     setMessage(null);
     setErrorMessage(null);
+    setRoomFeedbackModal(null);
     try {
       const createdRoom = await apiRequest<CreateRoomResponse>("/rooms", {
         method: "POST",
@@ -740,9 +741,12 @@ function App() {
       setSelectedRoomId(createdRoom.id);
       setExpandedRoomId(createdRoom.id);
       setCreateRoomForm({ name: "", type: "COUPLE", description: "" });
-      setMessage(`${nextRooms.find((room) => room.id === createdRoom.id)?.name ?? createdRoom.name} 방을 만들었습니다.`);
+      setRoomFeedbackModal({
+        title: "방 생성 완료",
+        message: `${nextRooms.find((room) => room.id === createdRoom.id)?.name ?? createdRoom.name} 방을 만들었습니다.`,
+      });
     } catch (error) {
-      setErrorMessage(toMessage(error));
+      setRoomFeedbackModal({ title: "방 생성 실패", message: toMessage(error) });
     }
   }
 
@@ -750,10 +754,10 @@ function App() {
     const contact = inviteContacts[roomId]?.trim() ?? "";
     setMessage(null);
     setErrorMessage(null);
-    setInviteErrorMessage(null);
+    setRoomFeedbackModal(null);
 
     if (!contact) {
-      setInviteErrorMessage("초대할 이메일 또는 전화번호를 입력해 주세요.");
+      setRoomFeedbackModal({ title: "초대 실패", message: "초대할 이메일 또는 전화번호를 입력해 주세요." });
       return;
     }
 
@@ -764,15 +768,16 @@ function App() {
       });
       setInviteContacts((current) => ({ ...current, [roomId]: "" }));
       await loadRooms();
-      setMessage("초대를 보냈습니다.");
+      setRoomFeedbackModal({ title: "초대 완료", message: "초대를 보냈습니다." });
     } catch (error) {
-      setInviteErrorMessage(toMessage(error));
+      setRoomFeedbackModal({ title: "초대 실패", message: toMessage(error) });
     }
   }
 
   async function respondInvitation(invitationId: number, action: "accept" | "decline") {
     setMessage(null);
     setErrorMessage(null);
+    setRoomFeedbackModal(null);
     try {
       const response = await apiRequest<RespondRoomInvitationResponse>(`/room-invitations/${invitationId}/${action}`, {
         method: "POST",
@@ -782,12 +787,15 @@ function App() {
       if (action === "accept") {
         setSelectedRoomId(response.roomId);
         setExpandedRoomId(response.roomId);
-        setMessage("초대를 수락했습니다. 방 리스트에 새 방이 추가되었습니다.");
+        setRoomFeedbackModal({
+          title: "초대 수락 완료",
+          message: "초대를 수락했습니다. 방 리스트에 새 방이 추가되었습니다.",
+        });
       } else {
-        setMessage("초대를 거절했습니다.");
+        setRoomFeedbackModal({ title: "초대 거절 완료", message: "초대를 거절했습니다." });
       }
     } catch (error) {
-      setErrorMessage(toMessage(error));
+      setRoomFeedbackModal({ title: "초대 응답 실패", message: toMessage(error) });
     }
   }
 
@@ -875,7 +883,9 @@ function App() {
 
       {logoutOpen ? <LogoutModal onClose={() => setLogoutOpen(false)} /> : null}
 
-      {inviteErrorMessage ? <AlertModal title="초대 실패" message={inviteErrorMessage} onClose={() => setInviteErrorMessage(null)} /> : null}
+      {roomFeedbackModal ? (
+        <AlertModal title={roomFeedbackModal.title} message={roomFeedbackModal.message} onClose={() => setRoomFeedbackModal(null)} />
+      ) : null}
 
       {notificationsModalOpen ? (
         <NotificationsModal
@@ -1364,40 +1374,44 @@ function RoomsView({
       </section>
 
       <section className="joined-room-list">
-        {rooms.map((room) => (
-          <article className={`room-card ${room.id === selectedRoomId ? "selected" : ""} ${room.role === "OWNER" ? "has-actions" : "no-actions"}`} key={room.id}>
-            <div>
-              <span>{roomTypeLabel(room.type)}</span>
-              <h2>{room.name}</h2>
-              <p>{room.description ?? "설명 없음"}</p>
-            </div>
-            <dl className="room-meta">
+        {rooms.map((room) => {
+          const canInvite = room.role === "OWNER";
+
+          return (
+            <article className={`room-card ${room.id === selectedRoomId ? "selected" : ""}`} key={room.id}>
               <div>
-                <dt>역할</dt>
-                <dd>{room.role === "OWNER" ? "방장" : "멤버"}</dd>
+                <span>{roomTypeLabel(room.type)}</span>
+                <h2>{room.name}</h2>
+                <p>{room.description ?? "설명 없음"}</p>
               </div>
-              <div>
-                <dt>멤버</dt>
-                <dd>{room.memberCount}명</dd>
-              </div>
-            </dl>
-            {room.role === "OWNER" ? (
+              <dl className="room-meta">
+                <div>
+                  <dt>역할</dt>
+                  <dd>{canInvite ? "방장" : "멤버"}</dd>
+                </div>
+                <div>
+                  <dt>멤버</dt>
+                  <dd>{room.memberCount}명</dd>
+                </div>
+              </dl>
               <div className="room-card-actions">
-                <div className="invite-inline-form">
+                <div className={`invite-inline-form ${canInvite ? "" : "is-disabled"}`}>
                   <input
-                    value={inviteContacts[room.id] ?? ""}
+                    value={canInvite ? inviteContacts[room.id] ?? "" : ""}
                     onChange={(event) => onInviteContactChange(room.id, event.target.value)}
-                    placeholder="이메일 또는 전화번호"
+                    placeholder={canInvite ? "이메일 또는 전화번호" : "방장만 초대할 수 있습니다"}
                     aria-label={`${room.name} 초대 연락처`}
+                    disabled={!canInvite}
                   />
-                  <button className="primary-button" type="button" onClick={() => onSendInvitation(room.id)}>
+                  <button className="primary-button" type="button" onClick={() => onSendInvitation(room.id)} disabled={!canInvite}>
                     초대
                   </button>
                 </div>
+                {!canInvite ? <span className="invite-permission-hint">방장 권한 필요</span> : null}
               </div>
-            ) : null}
-          </article>
-        ))}
+            </article>
+          );
+        })}
       </section>
     </>
   );

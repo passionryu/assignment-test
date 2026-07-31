@@ -1080,6 +1080,19 @@ dl {
   box-shadow: 0 0 0 3px rgba(240, 79, 149, 0.13);
 }
 
+.invite-inline-form.is-disabled input {
+  background: #f4f7fb;
+  color: #98a2b3;
+  cursor: not-allowed;
+}
+
+.invite-permission-hint {
+  color: #98a2b3;
+  font-size: 12px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
 .skeleton-list {
   display: grid;
   gap: 12px;
@@ -1331,6 +1344,22 @@ dl {
 .outline-button:hover,
 .danger-button:hover {
   transform: translateY(-1px);
+}
+
+.primary-button:disabled,
+.outline-button:disabled,
+.danger-button:disabled {
+  border-color: #dfe7f2;
+  background: #eef3fb;
+  color: #98a2b3;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.primary-button:disabled:hover,
+.outline-button:disabled:hover,
+.danger-button:disabled:hover {
+  transform: none;
 }
 
 .full-width {
