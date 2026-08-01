@@ -216,6 +216,8 @@ class LocalSeedRunner(
         seedMemoryComments()
         seedMissions()
         seedMissionSubmissions()
+        seedMissionApprovals()
+        seedMissionComments()
         seedLetters()
     }
 
@@ -398,14 +400,66 @@ class LocalSeedRunner(
             """
             insert into missions (id, room_id, title, description, status, created_by_member_id, created_at, completed_at)
             values
-                (101, 1, '오늘의 산책 인증', '함께 산책한 순간을 남긴다.', 'IN_PROGRESS', 1, now() - interval '5 days', null),
-                (102, 2, '가족 산책', '가족이 함께 산책한 기록을 남긴다.', 'IN_PROGRESS', 1, now() - interval '5 days', null),
-                (103, 1, '함께 먹은 점심', '점심 사진과 짧은 글을 남긴다.', 'IN_PROGRESS', 1, now() - interval '5 days', null),
-                (104, 2, '가족 여행 회고', '여행에서 좋았던 순간을 인증한다.', 'IN_PROGRESS', 1, now() - interval '5 days', null),
-                (105, 3, '프로젝트 회고', '프로젝트 회고 내용을 남긴다.', 'IN_PROGRESS', 1, now() - interval '5 days', null),
-                (106, 1, '저녁 약속 인증', '저녁 약속을 짧게 기록한다.', 'IN_PROGRESS', 1, now() - interval '5 days', null),
-                (107, 3, '팀 응원 미션', '팀원에게 응원 메시지를 남긴다.', 'IN_PROGRESS', 1, now() - interval '5 days', null),
-                (108, 3, '발표 준비 인증', '발표 준비 상황을 인증한다.', 'IN_PROGRESS', 1, now() - interval '5 days', null)
+                (101, 1, '오늘의 산책 사진', '함께 걸은 길이나 도착 장소를 사진으로 인증한다.', 'WAITING_APPROVAL', 1, now() - interval '20 days', null),
+                (102, 1, '함께 먹은 음식', '둘이 함께 먹은 음식 사진과 짧은 기록을 남긴다.', 'COMPLETED', 1, now() - interval '19 days', now() - interval '18 days'),
+                (103, 1, '카페 또는 디저트 인증', '함께 고른 음료나 디저트를 사진으로 남긴다.', 'IN_PROGRESS', 1, now() - interval '18 days', null),
+                (104, 1, '같은 색 아이템', '같은 색 옷이나 물건을 나란히 찍어 인증한다.', 'IN_PROGRESS', 1, now() - interval '17 days', null),
+                (105, 1, '둘만의 포즈 사진', '손하트나 약속한 포즈를 사진으로 남긴다.', 'IN_PROGRESS', 1, now() - interval '16 days', null),
+                (106, 1, '영화 또는 공연 티켓', '함께 본 영화, 공연, 전시 티켓이나 입장 흔적을 인증한다.', 'IN_PROGRESS', 1, now() - interval '15 days', null),
+                (107, 1, '함께 만든 요리', '같이 만든 음식의 완성 사진을 올린다.', 'IN_PROGRESS', 1, now() - interval '14 days', null),
+                (108, 1, '기념일 장소', '기념일에 들른 장소나 표지판을 사진으로 남긴다.', 'IN_PROGRESS', 1, now() - interval '13 days', null),
+                (109, 1, '작은 선물 인증', '서로에게 준 작은 선물이나 포장 사진을 남긴다.', 'IN_PROGRESS', 1, now() - interval '12 days', null),
+                (110, 1, '같이 본 하늘', '같은 날 함께 본 하늘이나 풍경을 사진으로 인증한다.', 'IN_PROGRESS', 1, now() - interval '11 days', null),
+                (111, 1, '운동 또는 산책 코스', '운동 장소, 산책로 표지, 코스 흔적을 사진으로 남긴다.', 'IN_PROGRESS', 1, now() - interval '10 days', null),
+                (112, 1, '데이트 코스 흔적', '간판, 영수증, 장소 사진 중 하나로 데이트 코스를 인증한다.', 'IN_PROGRESS', 1, now() - interval '9 days', null),
+                (113, 1, '추억 물건 사진', '둘에게 의미 있는 물건을 사진으로 남긴다.', 'IN_PROGRESS', 1, now() - interval '8 days', null),
+                (114, 1, '함께 고른 책 또는 음악', '같이 고른 책, 앨범, 플레이리스트 화면을 사진으로 남긴다.', 'IN_PROGRESS', 1, now() - interval '7 days', null),
+                (115, 1, '사진첩 정리 인증', '함께 정리한 사진첩이나 인화 사진을 촬영한다.', 'IN_PROGRESS', 1, now() - interval '6 days', null),
+                (116, 1, '서로의 컵 또는 음료', '각자 고른 컵이나 음료를 나란히 찍는다.', 'IN_PROGRESS', 1, now() - interval '5 days', null),
+                (117, 1, '서점 또는 문구점 방문', '함께 방문한 서점이나 문구점의 흔적을 사진으로 남긴다.', 'IN_PROGRESS', 1, now() - interval '4 days', null),
+                (118, 1, '밤 산책 풍경', '밤 산책 중 본 거리나 조명을 사진으로 인증한다.', 'IN_PROGRESS', 1, now() - interval '3 days', null),
+                (119, 1, '다음 약속 후보 장소', '다음에 가고 싶은 장소의 간판이나 사진을 올린다.', 'IN_PROGRESS', 1, now() - interval '2 days', null),
+                (120, 1, '이번 달 대표 사진', '이번 달을 대표할 사진 한 장을 골라 인증한다.', 'IN_PROGRESS', 1, now() - interval '1 day', null),
+                (201, 2, '가족 식탁 사진', '함께 먹은 식탁이나 준비한 음식을 사진으로 남긴다.', 'WAITING_APPROVAL', 1, now() - interval '20 days', null),
+                (202, 2, '가족 산책길', '가족이 함께 걸은 길이나 도착 장소를 인증한다.', 'COMPLETED', 1, now() - interval '19 days', now() - interval '18 days'),
+                (203, 2, '가족 앨범 한 장', '앨범이나 인화 사진 중 이번 달에 다시 보고 싶은 장면을 찍는다.', 'IN_PROGRESS', 1, now() - interval '18 days', null),
+                (204, 2, '장보기 장바구니', '함께 장본 물건이나 장바구니를 사진으로 남긴다.', 'IN_PROGRESS', 1, now() - interval '17 days', null),
+                (205, 2, '집 안의 작은 변화', '정리한 공간, 꽃, 새로 둔 물건 등 집 안 변화를 촬영한다.', 'IN_PROGRESS', 1, now() - interval '16 days', null),
+                (206, 2, '가족 요리 과정', '요리 과정이나 완성 음식을 사진으로 인증한다.', 'IN_PROGRESS', 1, now() - interval '15 days', null),
+                (207, 2, '가족 간식 선택', '가족 중 누군가가 고른 간식이나 음료를 사진으로 남긴다.', 'IN_PROGRESS', 1, now() - interval '14 days', null),
+                (208, 2, '여행 준비물', '여행 가방, 준비물, 체크리스트 중 하나를 사진으로 남긴다.', 'IN_PROGRESS', 1, now() - interval '13 days', null),
+                (209, 2, '아침 또는 저녁 하늘', '가족과 함께 본 아침이나 저녁 하늘을 촬영한다.', 'IN_PROGRESS', 1, now() - interval '12 days', null),
+                (210, 2, '오래된 물건 기록', '집에 오래 보관한 물건 한 가지를 사진으로 남긴다.', 'IN_PROGRESS', 1, now() - interval '11 days', null),
+                (211, 2, '생일 또는 기념일 장식', '케이크, 장식, 선물 포장 중 하나를 사진으로 인증한다.', 'IN_PROGRESS', 1, now() - interval '10 days', null),
+                (212, 2, '주말 나들이 장소', '가족이 다녀온 장소의 간판이나 풍경을 사진으로 남긴다.', 'IN_PROGRESS', 1, now() - interval '9 days', null),
+                (213, 2, '가족 운동 인증', '함께 운동한 장소나 운동 후 흔적을 사진으로 남긴다.', 'IN_PROGRESS', 1, now() - interval '8 days', null),
+                (214, 2, '가족 영화의 흔적', '영화 티켓, 화면, 간식 등 함께 본 흔적을 사진으로 인증한다.', 'IN_PROGRESS', 1, now() - interval '7 days', null),
+                (215, 2, '함께 정리한 공간', '가족이 함께 정리한 방이나 책상을 촬영한다.', 'IN_PROGRESS', 1, now() - interval '6 days', null),
+                (216, 2, '가족 신발 또는 우산', '함께 외출한 날의 신발이나 우산을 사진으로 남긴다.', 'IN_PROGRESS', 1, now() - interval '5 days', null),
+                (217, 2, '추억 장소 간판', '가족에게 의미 있는 장소의 간판이나 입구를 촬영한다.', 'IN_PROGRESS', 1, now() - interval '4 days', null),
+                (218, 2, '가족 메뉴판', '함께 고른 메뉴판이나 주문한 음식을 사진으로 남긴다.', 'IN_PROGRESS', 1, now() - interval '3 days', null),
+                (219, 2, '집 근처 산책 인증', '집 근처 산책 중 본 풍경을 사진으로 인증한다.', 'IN_PROGRESS', 1, now() - interval '2 days', null),
+                (220, 2, '이번 달 가족 대표 사진', '이번 달 가족 기록을 대표하는 사진을 선택한다.', 'IN_PROGRESS', 1, now() - interval '1 day', null),
+                (301, 3, '단체 출석 인증', '모임 시작 전 출석 상황이나 장소를 사진으로 남긴다.', 'WAITING_APPROVAL', 1, now() - interval '20 days', null),
+                (302, 3, '회의 보드 사진', '화이트보드, 칠판, 회의 메모를 사진으로 인증한다.', 'COMPLETED', 1, now() - interval '19 days', now() - interval '18 days'),
+                (303, 3, '발표 자료 화면', '발표 자료나 준비 화면을 사진으로 남긴다.', 'IN_PROGRESS', 1, now() - interval '18 days', null),
+                (304, 3, '실습 결과물', '수업, 동아리, 프로젝트 실습 결과물을 사진으로 인증한다.', 'IN_PROGRESS', 1, now() - interval '17 days', null),
+                (305, 3, '스터디 책상', '모임 중 사용한 책상, 책, 노트북 배치를 사진으로 남긴다.', 'IN_PROGRESS', 1, now() - interval '16 days', null),
+                (306, 3, '팀 노트 필기', '팀 노트나 필기 일부를 사진으로 인증한다.', 'IN_PROGRESS', 1, now() - interval '15 days', null),
+                (307, 3, '역할 분담 보드', '역할 분담표나 업무 보드를 사진으로 남긴다.', 'IN_PROGRESS', 1, now() - interval '14 days', null),
+                (308, 3, '모임 장소 간판', '모임 장소의 간판, 문패, 입구를 사진으로 인증한다.', 'IN_PROGRESS', 1, now() - interval '13 days', null),
+                (309, 3, '활동 소품 인증', '활동에 사용한 소품이나 준비물을 사진으로 남긴다.', 'IN_PROGRESS', 1, now() - interval '12 days', null),
+                (310, 3, '프로젝트 결과물 캡처', '만든 화면이나 결과물을 캡처 이미지로 인증한다.', 'IN_PROGRESS', 1, now() - interval '11 days', null),
+                (311, 3, '회고 포스트잇', '회고 내용이 담긴 포스트잇이나 보드를 사진으로 남긴다.', 'IN_PROGRESS', 1, now() - interval '10 days', null),
+                (312, 3, '팀 응원 문구', '팀원이 적은 응원 문구나 안내판을 사진으로 인증한다.', 'IN_PROGRESS', 1, now() - interval '9 days', null),
+                (313, 3, '활동 장면 기록', '학급, 동아리, 모임 활동 장면을 사진으로 남긴다.', 'IN_PROGRESS', 1, now() - interval '8 days', null),
+                (314, 3, '준비물 체크', '모임 준비물이나 체크리스트를 사진으로 인증한다.', 'IN_PROGRESS', 1, now() - interval '7 days', null),
+                (315, 3, '발표 리허설', '리허설 화면이나 연습 공간을 사진으로 남긴다.', 'IN_PROGRESS', 1, now() - interval '6 days', null),
+                (316, 3, '팀 간식 기록', '모임 중 함께 먹은 간식이나 음료를 사진으로 인증한다.', 'IN_PROGRESS', 1, now() - interval '5 days', null),
+                (317, 3, '행사 포스터', '행사 포스터, 안내문, 시간표를 사진으로 남긴다.', 'IN_PROGRESS', 1, now() - interval '4 days', null),
+                (318, 3, '마감 전 작업 화면', '마감 전 작업 화면이나 책상을 사진으로 인증한다.', 'IN_PROGRESS', 1, now() - interval '3 days', null),
+                (319, 3, '완료 인증 사진', '완료된 결과물이나 수료 흔적을 사진으로 남긴다.', 'IN_PROGRESS', 1, now() - interval '2 days', null),
+                (320, 3, '이번 달 대표 활동', '이번 달 모임을 대표하는 사진 한 장을 선택한다.', 'IN_PROGRESS', 1, now() - interval '1 day', null)
             on conflict (id) do update set
                 room_id = excluded.room_id,
                 title = excluded.title,
@@ -422,37 +476,47 @@ class LocalSeedRunner(
     private fun seedMissionSubmissions() {
         jdbcTemplate.update(
             """
+            delete from mission_approvals
+            where mission_submission_id in (
+                select id
+                from mission_submissions
+                where mission_id between 101 and 320
+                  and id not between 101 and 121
+            )
+            """.trimIndent(),
+        )
+        jdbcTemplate.update(
+            """
+            delete from mission_submissions
+            where mission_id between 101 and 320
+              and id not between 101 and 121
+            """.trimIndent(),
+        )
+        jdbcTemplate.update(
+            """
             insert into mission_submissions (id, mission_id, submitter_member_id, body, image_url, occurred_date, submitted_at)
             values
-                (101, 101, 2, '오늘 산책 인증 완료', null, ((now() at time zone 'Asia/Seoul')::date), now() - interval '8 minutes'),
-                (102, 102, 3, '가족 산책 인증', null, ((now() at time zone 'Asia/Seoul')::date) - 1, now() - interval '1 day 2 hours'),
-                (103, 103, 2, '점심 사진 인증', null, ((now() at time zone 'Asia/Seoul')::date) - 1, now() - interval '1 day 10 hours'),
-                (104, 104, 3, '가족 여행 회고 인증', null, ((now() at time zone 'Asia/Seoul')::date) - 2, now() - interval '2 days'),
-                (105, 105, 4, '프로젝트 회고 인증', null, ((now() at time zone 'Asia/Seoul')::date) - 2, now() - interval '2 days 2 hours'),
-                (106, 106, 2, '저녁 약속 인증', null, ((now() at time zone 'Asia/Seoul')::date) - 3, now() - interval '3 days 4 hours'),
-                (107, 107, 4, '팀 응원 미션 인증', null, ((now() at time zone 'Asia/Seoul')::date) - 4, now() - interval '4 days 5 hours'),
-                (108, 108, 4, '발표 준비 인증', null, date_trunc('month', now() at time zone 'Asia/Seoul')::date + 27, now() - interval '1 hour'),
-                (109, 101, 2, '월초 산책 다시 인증', null, date_trunc('month', now() at time zone 'Asia/Seoul')::date + 2, now() - interval '3 hours'),
-                (110, 102, 3, '가족 일정 미션 인증', null, date_trunc('month', now() at time zone 'Asia/Seoul')::date + 4, now() - interval '4 hours'),
-                (111, 105, 4, '팀 회고 미션 인증', null, date_trunc('month', now() at time zone 'Asia/Seoul')::date + 6, now() - interval '5 hours'),
-                (112, 103, 2, '점심 기록 추가 인증', null, date_trunc('month', now() at time zone 'Asia/Seoul')::date + 7, now() - interval '6 hours'),
-                (113, 104, 3, '가족 여행 사진 인증', null, date_trunc('month', now() at time zone 'Asia/Seoul')::date + 9, now() - interval '7 hours'),
-                (114, 108, 4, '발표 자료 점검 인증', null, date_trunc('month', now() at time zone 'Asia/Seoul')::date + 11, now() - interval '8 hours'),
-                (115, 106, 2, '저녁 약속 미션 인증', null, date_trunc('month', now() at time zone 'Asia/Seoul')::date + 13, now() - interval '9 hours'),
-                (116, 102, 3, '가족 산책 추가 인증', null, date_trunc('month', now() at time zone 'Asia/Seoul')::date + 14, now() - interval '10 hours'),
-                (117, 107, 4, '팀 응원 추가 인증', null, date_trunc('month', now() at time zone 'Asia/Seoul')::date + 16, now() - interval '11 hours'),
-                (118, 101, 2, '기념일 산책 인증', null, date_trunc('month', now() at time zone 'Asia/Seoul')::date + 18, now() - interval '12 hours'),
-                (119, 104, 3, '생신 준비 미션 인증', null, date_trunc('month', now() at time zone 'Asia/Seoul')::date + 20, now() - interval '13 hours'),
-                (120, 108, 4, '회식 후보 조사 인증', null, date_trunc('month', now() at time zone 'Asia/Seoul')::date + 21, now() - interval '14 hours'),
-                (121, 103, 2, '주말 데이트 인증', null, date_trunc('month', now() at time zone 'Asia/Seoul')::date + 23, now() - interval '15 hours'),
-                (122, 102, 3, '가족 앨범 정리 인증', null, date_trunc('month', now() at time zone 'Asia/Seoul')::date + 25, now() - interval '16 hours'),
-                (123, 107, 4, '프로젝트 마무리 인증', null, date_trunc('month', now() at time zone 'Asia/Seoul')::date + 28, now() - interval '17 hours'),
-                (124, 106, 2, '월말 산책 인증', null, date_trunc('month', now() at time zone 'Asia/Seoul')::date + 30, now() - interval '18 hours'),
-                (125, 101, 2, '화요일 산책 인증', null, date_trunc('month', now() at time zone 'Asia/Seoul')::date + 3, now() - interval '19 hours'),
-                (126, 104, 3, '일요일 가족 미션 인증', null, date_trunc('month', now() at time zone 'Asia/Seoul')::date + 8, now() - interval '20 hours'),
-                (127, 108, 4, '목요일 발표 점검 인증', null, date_trunc('month', now() at time zone 'Asia/Seoul')::date + 19, now() - interval '21 hours'),
-                (128, 107, 4, '목요일 팀 응원 인증', null, date_trunc('month', now() at time zone 'Asia/Seoul')::date + 26, now() - interval '22 hours'),
-                (129, 102, 3, '월말 가족 미션 인증', null, date_trunc('month', now() at time zone 'Asia/Seoul')::date + 29, now() - interval '23 hours')
+                (101, 101, 2, '오늘 산책로 입구 사진을 남겼어.', 'https://picsum.photos/seed/mission-101/900/640', ((now() at time zone 'Asia/Seoul')::date), now() - interval '8 minutes'),
+                (102, 102, 2, '함께 먹은 점심 사진으로 인증 완료.', 'https://picsum.photos/seed/mission-102/900/640', date_trunc('month', now() at time zone 'Asia/Seoul')::date + 2, now() - interval '1 day 2 hours'),
+                (103, 201, 3, '가족 식탁 사진을 올립니다.', 'https://picsum.photos/seed/mission-201/900/640', ((now() at time zone 'Asia/Seoul')::date) - 1, now() - interval '1 day 5 hours'),
+                (104, 202, 3, '가족 산책길 표지판을 찍었습니다.', 'https://picsum.photos/seed/mission-202/900/640', date_trunc('month', now() at time zone 'Asia/Seoul')::date + 4, now() - interval '2 days'),
+                (105, 301, 4, '모임 장소 입구 사진으로 출석 인증합니다.', 'https://picsum.photos/seed/mission-301/900/640', ((now() at time zone 'Asia/Seoul')::date) - 2, now() - interval '2 days 2 hours'),
+                (106, 302, 4, '회의 보드 사진을 올립니다.', 'https://picsum.photos/seed/mission-302/900/640', date_trunc('month', now() at time zone 'Asia/Seoul')::date + 6, now() - interval '3 days'),
+                (107, 103, 1, '디저트 사진은 여기 남겨둘게.', 'https://picsum.photos/seed/mission-103/900/640', date_trunc('month', now() at time zone 'Asia/Seoul')::date + 7, now() - interval '4 hours'),
+                (108, 203, 1, '오래된 가족 앨범 한 장을 다시 찍었습니다.', 'https://picsum.photos/seed/mission-203/900/640', date_trunc('month', now() at time zone 'Asia/Seoul')::date + 9, now() - interval '5 hours'),
+                (109, 303, 1, '발표 자료 화면을 캡처했습니다.', 'https://picsum.photos/seed/mission-303/900/640', date_trunc('month', now() at time zone 'Asia/Seoul')::date + 11, now() - interval '6 hours'),
+                (110, 104, 2, '같은 색 아이템을 맞춰 찍었어.', 'https://picsum.photos/seed/mission-104/900/640', date_trunc('month', now() at time zone 'Asia/Seoul')::date + 13, now() - interval '7 hours'),
+                (111, 204, 3, '장보기 장바구니 사진입니다.', 'https://picsum.photos/seed/mission-204/900/640', date_trunc('month', now() at time zone 'Asia/Seoul')::date + 14, now() - interval '8 hours'),
+                (112, 304, 4, '실습 결과물을 사진으로 인증합니다.', 'https://picsum.photos/seed/mission-304/900/640', date_trunc('month', now() at time zone 'Asia/Seoul')::date + 16, now() - interval '9 hours'),
+                (113, 105, 2, '둘만의 포즈 사진 인증.', 'https://picsum.photos/seed/mission-105/900/640', date_trunc('month', now() at time zone 'Asia/Seoul')::date + 18, now() - interval '10 hours'),
+                (114, 205, 3, '거실 책장 정리 후 사진을 남겼습니다.', 'https://picsum.photos/seed/mission-205/900/640', date_trunc('month', now() at time zone 'Asia/Seoul')::date + 20, now() - interval '11 hours'),
+                (115, 305, 4, '스터디 책상 인증합니다.', 'https://picsum.photos/seed/mission-305/900/640', date_trunc('month', now() at time zone 'Asia/Seoul')::date + 21, now() - interval '12 hours'),
+                (116, 106, 2, '티켓 사진을 남겼어.', 'https://picsum.photos/seed/mission-106/900/640', date_trunc('month', now() at time zone 'Asia/Seoul')::date + 23, now() - interval '13 hours'),
+                (117, 206, 3, '가족 요리 완성 사진입니다.', 'https://picsum.photos/seed/mission-206/900/640', date_trunc('month', now() at time zone 'Asia/Seoul')::date + 25, now() - interval '14 hours'),
+                (118, 306, 4, '팀 노트 필기 인증입니다.', 'https://picsum.photos/seed/mission-306/900/640', date_trunc('month', now() at time zone 'Asia/Seoul')::date + 26, now() - interval '15 hours'),
+                (119, 107, 1, '같이 만든 요리 사진을 올렸어.', 'https://picsum.photos/seed/mission-107/900/640', date_trunc('month', now() at time zone 'Asia/Seoul')::date + 28, now() - interval '16 hours'),
+                (120, 207, 1, '가족 간식 사진을 남깁니다.', 'https://picsum.photos/seed/mission-207/900/640', date_trunc('month', now() at time zone 'Asia/Seoul')::date + 29, now() - interval '17 hours'),
+                (121, 307, 1, '역할 분담 보드를 캡처했습니다.', 'https://picsum.photos/seed/mission-307/900/640', date_trunc('month', now() at time zone 'Asia/Seoul')::date + 30, now() - interval '18 hours')
             on conflict (id) do update set
                 mission_id = excluded.mission_id,
                 submitter_member_id = excluded.submitter_member_id,
@@ -460,6 +524,43 @@ class LocalSeedRunner(
                 image_url = excluded.image_url,
                 occurred_date = excluded.occurred_date,
                 submitted_at = excluded.submitted_at
+            """.trimIndent(),
+        )
+    }
+
+    // 완료 상태 미션은 실제 승인 데이터가 있어야 동의율과 완료 조건을 함께 확인할 수 있다.
+    private fun seedMissionApprovals() {
+        jdbcTemplate.update(
+            """
+            insert into mission_approvals (id, mission_submission_id, approver_member_id, decision, decided_at)
+            values
+                (101, 102, 1, 'APPROVED', now() - interval '1 day'),
+                (102, 104, 1, 'APPROVED', now() - interval '1 day'),
+                (103, 106, 1, 'APPROVED', now() - interval '1 day')
+            on conflict (mission_submission_id, approver_member_id) do update set
+                decision = excluded.decision,
+                decided_at = excluded.decided_at
+            """.trimIndent(),
+        )
+    }
+
+    // 선택 미션 상세 카드에서 댓글 흐름을 바로 검증할 수 있도록 미션별 댓글을 준비한다.
+    private fun seedMissionComments() {
+        jdbcTemplate.update(
+            """
+            insert into mission_comments (id, mission_id, author_member_id, body, created_at)
+            values
+                (101, 101, 1, '산책 사진은 책에 넣기 좋아 보인다.', now() - interval '42 minutes'),
+                (102, 101, 2, '다음에는 같은 장소에서 밤 사진도 찍어보자.', now() - interval '36 minutes'),
+                (103, 102, 1, '이 음식 사진은 표지 후보로도 괜찮겠다.', now() - interval '1 day 1 hour'),
+                (104, 201, 3, '식탁 전체가 잘 보이게 다시 한 장 찍어도 좋겠어요.', now() - interval '3 hours'),
+                (105, 301, 4, '출석 사진은 다음 모임 자료에도 같이 쓰겠습니다.', now() - interval '5 hours')
+            on conflict (id) do update set
+                mission_id = excluded.mission_id,
+                author_member_id = excluded.author_member_id,
+                body = excluded.body,
+                created_at = excluded.created_at,
+                deleted_at = null
             """.trimIndent(),
         )
     }
@@ -865,6 +966,8 @@ class LocalSeedRunner(
             "memory_comments",
             "missions",
             "mission_submissions",
+            "mission_approvals",
+            "mission_comments",
             "letters",
             "notifications",
         ).forEach { tableName ->
