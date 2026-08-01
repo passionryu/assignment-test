@@ -267,6 +267,64 @@ type DeleteMemoryPostResponse = {
   deleted: boolean;
 };
 
+type LetterBox = "RECEIVED" | "SENT";
+
+type LetterRecipient = {
+  memberId: number;
+  displayName: string;
+};
+
+type LetterSummary = {
+  id: number;
+  roomId: number;
+  box: LetterBox;
+  title: string;
+  bodyPreview: string;
+  counterpartMemberId: number;
+  counterpartName: string;
+  sentAt: string;
+  occurredDate: string;
+  read: boolean;
+};
+
+type LetterDetail = {
+  id: number;
+  roomId: number;
+  title: string;
+  body: string;
+  senderMemberId: number;
+  senderName: string;
+  receiverMemberId: number;
+  receiverName: string;
+  sentAt: string;
+  occurredDate: string;
+  readAt: string | null;
+  read: boolean;
+  mine: boolean;
+};
+
+type LettersResponse = {
+  roomId: number;
+  roomName: string;
+  box: LetterBox;
+  recipients: LetterRecipient[];
+  items: LetterSummary[];
+  page: number;
+  size: number;
+  hasMore: boolean;
+  totalCount: number;
+};
+
+type LetterForm = {
+  receiverMemberId: string;
+  title: string;
+  body: string;
+};
+
+type SendLetterResponse = {
+  letter: LetterDetail;
+};
+
 type MissionStatus = "IN_PROGRESS" | "WAITING_APPROVAL" | "COMPLETED";
 
 type MissionSubmission = {
@@ -355,6 +413,7 @@ const apiOrigin = apiBaseUrl.replace(/\/api\/?$/, "");
 const memberHeader = { "X-Member-Id": "1" };
 const currentMonth = toDateKey(new Date()).slice(0, 7);
 const memoryPostsPerPage = 6;
+const letterPageSize = 10;
 
 const demoProfile: MemberProfile = {
   id: 1,
@@ -410,9 +469,9 @@ const demoPendingInvitations: PendingRoomInvitation[] = [
   {
     id: 1,
     roomId: 4,
-    roomName: "민지의 여행 준비방",
+    roomName: "달콤이의 여행 준비방",
     roomType: "GROUP",
-    inviterName: "민지",
+    inviterName: "달콤이",
     createdAt: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
     expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
   },
@@ -442,7 +501,7 @@ const demoNotifications: NotificationItem[] = [
     type: "MISSION_APPROVAL_REQUEST",
     roomId: 1,
     roomName: "우리 둘의 100일",
-    actorName: "민지",
+    actorName: "달콤이",
     summary: "미션 인증 동의를 기다립니다.",
     occurredAt: new Date(Date.now() - 8 * 60 * 1000).toISOString(),
     read: false,
@@ -453,7 +512,7 @@ const demoNotifications: NotificationItem[] = [
     type: "CHAT",
     roomId: 1,
     roomName: "우리 둘의 100일",
-    actorName: "민지",
+    actorName: "달콤이",
     summary: "새 채팅을 보냈습니다.",
     occurredAt: new Date(Date.now() - 22 * 60 * 1000).toISOString(),
     read: false,
@@ -497,7 +556,7 @@ const demoNotifications: NotificationItem[] = [
     const typeCycle: NotificationType[] = ["CHAT", "LETTER", "MEMORY", "MISSION_APPROVAL_REQUEST", "MISSION_PROGRESS"];
     const type = typeCycle[index % typeCycle.length];
     const room = demoRooms[index % demoRooms.length];
-    const actorNames = ["민지", "아버지", "지훈"];
+    const actorNames = ["달콤이", "아버지", "지훈"];
     const targetType: NotificationTarget["type"] = type === "CHAT" ? "CHAT" : type === "LETTER" ? "LETTER" : type === "MEMORY" ? "MEMORY" : "MISSION";
     const feature = targetType === "CHAT" ? "chat" : targetType === "LETTER" ? "letters" : targetType === "MEMORY" ? "memories" : "missions";
 
@@ -725,6 +784,19 @@ function App() {
   const [memoryCommentSending, setMemoryCommentSending] = useState(false);
   const [memoryActionMode, setMemoryActionMode] = useState<MemoryActionMode>(null);
   const [memoryActionLoading, setMemoryActionLoading] = useState(false);
+  const [letterBox, setLetterBox] = useState<LetterBox>("RECEIVED");
+  const [letterRecipients, setLetterRecipients] = useState<LetterRecipient[]>([]);
+  const [letters, setLetters] = useState<LetterSummary[]>([]);
+  const [selectedLetter, setSelectedLetter] = useState<LetterDetail | null>(null);
+  const [letterForm, setLetterForm] = useState<LetterForm>(() => initialLetterForm());
+  const [letterLoading, setLetterLoading] = useState(false);
+  const [letterDetailLoading, setLetterDetailLoading] = useState(false);
+  const [letterLoadingMore, setLetterLoadingMore] = useState(false);
+  const [letterHasMore, setLetterHasMore] = useState(false);
+  const [letterTotalCount, setLetterTotalCount] = useState(0);
+  const [letterSending, setLetterSending] = useState(false);
+  const [letterFocusId, setLetterFocusId] = useState<number | null>(null);
+  const [letterComposeOpen, setLetterComposeOpen] = useState(false);
   const [missionList, setMissionList] = useState<MissionListResponse | null>(null);
   const [missionForm, setMissionForm] = useState<MissionForm>(() => initialMissionForm());
   const [missionSubmissionForm, setMissionSubmissionForm] = useState<MissionSubmissionForm>(() => initialMissionSubmissionForm());
@@ -778,6 +850,12 @@ function App() {
 
     void loadMissions(selectedRoom.id);
   }, [activeView, selectedRoom?.id]);
+
+  useEffect(() => {
+    if (activeView !== "letters" || !selectedRoom) return;
+
+    void loadLetters(selectedRoom.id, letterBox, { focusId: letterFocusId });
+  }, [activeView, selectedRoom?.id, letterBox, letterFocusId]);
 
   async function loadInitialData() {
     setErrorMessage(null);
@@ -872,6 +950,11 @@ function App() {
     if (notification.roomId) {
       setSelectedRoomId(notification.roomId);
       setExpandedRoomId(notification.roomId);
+    }
+
+    if (notification.target.type === "LETTER") {
+      setLetterBox("RECEIVED");
+      setLetterFocusId(notification.target.id);
     }
 
     setActiveView(notificationTargetView(notification));
@@ -1179,6 +1262,128 @@ function App() {
     } finally {
       setMemoryCommentSending(false);
     }
+  }
+
+  async function loadLetters(
+    roomId: number,
+    box: LetterBox = letterBox,
+    options: { focusId?: number | null; page?: number; append?: boolean } = {},
+  ) {
+    const page = options.page ?? 0;
+    const append = options.append ?? false;
+    const focusId = options.focusId ?? letterFocusId;
+
+    if (append) {
+      setLetterLoadingMore(true);
+    } else {
+      setLetterLoading(true);
+      setLetterDetailLoading(false);
+    }
+
+    try {
+      const fallbackAllLetters = demoLetters(roomId, box);
+      const fallbackStart = page * letterPageSize;
+      const fallbackItems = fallbackAllLetters.slice(fallbackStart, fallbackStart + letterPageSize);
+      const response = await safeApiGet<LettersResponse>(`/rooms/${roomId}/letters?box=${box}&page=${page}&size=${letterPageSize}`);
+      const recipients = response?.recipients ?? demoLetterRecipients(roomId);
+      const items = response?.items ?? fallbackItems;
+      const totalCount = response?.totalCount ?? fallbackAllLetters.length;
+      const hasMore = response?.hasMore ?? fallbackStart + items.length < totalCount;
+
+      setLetterRecipients(recipients);
+      setLetters((current) => (append ? [...current, ...items] : items));
+      setLetterTotalCount(totalCount);
+      setLetterHasMore(hasMore);
+
+      if (append) {
+        return;
+      }
+
+      if (items.length === 0) {
+        setSelectedLetter(null);
+        return;
+      }
+
+      const nextLetterId = focusId && items.some((letter) => letter.id === focusId)
+        ? focusId
+        : selectedLetter?.roomId === roomId && selectedLetter.mine === (box === "SENT") && items.some((letter) => letter.id === selectedLetter.id)
+          ? selectedLetter.id
+          : items[0].id;
+
+      if (focusId) {
+        setLetterFocusId(null);
+      }
+      await openLetterDetail(roomId, nextLetterId);
+    } finally {
+      if (append) {
+        setLetterLoadingMore(false);
+      } else {
+        setLetterLoading(false);
+      }
+    }
+  }
+
+  async function loadMoreLetters() {
+    if (!selectedRoom || letterLoading || letterLoadingMore || !letterHasMore) return;
+
+    const nextPage = Math.floor(letters.length / letterPageSize);
+    await loadLetters(selectedRoom.id, letterBox, { page: nextPage, append: true });
+  }
+
+  async function openLetterDetail(roomId: number, letterId: number) {
+    setLetterDetailLoading(true);
+    const response = await safeApiGet<LetterDetail>(`/rooms/${roomId}/letters/${letterId}`);
+    const detail = response ?? demoLetterDetail(roomId, letterId, letterBox);
+
+    setSelectedLetter(detail);
+    setLetters((current) => current.map((letter) => (letter.id === letterId ? { ...letter, read: detail.read } : letter)));
+    setLetterDetailLoading(false);
+  }
+
+  async function sendLetter() {
+    if (!selectedRoom) return;
+
+    const receiverMemberId = Number(letterForm.receiverMemberId);
+    const title = letterForm.title.trim();
+    const body = letterForm.body.trim();
+
+    if (!receiverMemberId || !title || !body) {
+      setErrorMessage("수신자, 제목, 내용을 모두 입력해 주세요.");
+      return;
+    }
+
+    setMessage(null);
+    setErrorMessage(null);
+    setLetterSending(true);
+
+    try {
+      const response = await apiRequest<SendLetterResponse>(`/rooms/${selectedRoom.id}/letters`, {
+        method: "POST",
+        body: {
+          receiverMemberId,
+          title,
+          body,
+        },
+      });
+
+      setLetterForm(initialLetterForm());
+      setLetterComposeOpen(false);
+      setLetterBox("SENT");
+      setSelectedLetter(response.letter);
+      await loadLetters(selectedRoom.id, "SENT", { focusId: response.letter.id });
+      await loadCalendarActivities(calendarRoomId);
+      setRoomFeedbackModal({ title: "편지 전송 완료", message: "선택한 구성원에게 편지를 보냈습니다." });
+    } catch (error) {
+      setErrorMessage(toMessage(error));
+    } finally {
+      setLetterSending(false);
+    }
+  }
+
+  function changeLetterBox(nextBox: LetterBox) {
+    setLetterBox(nextBox);
+    setLetterFocusId(null);
+    setSelectedLetter(null);
   }
 
   function openMemoryEditModal() {
@@ -1780,7 +1985,33 @@ function App() {
             onCreateComment={createMissionComment}
           />
         ) : null}
-        {activeView === "letters" ? <RoomFeatureView selectedRoom={selectedRoom} kind="letters" /> : null}
+        {activeView === "letters" ? (
+          <LetterBoardView
+            selectedRoom={selectedRoom}
+            box={letterBox}
+            recipients={letterRecipients}
+            letters={letters}
+            selectedLetter={selectedLetter}
+            form={letterForm}
+            loading={letterLoading}
+            detailLoading={letterDetailLoading}
+            loadingMore={letterLoadingMore}
+            hasMore={letterHasMore}
+            totalCount={letterTotalCount}
+            sending={letterSending}
+            composeOpen={letterComposeOpen}
+            onBoxChange={changeLetterBox}
+            onFormChange={setLetterForm}
+            onOpenCompose={() => setLetterComposeOpen(true)}
+            onCloseCompose={() => setLetterComposeOpen(false)}
+            onSendLetter={sendLetter}
+            onLoadMore={loadMoreLetters}
+            onOpenLetter={(letterId) => {
+              if (!selectedRoom) return;
+              void openLetterDetail(selectedRoom.id, letterId);
+            }}
+          />
+        ) : null}
         {activeView === "settings" ? (
           <SettingsView
             profile={profile}
@@ -2953,6 +3184,224 @@ function MemoryImage({ imageUrl, title, large = false }: { imageUrl: string | nu
 
   return (
     <img className={`memory-image ${large ? "large" : ""}`} src={resolveImageSource(imageUrl)} alt={`${title} 대표 이미지`} />
+  );
+}
+
+function LetterBoardView({
+  selectedRoom,
+  box,
+  recipients,
+  letters,
+  selectedLetter,
+  form,
+  loading,
+  detailLoading,
+  loadingMore,
+  hasMore,
+  totalCount,
+  sending,
+  composeOpen,
+  onBoxChange,
+  onFormChange,
+  onOpenCompose,
+  onCloseCompose,
+  onSendLetter,
+  onLoadMore,
+  onOpenLetter,
+}: {
+  selectedRoom: RoomSummary | null;
+  box: LetterBox;
+  recipients: LetterRecipient[];
+  letters: LetterSummary[];
+  selectedLetter: LetterDetail | null;
+  form: LetterForm;
+  loading: boolean;
+  detailLoading: boolean;
+  loadingMore: boolean;
+  hasMore: boolean;
+  totalCount: number;
+  sending: boolean;
+  composeOpen: boolean;
+  onBoxChange: (box: LetterBox) => void;
+  onFormChange: (form: LetterForm) => void;
+  onOpenCompose: () => void;
+  onCloseCompose: () => void;
+  onSendLetter: () => void;
+  onLoadMore: () => void;
+  onOpenLetter: (letterId: number) => void;
+}) {
+  return (
+    <>
+      <header className="page-header">
+        <div>
+          <h1>편지</h1>
+          <p>{selectedRoom ? `${selectedRoom.name} 구성원에게 편지를 보내고 받은 마음을 확인한다.` : "선택된 방이 없습니다."}</p>
+        </div>
+      </header>
+
+      <section className="letter-page">
+        <div className="letter-main-column">
+          <article className="letter-list-panel">
+            <div className="letter-list-heading">
+              <div>
+                <h2>편지함</h2>
+                <p>{loading ? "편지를 불러오는 중입니다." : `${totalCount}개의 ${letterBoxTitle(box)}가 있습니다.`}</p>
+              </div>
+              <button className="letter-compose-open-button" type="button" onClick={onOpenCompose} disabled={!selectedRoom}>
+                <MailPlus size={18} />
+                <span>+ 편지 보내기</span>
+              </button>
+            </div>
+            <div className="letter-box-tabs" role="tablist" aria-label="편지함 선택">
+              <button className={box === "RECEIVED" ? "active" : ""} type="button" onClick={() => onBoxChange("RECEIVED")}>
+                받은 편지
+              </button>
+              <button className={box === "SENT" ? "active" : ""} type="button" onClick={() => onBoxChange("SENT")}>
+                보낸 편지
+              </button>
+            </div>
+            <div className="letter-card-list">
+              {!loading && letters.length === 0 ? <p className="empty-state">아직 편지가 없습니다.</p> : null}
+              {letters.map((letter) => (
+                <button
+                  className={`letter-card ${selectedLetter?.id === letter.id ? "selected" : ""} ${letter.read || box === "SENT" ? "read" : "unread"}`}
+                  type="button"
+                  key={letter.id}
+                  onClick={() => onOpenLetter(letter.id)}
+                >
+                  <div className="letter-card-top">
+                    <span>{box === "SENT" ? "받는 사람" : "보낸 사람"} · {letter.counterpartName}</span>
+                    {!letter.read && box === "RECEIVED" ? <strong>NEW</strong> : null}
+                  </div>
+                  <h3>{letter.title}</h3>
+                  <p>{letter.bodyPreview}</p>
+                  <small>{formatDateLabel(letter.occurredDate)} · {formatChatTime(letter.sentAt)}</small>
+                </button>
+              ))}
+            </div>
+            {hasMore ? (
+              <button className="letter-more-button" type="button" onClick={onLoadMore} disabled={loadingMore}>
+                {loadingMore ? <span className="letter-loading-spinner" aria-hidden="true" /> : null}
+                {loadingMore ? "불러오는 중" : "더 보기"}
+              </button>
+            ) : null}
+          </article>
+        </div>
+
+        <aside className="letter-detail-panel">
+          <div className="letter-detail-header">
+            <div>
+              <span>선택한 편지</span>
+              <h2>{selectedLetter?.title ?? "편지를 선택하세요"}</h2>
+            </div>
+            <Mail size={24} />
+          </div>
+          {detailLoading ? <p className="empty-state">편지 내용을 불러오는 중입니다.</p> : null}
+          {!detailLoading && selectedLetter ? (
+            <>
+              <div className="letter-paper">
+                <div className="letter-paper-meta">
+                  <span>보낸 사람</span>
+                  <strong>{selectedLetter.senderName}</strong>
+                </div>
+                <div className="letter-paper-meta">
+                  <span>받는 사람</span>
+                  <strong>{selectedLetter.receiverName}</strong>
+                </div>
+                <p>{selectedLetter.body}</p>
+              </div>
+              <div className="letter-detail-info">
+                <span>{formatDateLabel(selectedLetter.occurredDate)}</span>
+                <span>{formatChatTime(selectedLetter.sentAt)}</span>
+                <span>{selectedLetter.mine ? "보낸 편지" : selectedLetter.read ? "읽은 편지" : "새 편지"}</span>
+              </div>
+            </>
+          ) : null}
+          {!detailLoading && !selectedLetter ? <p className="empty-state">왼쪽 편지함에서 읽을 편지를 선택하세요.</p> : null}
+        </aside>
+      </section>
+
+      {composeOpen ? (
+        <LetterComposeModal
+          selectedRoom={selectedRoom}
+          recipients={recipients}
+          form={form}
+          sending={sending}
+          onFormChange={onFormChange}
+          onSendLetter={onSendLetter}
+          onClose={onCloseCompose}
+        />
+      ) : null}
+    </>
+  );
+}
+
+function LetterComposeModal({
+  selectedRoom,
+  recipients,
+  form,
+  sending,
+  onFormChange,
+  onSendLetter,
+  onClose,
+}: {
+  selectedRoom: RoomSummary | null;
+  recipients: LetterRecipient[];
+  form: LetterForm;
+  sending: boolean;
+  onFormChange: (form: LetterForm) => void;
+  onSendLetter: () => void;
+  onClose: () => void;
+}) {
+  return (
+    <div className="modal-backdrop" role="presentation">
+      <section className="modal letter-compose-modal" role="dialog" aria-modal="true" aria-labelledby="letter-compose-title">
+        <h2 id="letter-compose-title">편지 보내기</h2>
+        <p>{selectedRoom ? `${selectedRoom.name} 구성원에게 지금 마음을 남긴다.` : "선택된 방이 없습니다."}</p>
+        <div className="letter-form letter-modal-form">
+          <label>
+            수신자
+            <select
+              value={form.receiverMemberId}
+              onChange={(event) => onFormChange({ ...form, receiverMemberId: event.target.value })}
+              disabled={!selectedRoom || recipients.length === 0}
+            >
+              <option value="">받는 사람 선택</option>
+              {recipients.map((recipient) => (
+                <option key={recipient.memberId} value={recipient.memberId}>
+                  {recipient.displayName}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            제목
+            <input
+              value={form.title}
+              onChange={(event) => onFormChange({ ...form, title: event.target.value })}
+              placeholder="예: 오늘 고마웠던 마음"
+            />
+          </label>
+          <label>
+            내용
+            <textarea
+              value={form.body}
+              onChange={(event) => onFormChange({ ...form, body: event.target.value })}
+              placeholder="상대에게 보내고 싶은 말을 편하게 남겨주세요."
+              rows={6}
+            />
+          </label>
+        </div>
+        <div className="modal-actions">
+          <button className="outline-button" type="button" onClick={onClose} disabled={sending}>
+            취소
+          </button>
+          <button className="primary-button" type="button" onClick={onSendLetter} disabled={!selectedRoom || sending}>
+            {sending ? "보내는 중" : "편지 보내기"}
+          </button>
+        </div>
+      </section>
+    </div>
   );
 }
 
@@ -4186,6 +4635,139 @@ function roomFeatureCopy(kind: RoomFeatureKind) {
   };
 }
 
+function initialLetterForm(): LetterForm {
+  return {
+    receiverMemberId: "",
+    title: "",
+    body: "",
+  };
+}
+
+function letterBoxTitle(box: LetterBox): string {
+  return box === "SENT" ? "보낸 편지" : "받은 편지";
+}
+
+function demoLetterRecipients(roomId: number): LetterRecipient[] {
+  if (roomId === 1) {
+    return [{ memberId: 2, displayName: "달콤이" }];
+  }
+
+  if (roomId === 2) {
+    return [
+      { memberId: 3, displayName: "아버지" },
+      { memberId: 5, displayName: "어머니" },
+      { memberId: 6, displayName: "형" },
+      { memberId: 7, displayName: "누나" },
+      { memberId: 8, displayName: "남동생" },
+      { memberId: 9, displayName: "여동생" },
+    ];
+  }
+
+  return [
+    { memberId: 4, displayName: "지훈" },
+    { memberId: 10, displayName: "서연" },
+    { memberId: 11, displayName: "도윤" },
+    { memberId: 12, displayName: "하준" },
+    { memberId: 13, displayName: "수아" },
+  ];
+}
+
+function demoLetters(roomId: number, box: LetterBox): LetterSummary[] {
+  const room = demoRooms.find((candidate) => candidate.id === roomId) ?? demoRooms[0];
+  const recipients = demoLetterRecipients(room.id);
+  const counterpart = recipients[0] ?? { memberId: 2, displayName: "달콤이" };
+  const baseId = 99000 + room.id * 100 + (box === "SENT" ? 50 : 0);
+
+  if (box === "SENT") {
+    return [
+      {
+        id: baseId + 1,
+        roomId: room.id,
+        box,
+        title: "오늘 기록 고마웠어",
+        bodyPreview: "오늘 남긴 사진이 좋아서 편지로도 마음을 남겨둔다.",
+        counterpartMemberId: counterpart.memberId,
+        counterpartName: counterpart.displayName,
+        sentAt: `${todayDateKey()}T20:12:00+09:00`,
+        occurredDate: todayDateKey(),
+        read: true,
+      },
+      {
+        id: baseId + 2,
+        roomId: room.id,
+        box,
+        title: "나중에 책에 같이 넣자",
+        bodyPreview: "이번 달 기록 중 마음에 드는 장면을 같이 골라보자.",
+        counterpartMemberId: counterpart.memberId,
+        counterpartName: counterpart.displayName,
+        sentAt: `${offsetDateKey(-2)}T19:30:00+09:00`,
+        occurredDate: offsetDateKey(-2),
+        read: false,
+      },
+    ];
+  }
+
+  return [
+    {
+      id: baseId + 1,
+      roomId: room.id,
+      box,
+      title: "오늘 하루도 잘 남겨보자",
+      bodyPreview: "오늘 있었던 일 중 책에 넣고 싶은 장면을 같이 남겨보자.",
+      counterpartMemberId: counterpart.memberId,
+      counterpartName: counterpart.displayName,
+      sentAt: `${todayDateKey()}T09:20:00+09:00`,
+      occurredDate: todayDateKey(),
+      read: false,
+    },
+    {
+      id: baseId + 2,
+      roomId: room.id,
+      box,
+      title: "사진 고마워",
+      bodyPreview: "네가 올린 사진을 보니까 그날 분위기가 다시 생각났어.",
+      counterpartMemberId: counterpart.memberId,
+      counterpartName: counterpart.displayName,
+      sentAt: `${offsetDateKey(-1)}T21:05:00+09:00`,
+      occurredDate: offsetDateKey(-1),
+      read: true,
+    },
+    {
+      id: baseId + 3,
+      roomId: room.id,
+      box,
+      title: "다음 기록 약속",
+      bodyPreview: "이번 주말에는 미션 인증이랑 추억 게시판을 같이 채워보자.",
+      counterpartMemberId: counterpart.memberId,
+      counterpartName: counterpart.displayName,
+      sentAt: `${offsetDateKey(-5)}T18:42:00+09:00`,
+      occurredDate: offsetDateKey(-5),
+      read: true,
+    },
+  ];
+}
+
+function demoLetterDetail(roomId: number, letterId: number, box: LetterBox): LetterDetail {
+  const summary = demoLetters(roomId, box).find((letter) => letter.id === letterId) ?? demoLetters(roomId, box)[0];
+  const isSent = box === "SENT";
+
+  return {
+    id: summary.id,
+    roomId: summary.roomId,
+    title: summary.title,
+    body: `${summary.bodyPreview}\n\n서로의 기록이 쌓이면 나중에 다시 펼쳐볼 수 있는 한 장면이 될 것 같아.`,
+    senderMemberId: isSent ? 1 : summary.counterpartMemberId,
+    senderName: isSent ? "류성열" : summary.counterpartName,
+    receiverMemberId: isSent ? summary.counterpartMemberId : 1,
+    receiverName: isSent ? summary.counterpartName : "류성열",
+    sentAt: summary.sentAt,
+    occurredDate: summary.occurredDate,
+    readAt: summary.read || !isSent ? `${summary.occurredDate}T22:00:00+09:00` : null,
+    read: true,
+    mine: isSent,
+  };
+}
+
 function initialMemoryPostForm(): MemoryPostForm {
   return {
     title: "",
@@ -4263,7 +4845,7 @@ function demoMissionList(roomId: number): MissionListResponse {
           id: 9500 + room.id * 10 + index,
           missionId: 9000 + room.id * 100 + index,
           submitterMemberId: room.id === 1 ? 2 : room.id === 2 ? 3 : 4,
-          submitterName: room.id === 1 ? "민지" : room.id === 2 ? "아버지" : "지훈",
+          submitterName: room.id === 1 ? "달콤이" : room.id === 2 ? "아버지" : "지훈",
           body: "사진으로 인증한 기록입니다.",
           imageUrl: `https://picsum.photos/seed/demo-mission-${room.id}-${index}/900/640`,
           occurredDate: offsetDateKey(-index),
@@ -4295,7 +4877,7 @@ function demoMissionList(roomId: number): MissionListResponse {
           id: 9700 + room.id * 10 + index,
           missionId: 9000 + room.id * 100 + index,
           authorMemberId: index % 2 === 0 ? 1 : 2,
-          authorName: index % 2 === 0 ? "류성열" : "민지",
+          authorName: index % 2 === 0 ? "류성열" : "달콤이",
           body: index <= 1 ? "이 미션은 책에 담기 좋겠다." : "인증할 사진을 골라보자.",
           createdAt: `${offsetDateKey(-index)}T11:20:00+09:00`,
           mine: index % 2 === 0,
@@ -4315,7 +4897,7 @@ function demoMissionList(roomId: number): MissionListResponse {
 
 function demoMemoryPosts(roomId: number): MemoryPostSummary[] {
   const room = demoRooms.find((candidate) => candidate.id === roomId) ?? demoRooms[0];
-  const authorName = room.id === 1 ? "민지" : room.id === 2 ? "아버지" : "지훈";
+  const authorName = room.id === 1 ? "달콤이" : room.id === 2 ? "아버지" : "지훈";
 
   return [
     {
@@ -4360,7 +4942,7 @@ function demoMemoryDetail(roomId: number, memoryId: number): MemoryPostDetail {
         id: summary.id + 1000,
         memoryPostId: summary.id,
         authorMemberId: summary.mine ? 2 : 1,
-        authorName: summary.mine ? "민지" : "류성열",
+        authorName: summary.mine ? "달콤이" : "류성열",
         body: "이 추억은 나중에 다시 보면 좋겠다.",
         createdAt: `${summary.occurredDate}T21:10:00+09:00`,
         mine: !summary.mine,
@@ -4405,7 +4987,7 @@ function demoChatMessages(roomId: number): ChatMessage[] {
       id: 8001,
       roomId: room.id,
       senderMemberId: room.id === 1 ? 2 : 3,
-      senderName: room.id === 1 ? "민지" : room.id === 2 ? "아버지" : "지훈",
+      senderName: room.id === 1 ? "달콤이" : room.id === 2 ? "아버지" : "지훈",
       senderType: "MEMBER",
       body: `${room.name}에 오늘 기록 남겨둘게.`,
       sentAt: `${yesterday}T20:10:00+09:00`,
@@ -4427,7 +5009,7 @@ function demoChatMessages(roomId: number): ChatMessage[] {
       id: 8003,
       roomId: room.id,
       senderMemberId: room.id === 1 ? 2 : 3,
-      senderName: room.id === 1 ? "민지" : room.id === 2 ? "아버지" : "지훈",
+      senderName: room.id === 1 ? "달콤이" : room.id === 2 ? "아버지" : "지훈",
       senderType: "MEMBER",
       body: "이 대화는 날짜별 기록으로 남겨두면 다시 돌아보기 좋겠다.",
       sentAt: `${baseDate}T09:05:00+09:00`,
