@@ -3393,7 +3393,7 @@ function LetterComposeModal({
           </label>
         </div>
         <div className="modal-actions">
-          <button type="button" onClick={onClose} disabled={sending}>
+          <button className="outline-button" type="button" onClick={onClose} disabled={sending}>
             취소
           </button>
           <button className="primary-button" type="button" onClick={onSendLetter} disabled={!selectedRoom || sending}>

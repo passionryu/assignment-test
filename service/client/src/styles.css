@@ -2161,6 +2161,23 @@ dl {
   width: min(680px, 100%);
 }
 
+.letter-compose-modal .modal-actions .outline-button {
+  min-width: 104px;
+  min-height: 52px;
+  border-color: #ffd5e7;
+  background: #fff8fc;
+  color: #f04f95;
+  box-shadow: 0 8px 18px rgba(240, 79, 149, 0.08);
+}
+
+.letter-compose-modal .modal-actions .outline-button:hover,
+.letter-compose-modal .modal-actions .outline-button:focus-visible {
+  border-color: #f04f95;
+  background: #fff1f7;
+  color: #d93d82;
+  outline: none;
+}
+
 .letter-modal-form {
   grid-template-columns: 1fr;
   margin-top: 18px;
