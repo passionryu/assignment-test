@@ -22,17 +22,21 @@ class LetterController(
     private val currentMemberResolver: CurrentMemberResolver,
     private val letterService: LetterService,
 ) {
-    @Operation(summary = "편지 목록 조회", description = "선택 방의 받은 편지함 또는 보낸 편지함을 조회한다.")
+    @Operation(summary = "편지 목록 조회", description = "선택 방의 받은 편지함 또는 보낸 편지함을 최신순으로 페이지 조회한다.")
     @GetMapping
     fun getLetters(
         @RequestHeader("X-Member-Id", required = false) rawMemberId: String?,
         @PathVariable roomId: Long,
         @RequestParam(required = false) box: String?,
+        @RequestParam(required = false) page: Int?,
+        @RequestParam(required = false) size: Int?,
     ): LettersResponse =
         letterService.getLetters(
             memberId = currentMemberResolver.resolve(rawMemberId),
             roomId = roomId,
             rawBox = box,
+            rawPage = page,
+            rawSize = size,
         )
 
     @Operation(summary = "편지 작성", description = "같은 방 구성원에게 편지를 보내고 서버 전송 시점 기준 날짜와 수신자 알림을 생성한다.")

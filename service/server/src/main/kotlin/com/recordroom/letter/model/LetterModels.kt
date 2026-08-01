@@ -9,6 +9,10 @@ data class LettersResponse(
     val box: String,
     val recipients: List<LetterRecipientResponse>,
     val items: List<LetterSummaryResponse>,
+    val page: Int,
+    val size: Int,
+    val hasMore: Boolean,
+    val totalCount: Long,
 )
 
 data class LetterRecipientResponse(

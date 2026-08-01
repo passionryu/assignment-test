@@ -42,8 +42,8 @@ class LetterRepository(
             }
     }
 
-    // 받은 편지함과 보낸 편지함을 같은 응답 형태로 노출하기 위해 상대방 이름과 함께 목록을 조회한다.
-    fun findLetters(roomId: Long, memberId: Long, box: String): List<LetterSummaryResponse> {
+    // 편지함 더보기 여부를 계산하기 위해 요청 페이지보다 1건 더 조회한다.
+    fun findLetters(roomId: Long, memberId: Long, box: String, page: Int, size: Int): List<LetterSummaryResponse> {
         val sender = QMemberEntity("letterSummarySender")
         val receiver = QMemberEntity("letterSummaryReceiver")
         val counterpart = if (box == BOX_SENT) receiver else sender
@@ -69,6 +69,8 @@ class LetterRepository(
             .join(receiver).on(receiver.id.eq(letterEntity.receiverMemberId))
             .where(letterEntity.roomId.eq(roomId), mailboxCondition(memberId, box))
             .orderBy(letterEntity.sentAt.desc(), letterEntity.id.desc())
+            .offset(page.toLong() * size.toLong())
+            .limit((size + 1).toLong())
             .fetch()
             .map { row ->
                 LetterSummaryResponse(
@@ -85,6 +87,15 @@ class LetterRepository(
                 )
             }
     }
+
+    // 편지함의 전체 건수를 함께 내려 더보기 UI가 현재 조회 범위를 명확히 알 수 있게 한다.
+    fun countLetters(roomId: Long, memberId: Long, box: String): Long =
+        queryFactory
+            .select(letterEntity.id.count())
+            .from(letterEntity)
+            .where(letterEntity.roomId.eq(roomId), mailboxCondition(memberId, box))
+            .fetchOne()
+            ?: 0L
 
     // 상세 조회와 읽음 처리를 위해 현재 회원이 접근 가능한 편지 엔티티만 조회한다.
     fun findAccessibleLetter(roomId: Long, letterId: Long, memberId: Long): LetterEntity? =

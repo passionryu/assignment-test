@@ -30,18 +30,27 @@ class LetterService(
     private val log = LoggerFactory.getLogger(LetterService::class.java)
     private val seoulZone = ZoneId.of("Asia/Seoul")
 
-    fun getLetters(memberId: Long, roomId: Long, rawBox: String?): LettersResponse {
+    fun getLetters(memberId: Long, roomId: Long, rawBox: String?, rawPage: Int?, rawSize: Int?): LettersResponse {
         memberService.getProfile(memberId)
 
-        val room = readRoomJoinedByMember(memberId, roomId, "GET /api/rooms/$roomId/letters")
+        val what = "GET /api/rooms/$roomId/letters"
+        val room = readRoomJoinedByMember(memberId, roomId, what)
         val box = normalizeBox(memberId, roomId, rawBox)
+        val page = normalizePage(memberId, roomId, rawPage)
+        val size = normalizePageSize(memberId, roomId, rawSize)
+        val pageCandidates = letterRepository.findLetters(roomId, memberId, box, page, size)
+        val totalCount = letterRepository.countLetters(roomId, memberId, box)
 
         return LettersResponse(
             roomId = room.id,
             roomName = room.name,
             box = box,
             recipients = letterRepository.findRecipients(roomId, memberId),
-            items = letterRepository.findLetters(roomId, memberId, box),
+            items = pageCandidates.take(size),
+            page = page,
+            size = size,
+            hasMore = pageCandidates.size > size,
+            totalCount = totalCount,
         )
     }
 
@@ -140,6 +149,31 @@ class LetterService(
         badRequest(memberId, roomId, "GET /api/rooms/$roomId/letters", "box:$rawBox", "편지함은 RECEIVED 또는 SENT만 사용할 수 있습니다.", "LETTER_BOX_INVALID")
     }
 
+    private fun normalizePage(memberId: Long, roomId: Long, rawPage: Int?): Int {
+        val page = rawPage ?: DEFAULT_PAGE
+        if (page >= 0) {
+            return page
+        }
+
+        badRequest(memberId, roomId, "GET /api/rooms/$roomId/letters", "page:$rawPage", "페이지 번호는 0 이상이어야 합니다.", "LETTER_PAGE_INVALID")
+    }
+
+    private fun normalizePageSize(memberId: Long, roomId: Long, rawSize: Int?): Int {
+        val size = rawSize ?: DEFAULT_PAGE_SIZE
+        if (size in MIN_PAGE_SIZE..MAX_PAGE_SIZE) {
+            return size
+        }
+
+        badRequest(
+            memberId,
+            roomId,
+            "GET /api/rooms/$roomId/letters",
+            "size:$rawSize",
+            "페이지 크기는 ${MIN_PAGE_SIZE}개 이상 ${MAX_PAGE_SIZE}개 이하로 입력해 주세요.",
+            "LETTER_SIZE_INVALID",
+        )
+    }
+
     private fun validateReceiver(memberId: Long, roomId: Long, rawReceiverMemberId: Long?): Long {
         val receiverMemberId = rawReceiverMemberId
             ?: badRequest(
@@ -224,6 +258,10 @@ class LetterService(
     }
 
     companion object {
+        private const val DEFAULT_PAGE = 0
+        private const val DEFAULT_PAGE_SIZE = 10
+        private const val MIN_PAGE_SIZE = 1
+        private const val MAX_PAGE_SIZE = 50
         private const val MAX_TITLE_LENGTH = 120
         private const val MAX_BODY_LENGTH = 5000
     }

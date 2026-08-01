@@ -309,6 +309,10 @@ type LettersResponse = {
   box: LetterBox;
   recipients: LetterRecipient[];
   items: LetterSummary[];
+  page: number;
+  size: number;
+  hasMore: boolean;
+  totalCount: number;
 };
 
 type LetterForm = {
@@ -409,6 +413,7 @@ const apiOrigin = apiBaseUrl.replace(/\/api\/?$/, "");
 const memberHeader = { "X-Member-Id": "1" };
 const currentMonth = toDateKey(new Date()).slice(0, 7);
 const memoryPostsPerPage = 6;
+const letterPageSize = 10;
 
 const demoProfile: MemberProfile = {
   id: 1,
@@ -786,6 +791,9 @@ function App() {
   const [letterForm, setLetterForm] = useState<LetterForm>(() => initialLetterForm());
   const [letterLoading, setLetterLoading] = useState(false);
   const [letterDetailLoading, setLetterDetailLoading] = useState(false);
+  const [letterLoadingMore, setLetterLoadingMore] = useState(false);
+  const [letterHasMore, setLetterHasMore] = useState(false);
+  const [letterTotalCount, setLetterTotalCount] = useState(0);
   const [letterSending, setLetterSending] = useState(false);
   const [letterFocusId, setLetterFocusId] = useState<number | null>(null);
   const [letterComposeOpen, setLetterComposeOpen] = useState(false);
@@ -846,7 +854,7 @@ function App() {
   useEffect(() => {
     if (activeView !== "letters" || !selectedRoom) return;
 
-    void loadLetters(selectedRoom.id, letterBox, letterFocusId);
+    void loadLetters(selectedRoom.id, letterBox, { focusId: letterFocusId });
   }, [activeView, selectedRoom?.id, letterBox, letterFocusId]);
 
   async function loadInitialData() {
@@ -1256,33 +1264,70 @@ function App() {
     }
   }
 
-  async function loadLetters(roomId: number, box: LetterBox = letterBox, focusId: number | null = letterFocusId) {
-    setLetterLoading(true);
-    setLetterDetailLoading(false);
+  async function loadLetters(
+    roomId: number,
+    box: LetterBox = letterBox,
+    options: { focusId?: number | null; page?: number; append?: boolean } = {},
+  ) {
+    const page = options.page ?? 0;
+    const append = options.append ?? false;
+    const focusId = options.focusId ?? letterFocusId;
 
-    const response = await safeApiGet<LettersResponse>(`/rooms/${roomId}/letters?box=${box}`);
-    const recipients = response?.recipients ?? demoLetterRecipients(roomId);
-    const items = response?.items ?? demoLetters(roomId, box);
-
-    setLetterRecipients(recipients);
-    setLetters(items);
-    setLetterLoading(false);
-
-    if (items.length === 0) {
-      setSelectedLetter(null);
-      return;
+    if (append) {
+      setLetterLoadingMore(true);
+    } else {
+      setLetterLoading(true);
+      setLetterDetailLoading(false);
     }
 
-    const nextLetterId = focusId && items.some((letter) => letter.id === focusId)
-      ? focusId
-      : selectedLetter?.roomId === roomId && selectedLetter.mine === (box === "SENT") && items.some((letter) => letter.id === selectedLetter.id)
-        ? selectedLetter.id
-        : items[0].id;
+    try {
+      const fallbackAllLetters = demoLetters(roomId, box);
+      const fallbackStart = page * letterPageSize;
+      const fallbackItems = fallbackAllLetters.slice(fallbackStart, fallbackStart + letterPageSize);
+      const response = await safeApiGet<LettersResponse>(`/rooms/${roomId}/letters?box=${box}&page=${page}&size=${letterPageSize}`);
+      const recipients = response?.recipients ?? demoLetterRecipients(roomId);
+      const items = response?.items ?? fallbackItems;
+      const totalCount = response?.totalCount ?? fallbackAllLetters.length;
+      const hasMore = response?.hasMore ?? fallbackStart + items.length < totalCount;
 
-    if (focusId) {
-      setLetterFocusId(null);
+      setLetterRecipients(recipients);
+      setLetters((current) => (append ? [...current, ...items] : items));
+      setLetterTotalCount(totalCount);
+      setLetterHasMore(hasMore);
+
+      if (append) {
+        return;
+      }
+
+      if (items.length === 0) {
+        setSelectedLetter(null);
+        return;
+      }
+
+      const nextLetterId = focusId && items.some((letter) => letter.id === focusId)
+        ? focusId
+        : selectedLetter?.roomId === roomId && selectedLetter.mine === (box === "SENT") && items.some((letter) => letter.id === selectedLetter.id)
+          ? selectedLetter.id
+          : items[0].id;
+
+      if (focusId) {
+        setLetterFocusId(null);
+      }
+      await openLetterDetail(roomId, nextLetterId);
+    } finally {
+      if (append) {
+        setLetterLoadingMore(false);
+      } else {
+        setLetterLoading(false);
+      }
     }
-    await openLetterDetail(roomId, nextLetterId);
+  }
+
+  async function loadMoreLetters() {
+    if (!selectedRoom || letterLoading || letterLoadingMore || !letterHasMore) return;
+
+    const nextPage = Math.floor(letters.length / letterPageSize);
+    await loadLetters(selectedRoom.id, letterBox, { page: nextPage, append: true });
   }
 
   async function openLetterDetail(roomId: number, letterId: number) {
@@ -1325,7 +1370,7 @@ function App() {
       setLetterComposeOpen(false);
       setLetterBox("SENT");
       setSelectedLetter(response.letter);
-      await loadLetters(selectedRoom.id, "SENT", response.letter.id);
+      await loadLetters(selectedRoom.id, "SENT", { focusId: response.letter.id });
       await loadCalendarActivities(calendarRoomId);
       setRoomFeedbackModal({ title: "편지 전송 완료", message: "선택한 구성원에게 편지를 보냈습니다." });
     } catch (error) {
@@ -1950,6 +1995,9 @@ function App() {
             form={letterForm}
             loading={letterLoading}
             detailLoading={letterDetailLoading}
+            loadingMore={letterLoadingMore}
+            hasMore={letterHasMore}
+            totalCount={letterTotalCount}
             sending={letterSending}
             composeOpen={letterComposeOpen}
             onBoxChange={changeLetterBox}
@@ -1957,6 +2005,7 @@ function App() {
             onOpenCompose={() => setLetterComposeOpen(true)}
             onCloseCompose={() => setLetterComposeOpen(false)}
             onSendLetter={sendLetter}
+            onLoadMore={loadMoreLetters}
             onOpenLetter={(letterId) => {
               if (!selectedRoom) return;
               void openLetterDetail(selectedRoom.id, letterId);
@@ -3147,6 +3196,9 @@ function LetterBoardView({
   form,
   loading,
   detailLoading,
+  loadingMore,
+  hasMore,
+  totalCount,
   sending,
   composeOpen,
   onBoxChange,
@@ -3154,6 +3206,7 @@ function LetterBoardView({
   onOpenCompose,
   onCloseCompose,
   onSendLetter,
+  onLoadMore,
   onOpenLetter,
 }: {
   selectedRoom: RoomSummary | null;
@@ -3164,6 +3217,9 @@ function LetterBoardView({
   form: LetterForm;
   loading: boolean;
   detailLoading: boolean;
+  loadingMore: boolean;
+  hasMore: boolean;
+  totalCount: number;
   sending: boolean;
   composeOpen: boolean;
   onBoxChange: (box: LetterBox) => void;
@@ -3171,16 +3227,9 @@ function LetterBoardView({
   onOpenCompose: () => void;
   onCloseCompose: () => void;
   onSendLetter: () => void;
+  onLoadMore: () => void;
   onOpenLetter: (letterId: number) => void;
 }) {
-  const [visibleLetterCount, setVisibleLetterCount] = useState(10);
-  const visibleLetters = letters.slice(0, visibleLetterCount);
-  const hasMoreLetters = visibleLetterCount < letters.length;
-
-  useEffect(() => {
-    setVisibleLetterCount(10);
-  }, [box, selectedRoom?.id, letters.length]);
-
   return (
     <>
       <header className="page-header">
@@ -3196,7 +3245,7 @@ function LetterBoardView({
             <div className="letter-list-heading">
               <div>
                 <h2>편지함</h2>
-                <p>{loading ? "편지를 불러오는 중입니다." : `${letters.length}개의 ${letterBoxTitle(box)}가 있습니다.`}</p>
+                <p>{loading ? "편지를 불러오는 중입니다." : `${totalCount}개의 ${letterBoxTitle(box)}가 있습니다.`}</p>
               </div>
               <button className="letter-compose-open-button" type="button" onClick={onOpenCompose} disabled={!selectedRoom}>
                 <MailPlus size={18} />
@@ -3213,7 +3262,7 @@ function LetterBoardView({
             </div>
             <div className="letter-card-list">
               {!loading && letters.length === 0 ? <p className="empty-state">아직 편지가 없습니다.</p> : null}
-              {visibleLetters.map((letter) => (
+              {letters.map((letter) => (
                 <button
                   className={`letter-card ${selectedLetter?.id === letter.id ? "selected" : ""} ${letter.read || box === "SENT" ? "read" : "unread"}`}
                   type="button"
@@ -3230,9 +3279,10 @@ function LetterBoardView({
                 </button>
               ))}
             </div>
-            {hasMoreLetters ? (
-              <button className="letter-more-button" type="button" onClick={() => setVisibleLetterCount((count) => count + 10)}>
-                더 보기
+            {hasMore ? (
+              <button className="letter-more-button" type="button" onClick={onLoadMore} disabled={loadingMore}>
+                {loadingMore ? <span className="letter-loading-spinner" aria-hidden="true" /> : null}
+                {loadingMore ? "불러오는 중" : "더 보기"}
               </button>
             ) : null}
           </article>
