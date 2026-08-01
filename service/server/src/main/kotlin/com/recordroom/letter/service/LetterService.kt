@@ -62,7 +62,7 @@ class LetterService(
                 receiverMemberId = receiverMemberId,
                 title = title,
                 body = body,
-                occurredDate = request.occurredDate ?: now.toLocalDate(),
+                occurredDate = now.toLocalDate(),
                 sentAt = now,
             ),
         )

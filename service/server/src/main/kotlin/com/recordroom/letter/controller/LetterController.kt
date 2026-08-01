@@ -35,7 +35,7 @@ class LetterController(
             rawBox = box,
         )
 
-    @Operation(summary = "편지 작성", description = "같은 방 구성원에게 편지를 보내고 수신자에게 알림을 생성한다.")
+    @Operation(summary = "편지 작성", description = "같은 방 구성원에게 편지를 보내고 서버 전송 시점 기준 날짜와 수신자 알림을 생성한다.")
     @PostMapping
     fun sendLetter(
         @RequestHeader("X-Member-Id", required = false) rawMemberId: String?,

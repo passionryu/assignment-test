@@ -49,7 +49,6 @@ data class SendLetterRequest(
     val receiverMemberId: Long?,
     val title: String?,
     val body: String?,
-    val occurredDate: LocalDate?,
 )
 
 data class SendLetterResponse(
