@@ -5,11 +5,13 @@ import com.recordroom.common.ApiException
 import com.recordroom.member.service.MemberService
 import com.recordroom.memory.model.CreateMemoryCommentRequest
 import com.recordroom.memory.model.CreateMemoryPostRequest
+import com.recordroom.memory.model.DeleteMemoryPostResponse
 import com.recordroom.memory.model.MemoryCommentEntity
 import com.recordroom.memory.model.MemoryCommentResponse
 import com.recordroom.memory.model.MemoryImageUploadResponse
 import com.recordroom.memory.model.MemoryPostDetailResponse
 import com.recordroom.memory.model.MemoryPostsResponse
+import com.recordroom.memory.model.UpdateMemoryPostRequest
 import com.recordroom.memory.repository.MemoryRepository
 import com.recordroom.room.model.RoomEntity
 import com.recordroom.room.repository.RoomRepository
@@ -79,6 +81,50 @@ class MemoryService(
         )
 
         return readPostDetail(memberId, roomId, savedPost.id, "MemoryService.createPost")
+    }
+
+    @Transactional
+    fun updatePost(
+        memberId: Long,
+        roomId: Long,
+        memoryId: Long,
+        request: UpdateMemoryPostRequest,
+    ): MemoryPostDetailResponse {
+        memberService.getProfile(memberId)
+
+        readRoomJoinedByMember(memberId, roomId, "PATCH /api/rooms/$roomId/memories/$memoryId")
+        val post = readActivePost(memberId, roomId, memoryId, "PATCH /api/rooms/$roomId/memories/$memoryId")
+        validateMemberOwnsMemoryPost(memberId, roomId, post, "PATCH /api/rooms/$roomId/memories/$memoryId")
+
+        val title = validateTitle(memberId, roomId, "PATCH /api/rooms/$roomId/memories/$memoryId", request.title)
+        val body = validateBody(memberId, roomId, "PATCH /api/rooms/$roomId/memories/$memoryId", request.body)
+        val imageUrl = validateImageUrl(memberId, roomId, "PATCH /api/rooms/$roomId/memories/$memoryId", request.representativeImageUrl)
+
+        post.title = title
+        post.body = body
+        post.representativeImageUrl = imageUrl
+        post.imageCount = if (imageUrl == null) 0 else 1
+        post.occurredDate = request.occurredDate ?: post.occurredDate
+        post.updatedAt = OffsetDateTime.now(seoulZone)
+        memoryRepository.savePost(post)
+
+        return readPostDetail(memberId, roomId, memoryId, "MemoryService.updatePost")
+    }
+
+    @Transactional
+    fun deletePost(memberId: Long, roomId: Long, memoryId: Long): DeleteMemoryPostResponse {
+        memberService.getProfile(memberId)
+
+        readRoomJoinedByMember(memberId, roomId, "DELETE /api/rooms/$roomId/memories/$memoryId")
+        val post = readActivePost(memberId, roomId, memoryId, "DELETE /api/rooms/$roomId/memories/$memoryId")
+        validateMemberOwnsMemoryPost(memberId, roomId, post, "DELETE /api/rooms/$roomId/memories/$memoryId")
+
+        val now = OffsetDateTime.now(seoulZone)
+        post.deletedAt = now
+        post.updatedAt = now
+        memoryRepository.savePost(post)
+
+        return DeleteMemoryPostResponse(id = memoryId, deleted = true)
     }
 
     fun uploadImage(memberId: Long, roomId: Long, image: MultipartFile): MemoryImageUploadResponse {
@@ -154,6 +200,20 @@ class MemoryService(
 
     private fun readActivePost(memberId: Long, roomId: Long, memoryId: Long, what: String): MemoryPostEntity =
         memoryRepository.findActivePost(roomId, memoryId) ?: postNotFound(memberId, roomId, memoryId, what)
+
+    private fun validateMemberOwnsMemoryPost(memberId: Long, roomId: Long, post: MemoryPostEntity, what: String) {
+        if (post.authorMemberId == memberId) return
+
+        log.warn(
+            "[추억 게시글] 작성자 권한 검증 실패. who=memberId:{}, what={}, requestData=roomId:{},memoryId:{},authorMemberId:{}, reason=memory_post_owner_required",
+            memberId,
+            what,
+            roomId,
+            post.id,
+            post.authorMemberId,
+        )
+        throw ApiException(HttpStatus.FORBIDDEN, "MEMORY_POST_OWNER_REQUIRED", "작성자만 추억 게시글을 수정하거나 삭제할 수 있습니다.")
+    }
 
     private fun validateTitle(memberId: Long, roomId: Long, what: String, rawTitle: String?): String {
         val title = rawTitle?.trim()

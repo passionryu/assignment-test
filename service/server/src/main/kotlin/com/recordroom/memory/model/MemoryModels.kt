@@ -57,6 +57,18 @@ data class CreateMemoryPostRequest(
     val occurredDate: LocalDate?,
 )
 
+data class UpdateMemoryPostRequest(
+    val title: String?,
+    val body: String?,
+    val representativeImageUrl: String?,
+    val occurredDate: LocalDate?,
+)
+
+data class DeleteMemoryPostResponse(
+    val id: Long,
+    val deleted: Boolean,
+)
+
 data class CreateMemoryCommentRequest(
     val body: String?,
 )
