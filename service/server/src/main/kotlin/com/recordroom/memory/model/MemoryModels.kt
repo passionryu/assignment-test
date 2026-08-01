@@ -60,3 +60,9 @@ data class CreateMemoryPostRequest(
 data class CreateMemoryCommentRequest(
     val body: String?,
 )
+
+data class MemoryImageUploadResponse(
+    val imageUrl: String,
+    val originalFileName: String,
+    val size: Long,
+)

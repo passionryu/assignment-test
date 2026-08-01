@@ -7,6 +7,7 @@ import com.recordroom.memory.model.CreateMemoryCommentRequest
 import com.recordroom.memory.model.CreateMemoryPostRequest
 import com.recordroom.memory.model.MemoryCommentEntity
 import com.recordroom.memory.model.MemoryCommentResponse
+import com.recordroom.memory.model.MemoryImageUploadResponse
 import com.recordroom.memory.model.MemoryPostDetailResponse
 import com.recordroom.memory.model.MemoryPostsResponse
 import com.recordroom.memory.repository.MemoryRepository
@@ -16,6 +17,7 @@ import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import org.springframework.web.multipart.MultipartFile
 import java.time.LocalDate
 import java.time.OffsetDateTime
 import java.time.ZoneId
@@ -26,6 +28,7 @@ class MemoryService(
     private val memberService: MemberService,
     private val roomRepository: RoomRepository,
     private val memoryRepository: MemoryRepository,
+    private val memoryImageStorage: MemoryImageStorage,
 ) {
     private val log = LoggerFactory.getLogger(MemoryService::class.java)
     private val seoulZone = ZoneId.of("Asia/Seoul")
@@ -76,6 +79,14 @@ class MemoryService(
         )
 
         return readPostDetail(memberId, roomId, savedPost.id, "MemoryService.createPost")
+    }
+
+    fun uploadImage(memberId: Long, roomId: Long, image: MultipartFile): MemoryImageUploadResponse {
+        memberService.getProfile(memberId)
+
+        readRoomJoinedByMember(memberId, roomId, "POST /api/rooms/$roomId/memories/images")
+
+        return memoryImageStorage.storeImageSelectedByMember(memberId, roomId, image)
     }
 
     @Transactional

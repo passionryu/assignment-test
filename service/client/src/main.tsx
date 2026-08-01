@@ -1,4 +1,4 @@
-import { StrictMode, useEffect, useMemo, useRef, useState } from "react";
+import { StrictMode, useEffect, useMemo, useRef, useState, type DragEvent } from "react";
 import { createRoot } from "react-dom/client";
 import {
   BadgeCheck,
@@ -23,6 +23,7 @@ import {
   Phone,
   Settings,
   ShieldAlert,
+  UploadCloud,
   UserRound,
   UsersRound,
   X,
@@ -249,7 +250,14 @@ type MemoryPostForm = {
   title: string;
   body: string;
   representativeImageUrl: string;
+  representativeImageName: string;
   occurredDate: string;
+};
+
+type MemoryImageUploadResponse = {
+  imageUrl: string;
+  originalFileName: string;
+  size: number;
 };
 
 type ApiError = {
@@ -263,8 +271,10 @@ type AppView = "home" | "rooms" | "room" | "settings" | RoomFeatureKind;
 type RoomSettingsMode = "menu" | "info" | "edit" | "delete" | null;
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8080/api";
+const apiOrigin = apiBaseUrl.replace(/\/api\/?$/, "");
 const memberHeader = { "X-Member-Id": "1" };
 const currentMonth = toDateKey(new Date()).slice(0, 7);
+const memoryPostsPerPage = 6;
 
 const demoProfile: MemberProfile = {
   id: 1,
@@ -629,6 +639,7 @@ function App() {
   const [memoryLoading, setMemoryLoading] = useState(false);
   const [memoryDetailLoading, setMemoryDetailLoading] = useState(false);
   const [memoryCreating, setMemoryCreating] = useState(false);
+  const [memoryImageUploading, setMemoryImageUploading] = useState(false);
   const [memoryCommentSending, setMemoryCommentSending] = useState(false);
   const [profileForm, setProfileForm] = useState({ displayName: "", profileImageUrl: "" });
   const [passwordForm, setPasswordForm] = useState({ currentPassword: "", newPassword: "" });
@@ -934,7 +945,7 @@ function App() {
 
     const title = memoryPostForm.title.trim();
     const body = memoryPostForm.body.trim();
-    const imageUrl = memoryPostForm.representativeImageUrl.trim();
+    const imageUrl = memoryPostForm.representativeImageUrl;
 
     if (!title || !body) {
       setErrorMessage("추억 제목과 내용을 입력해 주세요.");
@@ -965,6 +976,39 @@ function App() {
       setErrorMessage(toMessage(error));
     } finally {
       setMemoryCreating(false);
+    }
+  }
+
+  async function uploadMemoryImage(file: File) {
+    if (!selectedRoom) return;
+
+    if (!file.type.startsWith("image/")) {
+      setErrorMessage("이미지 파일만 선택해 주세요.");
+      return;
+    }
+
+    setMessage(null);
+    setErrorMessage(null);
+    setMemoryImageUploading(true);
+
+    try {
+      const formData = new FormData();
+      formData.append("image", file);
+
+      const uploadedImage = await apiFormDataRequest<MemoryImageUploadResponse>(
+        `/rooms/${selectedRoom.id}/memories/images`,
+        formData,
+      );
+
+      setMemoryPostForm((current) => ({
+        ...current,
+        representativeImageUrl: uploadedImage.imageUrl,
+        representativeImageName: uploadedImage.originalFileName,
+      }));
+    } catch (error) {
+      setErrorMessage(toMessage(error));
+    } finally {
+      setMemoryImageUploading(false);
     }
   }
 
@@ -1311,8 +1355,11 @@ function App() {
             loading={memoryLoading}
             detailLoading={memoryDetailLoading}
             creating={memoryCreating}
+            imageUploading={memoryImageUploading}
             commentSending={memoryCommentSending}
             onFormChange={setMemoryPostForm}
+            onImageUpload={uploadMemoryImage}
+            onImageClear={() => setMemoryPostForm((current) => ({ ...current, representativeImageUrl: "", representativeImageName: "" }))}
             onCommentDraftChange={setMemoryCommentDraft}
             onCreatePost={createMemoryPost}
             onOpenPost={(memoryId) => {
@@ -2208,8 +2255,11 @@ function MemoryBoardView({
   loading,
   detailLoading,
   creating,
+  imageUploading,
   commentSending,
   onFormChange,
+  onImageUpload,
+  onImageClear,
   onCommentDraftChange,
   onCreatePost,
   onOpenPost,
@@ -2223,13 +2273,34 @@ function MemoryBoardView({
   loading: boolean;
   detailLoading: boolean;
   creating: boolean;
+  imageUploading: boolean;
   commentSending: boolean;
   onFormChange: (form: MemoryPostForm) => void;
+  onImageUpload: (file: File) => void;
+  onImageClear: () => void;
   onCommentDraftChange: (value: string) => void;
   onCreatePost: () => void;
   onOpenPost: (memoryId: number) => void;
   onCreateComment: () => void;
 }) {
+  const [currentPage, setCurrentPage] = useState(1);
+  const totalPages = Math.max(1, Math.ceil(posts.length / memoryPostsPerPage));
+  const safePage = Math.min(currentPage, totalPages);
+  const visiblePosts = posts.slice((safePage - 1) * memoryPostsPerPage, safePage * memoryPostsPerPage);
+  const uploadInputId = `memory-image-upload-${selectedRoom?.id ?? "none"}`;
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedRoom?.id, posts.length]);
+
+  function handleImageDrop(event: DragEvent<HTMLDivElement>) {
+    event.preventDefault();
+    const file = event.dataTransfer.files[0];
+    if (file) {
+      onImageUpload(file);
+    }
+  }
+
   return (
     <>
       <header className="page-header">
@@ -2263,14 +2334,45 @@ function MemoryBoardView({
                   onChange={(event) => onFormChange({ ...form, occurredDate: event.target.value })}
                 />
               </label>
-              <label className="memory-form-wide">
-                이미지 URL
+              <div
+                className={`memory-upload-dropzone memory-form-wide ${form.representativeImageUrl ? "has-image" : ""}`}
+                onDragOver={(event) => event.preventDefault()}
+                onDrop={handleImageDrop}
+              >
                 <input
-                  value={form.representativeImageUrl}
-                  onChange={(event) => onFormChange({ ...form, representativeImageUrl: event.target.value })}
-                  placeholder="https://example.com/photo.jpg"
+                  id={uploadInputId}
+                  type="file"
+                  accept="image/*"
+                  disabled={!selectedRoom || imageUploading}
+                  onChange={(event) => {
+                    const file = event.target.files?.[0];
+                    if (file) {
+                      onImageUpload(file);
+                    }
+                    event.currentTarget.value = "";
+                  }}
                 />
-              </label>
+                <UploadCloud size={28} />
+                <div>
+                  <strong>{imageUploading ? "이미지 업로드 중" : "사진을 끌어놓거나 파일을 선택하세요"}</strong>
+                  <span>jpg, png, gif, webp · 5MB 이하</span>
+                </div>
+                <label className="outline-button upload-pick-button" htmlFor={uploadInputId}>
+                  파일 선택
+                </label>
+              </div>
+              {form.representativeImageUrl ? (
+                <div className="memory-upload-preview memory-form-wide">
+                  <MemoryImage imageUrl={form.representativeImageUrl} title={form.representativeImageName || "선택한 이미지"} />
+                  <div>
+                    <strong>{form.representativeImageName || "선택한 이미지"}</strong>
+                    <span>등록할 추억의 대표 사진으로 사용한다.</span>
+                  </div>
+                  <button className="icon-button" type="button" onClick={onImageClear} aria-label="선택 이미지 제거">
+                    <X size={18} />
+                  </button>
+                </div>
+              ) : null}
               <label className="memory-form-wide">
                 내용
                 <textarea
@@ -2290,13 +2392,13 @@ function MemoryBoardView({
             <div className="memory-list-heading">
               <div>
                 <h2>추억 목록</h2>
-                <p>{loading ? "추억을 불러오는 중입니다." : `${posts.length}개의 추억이 있습니다.`}</p>
+                <p>{loading ? "추억을 불러오는 중입니다." : `${posts.length}개의 추억이 있습니다. ${safePage}/${totalPages} 페이지`}</p>
               </div>
               <BookImage size={24} />
             </div>
             <div className="memory-post-grid">
               {!loading && posts.length === 0 ? <p className="empty-state">아직 남긴 추억이 없습니다.</p> : null}
-              {posts.map((post) => (
+              {visiblePosts.map((post) => (
                 <button
                   className={`memory-post-card ${selectedPost?.id === post.id ? "selected" : ""}`}
                   type="button"
@@ -2311,6 +2413,21 @@ function MemoryBoardView({
                 </button>
               ))}
             </div>
+            {posts.length > memoryPostsPerPage ? (
+              <div className="memory-pagination" aria-label="추억 목록 페이지 이동">
+                <button type="button" onClick={() => setCurrentPage((page) => Math.max(1, page - 1))} disabled={safePage === 1}>
+                  이전
+                </button>
+                {Array.from({ length: totalPages }, (_, index) => index + 1).map((page) => (
+                  <button className={safePage === page ? "active" : ""} type="button" key={page} onClick={() => setCurrentPage(page)}>
+                    {page}
+                  </button>
+                ))}
+                <button type="button" onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))} disabled={safePage === totalPages}>
+                  다음
+                </button>
+              </div>
+            ) : null}
           </article>
         </div>
 
@@ -2337,10 +2454,14 @@ function MemoryBoardView({
                 <div className="memory-comment-list">
                   {selectedPost.comments.length === 0 ? <p className="empty-state">아직 댓글이 없습니다.</p> : null}
                   {selectedPost.comments.map((comment) => (
-                    <div className={`memory-comment ${comment.mine ? "mine" : ""}`} key={comment.id}>
-                      <strong>{comment.authorName}</strong>
-                      <span>{formatChatTime(comment.createdAt)}</span>
-                      <p>{comment.body}</p>
+                    <div className={`memory-comment-row ${comment.mine ? "mine" : "other"}`} key={comment.id}>
+                      <div className="memory-comment-meta">
+                        <strong>{comment.authorName}</strong>
+                        <span>{formatChatTime(comment.createdAt)}</span>
+                      </div>
+                      <div className="memory-comment-bubble">
+                        <p>{comment.body}</p>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -2380,7 +2501,7 @@ function MemoryImage({ imageUrl, title, large = false }: { imageUrl: string | nu
   }
 
   return (
-    <img className={`memory-image ${large ? "large" : ""}`} src={imageUrl} alt={`${title} 대표 이미지`} />
+    <img className={`memory-image ${large ? "large" : ""}`} src={resolveImageSource(imageUrl)} alt={`${title} 대표 이미지`} />
   );
 }
 
@@ -3052,6 +3173,7 @@ function initialMemoryPostForm(): MemoryPostForm {
     title: "",
     body: "",
     representativeImageUrl: "",
+    representativeImageName: "",
     occurredDate: todayDateKey(),
   };
 }
@@ -3392,6 +3514,21 @@ async function safeApiRequest<T>(path: string, options: { method: string; body?:
   }
 }
 
+async function apiFormDataRequest<T>(path: string, formData: FormData): Promise<T> {
+  const response = await fetch(`${apiBaseUrl}${path}`, {
+    method: "POST",
+    headers: memberHeader,
+    body: formData,
+  });
+
+  const payload = (await response.json()) as T | ApiError;
+  if (!response.ok) {
+    throw new Error((payload as ApiError).message ?? `HTTP ${response.status}`);
+  }
+
+  return payload as T;
+}
+
 async function apiRequest<T>(path: string, options: { method: string; body?: unknown }): Promise<T> {
   const response = await fetch(`${apiBaseUrl}${path}`, {
     method: options.method,
@@ -3408,6 +3545,18 @@ async function apiRequest<T>(path: string, options: { method: string; body?: unk
   }
 
   return payload as T;
+}
+
+function resolveImageSource(imageUrl: string): string {
+  if (imageUrl.startsWith("http://") || imageUrl.startsWith("https://") || imageUrl.startsWith("data:")) {
+    return imageUrl;
+  }
+
+  if (imageUrl.startsWith("/")) {
+    return `${apiOrigin}${imageUrl}`;
+  }
+
+  return imageUrl;
 }
 
 function toMessage(error: unknown): string {

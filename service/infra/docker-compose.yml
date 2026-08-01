@@ -32,6 +32,8 @@ services:
       SEED_ENABLED: "true"
     ports:
       - "8080:8080"
+    volumes:
+      - app-upload-data:/app/uploads
     depends_on:
       app-db:
         condition: service_healthy
@@ -50,3 +52,4 @@ services:
 
 volumes:
   app-db-data:
+  app-upload-data:

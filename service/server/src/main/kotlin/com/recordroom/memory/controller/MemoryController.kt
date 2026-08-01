@@ -4,6 +4,7 @@ import com.recordroom.member.service.CurrentMemberResolver
 import com.recordroom.memory.model.CreateMemoryCommentRequest
 import com.recordroom.memory.model.CreateMemoryPostRequest
 import com.recordroom.memory.model.MemoryCommentResponse
+import com.recordroom.memory.model.MemoryImageUploadResponse
 import com.recordroom.memory.model.MemoryPostDetailResponse
 import com.recordroom.memory.model.MemoryPostsResponse
 import com.recordroom.memory.service.MemoryService
@@ -15,7 +16,10 @@ import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestHeader
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
+import org.springframework.web.bind.annotation.RequestPart
 import org.springframework.web.bind.annotation.RestController
+import org.springframework.http.MediaType
+import org.springframework.web.multipart.MultipartFile
 import java.time.LocalDate
 
 @RestController
@@ -58,6 +62,18 @@ class MemoryController(
             memberId = currentMemberResolver.resolve(rawMemberId),
             roomId = roomId,
             request = request,
+        )
+
+    @PostMapping("/images", consumes = [MediaType.MULTIPART_FORM_DATA_VALUE])
+    fun uploadImage(
+        @RequestHeader("X-Member-Id", required = false) rawMemberId: String?,
+        @PathVariable roomId: Long,
+        @RequestPart("image") image: MultipartFile,
+    ): MemoryImageUploadResponse =
+        memoryService.uploadImage(
+            memberId = currentMemberResolver.resolve(rawMemberId),
+            roomId = roomId,
+            image = image,
         )
 
     @PostMapping("/{memoryId}/comments")
