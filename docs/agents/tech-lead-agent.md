@@ -84,9 +84,48 @@ curl 1차 검증은 다음 범위를 포함한다.
 
 Tech Lead Agent는 API 1개당 대표 happy case만 확인하고 PASS를 줄 수 없다.
 
+`1 API`는 `HTTP method + path` 조합을 기준으로 본다.
+
+### Mandatory curl Coverage Gate
+
+Tech Lead Agent는 모든 구현 API에 대해 아래 최소 기준을 만족해야 한다.
+이 기준을 만족하지 못한 API가 하나라도 있으면 전체 검증 결과는 `PASS`가 아니라 `FAIL` 또는 `CONDITIONAL_PASS`로 기록한다.
+
+| API Scope | Minimum Happy curl cases | Minimum Edge curl cases |
+| --- | ---: | ---: |
+| `GET` 단건 조회 | 2개 이상 | 5개 이상 |
+| `GET` 목록 조회 | 2개 이상 | 5개 이상 |
+| `POST` 생성 | 3개 이상 | 7개 이상 |
+| `PATCH` / `PUT` 수정 | 3개 이상 | 7개 이상 |
+| `DELETE` 삭제 | 2개 이상 | 6개 이상 |
+| 상태 변경 API | 3개 이상 | 7개 이상 |
+| 외부 API 연동 API | 2개 이상 | 6개 이상 |
+
+Happy case는 단순 HTTP 200 확인으로 끝내지 않는다.
+최소 1개 이상은 생성/수정/삭제 이후 재조회, 목록 반영, 검색 반영, 상태 변경 반영 중 하나로 결과 지속성을 확인해야 한다.
+
+Edge case는 아래 후보 중 API 성격에 맞는 항목을 복수로 선택한다.
+
+- 인증 헤더 누락
+- 인증 헤더 형식 오류
+- 존재하지 않는 회원
+- 존재하지 않는 리소스 id
+- 권한 없는 리소스 접근
+- 필수 필드 누락
+- `null` 입력
+- blank 입력
+- 최대 길이 초과
+- 허용되지 않는 enum/status 값
+- 잘못된 query parameter 형식
+- pagination/filter 경계값
+- malformed JSON
+- 잘못된 `Content-Type`
+- 중복 요청 또는 idempotency 정책
+- 외부 API key 누락 또는 외부 API 실패 fallback
+
 각 API는 기능 특성에 맞춰 아래 기준을 만족해야 한다.
 
-| API Type | Minimum curl cases |
+| API Type | Required curl coverage |
 | --- | --- |
 | `GET` 단건 조회 | happy, 인증 누락, 권한 없는 사용자, 존재하지 않는 id 또는 리소스 없음 |
 | `GET` 목록 조회 | happy, 빈 목록, pagination/filter 기본값, 잘못된 query parameter |
@@ -112,6 +151,8 @@ Tech Lead Agent는 API 1개당 대표 happy case만 확인하고 PASS를 줄 수
 
 다음 중 하나라도 누락되면 `PASS`를 줄 수 없다.
 
+- API별 최소 Happy/Edge curl case 수
+- API별 coverage summary table
 - POST/PATCH/PUT API의 필드별 validation matrix
 - 인증/권한 실패 케이스
 - malformed JSON 또는 잘못된 Content-Type 계열 오류
@@ -131,8 +172,20 @@ Tech Lead Agent는 API 1개당 대표 happy case만 확인하고 PASS를 줄 수
 
 ## Curl Results
 
-| Test ID | Case | Expected | Actual | Status |
-| --- | --- | --- | --- | --- |
+## API Coverage Summary
+
+| API | Required Happy | Actual Happy | Required Edge | Actual Edge | Result |
+| --- | ---: | ---: | ---: | ---: | --- |
+
+## Happy curl Results
+
+| Test ID | API | Case | curl | Expected | Actual | Status |
+| --- | --- | --- | --- | --- | --- | --- |
+
+## Edge curl Results
+
+| Test ID | API | Case | curl | Expected | Actual | Status |
+| --- | --- | --- | --- | --- | --- | --- |
 
 ## API Validation Matrix
 

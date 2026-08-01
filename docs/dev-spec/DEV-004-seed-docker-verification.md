@@ -423,6 +423,12 @@ Expected:
 
 Full Stack Dev Agent should update `docs/qa/issue-{issueNumber}/테크리드_에이전트_1차검증.md` after implementation.
 
+The authoritative verification report standard is `docs/agents/tech-lead-agent.md`.
+Every issue with API changes must include the `API Coverage Summary`, `Happy curl Results`, and `Edge curl Results` sections defined by the Tech Lead Agent document.
+
+For each implemented API, the report must satisfy the minimum Happy/Edge curl coverage gate.
+If the minimum coverage is not satisfied, the result cannot be marked `PASS`.
+
 Required sections:
 
 ```text
@@ -434,11 +440,14 @@ Required sections:
 - docker command:
 - server url:
 
+### API Coverage Summary
+| API | Required Happy | Actual Happy | Required Edge | Actual Edge | Result |
+
 ### Happy Cases
-| Case | Result | Note |
+| Test ID | API | Case | curl | Expected | Actual | Status |
 
 ### Edge Cases
-| Case | Result | Note |
+| Test ID | API | Case | curl | Expected | Actual | Status |
 
 ### Known Issues
 ```

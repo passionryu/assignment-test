@@ -84,9 +84,29 @@ PM Final Check에서 확인할 항목:
 - 요구사항 누락이 없는가?
 - Docker 실행 방법이 README와 일치하는가?
 - seed data로 바로 서비스 확인이 가능한가?
+- Tech Lead Agent의 API별 curl 검증이 최소 Happy/Edge 기준을 만족하는가?
 - QA evidence가 남아 있는가?
 - 알려진 제한사항이 README 또는 문서에 정리되어 있는가?
 - 공개 저장소에 회사명, 채용 전형명, secret이 노출되지 않았는가?
+
+## Tech Lead Verification Gate
+
+PM/PO Agent는 API가 포함된 이슈를 Human QA 또는 Done으로 넘기기 전에 `docs/agents/tech-lead-agent.md`의 `Mandatory curl Coverage Gate` 충족 여부를 확인한다.
+
+다음 중 하나라도 누락되면 PM/PO Agent는 해당 이슈를 완료 처리하지 않고 Implement 단계로 되돌린다.
+
+- `docs/qa/issue-{issueNumber}/테크리드_에이전트_1차검증.md`가 없다.
+- `API Coverage Summary`가 없다.
+- 구현된 API 중 검증 테이블에서 빠진 API가 있다.
+- API 1개당 최소 Happy/Edge curl case 수를 만족하지 못했다.
+- 생성/수정/삭제 API에서 처리 후 재조회 또는 목록 반영 검증이 없다.
+- 인증, 권한, 존재하지 않는 리소스, 입력 validation, malformed JSON 계열 edge case가 API 성격에 맞게 검증되지 않았다.
+- 실패 응답의 HTTP status와 error response 구조가 확인되지 않았다.
+
+토큰 절약 정책은 QA evidence와 에이전트 호출량을 줄이기 위한 정책이며, Tech Lead Agent의 API curl 검증 최소 기준을 줄이는 근거가 될 수 없다.
+
+예외는 개발자가 이 채팅방에서 명시적으로 승인한 경우에만 허용한다.
+예외가 발생하면 PM/PO Agent는 `CONDITIONAL_PASS`로만 처리하고, 제외한 API/edge case/사유/후속 이슈를 Tech Lead 보고서에 남긴다.
 
 ## Human QA Handoff Report
 
