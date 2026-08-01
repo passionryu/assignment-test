@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Issue #10 QA 레포트</title>
+    <style>
+      body {
+        margin: 0;
+        background: #f5f7fb;
+        color: #253248;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+      main {
+        max-width: 1040px;
+        margin: 0 auto;
+        padding: 40px 24px;
+      }
+      section {
+        margin-top: 20px;
+        border: 1px solid #dfe7f2;
+        border-radius: 8px;
+        background: #fff;
+        padding: 24px;
+      }
+      h1,
+      h2 {
+        margin: 0 0 12px;
+      }
+      ul,
+      ol {
+        line-height: 1.8;
+      }
+      .badge {
+        display: inline-flex;
+        border-radius: 999px;
+        background: #fff1f7;
+        color: #f04f95;
+        padding: 6px 12px;
+        font-weight: 800;
+      }
+      img {
+        width: 100%;
+        border: 1px solid #dfe7f2;
+        border-radius: 8px;
+      }
+      code {
+        border-radius: 6px;
+        background: #f2f5fa;
+        padding: 2px 6px;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="badge">Issue #10 미션 인증 QA</p>
+      <h1>AI QA 레포트</h1>
+      <p>Smoke + Focused API 검증 완료. Human QA 대기 상태.</p>
+
+      <section>
+        <h2>확인 결과</h2>
+        <ul>
+          <li>미션 인증 화면 진입, 미션 목록, 상세 패널, 커스텀 미션 입력, 사진 업로드 UI를 확인했다.</li>
+          <li>curl로 미션 목록/생성/업로드/제출/동의 API의 해피/엣지 케이스를 검증했다.</li>
+          <li>검증 중 생성한 QA용 커스텀 미션은 DB에서 정리했다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>Evidence</h2>
+        <p>curl 결과: <code>docs/qa/issue-10/evidence/curl-summary.json</code></p>
+        <p>화면 스크린샷: <code>docs/qa/issue-10/evidence/mission-screen-smoke.png</code></p>
+        <img src="./evidence/mission-screen-smoke.png" alt="미션 인증 화면 Smoke QA 스크린샷" />
+      </section>
+
+      <section>
+        <h2>Human QA 체크</h2>
+        <ol>
+          <li>사이드바에서 선택 방의 <code>미션 인증</code>으로 이동한다.</li>
+          <li>기본 미션 20개와 상태 표시를 확인한다.</li>
+          <li>커스텀 미션을 추가하고 목록 반영을 확인한다.</li>
+          <li>이미지를 업로드하고 인증 요청을 제출한다.</li>
+          <li>상대가 올린 인증 요청에 동의했을 때 완료 상태로 바뀌는지 확인한다.</li>
+          <li>사진 누락, 비이미지 업로드 같은 실패 케이스 안내를 확인한다.</li>
+        </ol>
+      </section>
+    </main>
+  </body>
+</html>

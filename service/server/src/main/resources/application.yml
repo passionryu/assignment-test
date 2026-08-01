@@ -42,6 +42,8 @@ app:
   upload:
     memory-dir: ${MEMORY_UPLOAD_DIR:uploads/memories}
     memory-public-path: ${MEMORY_UPLOAD_PUBLIC_PATH:/uploads/memories}
+    mission-dir: ${MISSION_UPLOAD_DIR:uploads/missions}
+    mission-public-path: ${MISSION_UPLOAD_PUBLIC_PATH:/uploads/missions}
 
 logging:
   pattern:

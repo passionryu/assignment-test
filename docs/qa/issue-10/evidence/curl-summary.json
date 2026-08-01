@@ -1,0 +1,17 @@
+{
+  "health": {"status":"UP"},
+  "list_room1_happy": {"missionCount":20,"roomName":"우리 둘의 100일","completionRule":"상대 동의 시 완료","first":{"id":101,"title":"오늘의 산책 사진","status":"WAITING_APPROVAL","latestSubmitter":"민지"}},
+  "list_room2_rule_happy": {"missionCount":20,"roomName":"7월 가족","completionRule":"방장 승인 또는 과반 동의 시 완료","firstWaiting":{"id":201,"title":"가족 식탁 사진","approvedCount":0,"requiredApprovalCount":2,"canApprove":true}},
+  "list_room_not_found_edge": {"status": 404, "body": {"code":"ROOM_NOT_FOUND","message":"방을 찾을 수 없습니다.","requestId":"20644efe-404a-4201-a241-1bfdc8938872"}},
+  "list_room_forbidden_edge": {"status": 403, "body": {"code":"ROOM_ACCESS_DENIED","message":"참여 중인 방의 미션만 볼 수 있습니다.","requestId":"ac88702c-9376-4946-b7b5-932415bc963b"}},
+  "create_mission_happy": {"id":324,"title":"QA 사진 인증 235325","status":"IN_PROGRESS","custom":true},
+  "create_mission_empty_title_edge": {"status": 400, "body": {"code":"MISSION_TITLE_REQUIRED","message":"미션 제목을 입력해 주세요.","requestId":"67e32137-3abe-4971-80e0-7fc5d2e2d70c"}},
+  "create_mission_long_title_edge": {"status": 400, "body": {"code":"MISSION_TITLE_TOO_LONG","message":"미션 제목은 120자 이하로 입력해 주세요.","requestId":"1a3035c0-70ba-48a0-ae9d-8272297e076a"}},
+  "upload_image_happy": {"imageUrl":"/uploads/missions/389f90c9-1b6a-4028-a338-897f5ba51971.png","originalFileName":"proof.png","size":68},
+  "upload_non_image_edge": {"status": 400, "body": {"code":"MISSION_IMAGE_TYPE_INVALID","message":"이미지 파일만 업로드할 수 있습니다.","requestId":"f50b178f-54c9-4dd9-8036-5537ade15b67"}},
+  "submit_mission_happy": {"id":324,"title":"QA 사진 인증 235325","status":"WAITING_APPROVAL","latestSubmission":{"id":132,"submitterName":"류성열","approvedCount":0,"requiredApprovalCount":1,"canApprove":false}},
+  "submit_without_image_edge": {"status": 400, "body": {"code":"MISSION_IMAGE_REQUIRED","message":"미션 인증 사진을 등록해 주세요.","requestId":"5f4be62a-087c-414e-ab64-ad4053e07235"}},
+  "approve_self_edge": {"status": 403, "body": {"code":"MISSION_SELF_APPROVAL_NOT_ALLOWED","message":"본인이 올린 인증에는 동의할 수 없습니다.","requestId":"ae547771-7467-4702-ab85-37de3b9e1148"}},
+  "approve_partner_happy": {"missionId":324,"submissionId":132,"status":"COMPLETED","approvedCount":1,"totalMemberCount":2,"requiredApprovalCount":1,"approvalRate":50,"completed":true},
+  "approve_completed_edge": {"status": 409, "body": {"code":"MISSION_ALREADY_COMPLETED","message":"이미 완료된 미션입니다.","requestId":"cf9565d6-6348-4a3c-ad0e-d8781f31709a"}}
+}

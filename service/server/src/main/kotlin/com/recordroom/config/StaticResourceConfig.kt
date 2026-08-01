@@ -11,12 +11,19 @@ import java.nio.file.Paths
 class StaticResourceConfig(
     @Value("\${app.upload.memory-dir:uploads/memories}")
     private val memoryUploadDir: String,
+    @Value("\${app.upload.mission-dir:uploads/missions}")
+    private val missionUploadDir: String,
 ) : WebMvcConfigurer {
     override fun addResourceHandlers(registry: ResourceHandlerRegistry) {
-        val uploadRoot = Paths.get(memoryUploadDir).toAbsolutePath().normalize()
-        Files.createDirectories(uploadRoot)
+        val memoryUploadRoot = Paths.get(memoryUploadDir).toAbsolutePath().normalize()
+        val missionUploadRoot = Paths.get(missionUploadDir).toAbsolutePath().normalize()
+        Files.createDirectories(memoryUploadRoot)
+        Files.createDirectories(missionUploadRoot)
 
         registry.addResourceHandler("/uploads/memories/**")
-            .addResourceLocations(uploadRoot.toUri().toString())
+            .addResourceLocations(memoryUploadRoot.toUri().toString())
+
+        registry.addResourceHandler("/uploads/missions/**")
+            .addResourceLocations(missionUploadRoot.toUri().toString())
     }
 }
