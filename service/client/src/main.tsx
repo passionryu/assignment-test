@@ -198,6 +198,60 @@ type ChatSearchResponse = {
   results: ChatSearchResult[];
 };
 
+type MemoryPostSummary = {
+  id: number;
+  roomId: number;
+  authorMemberId: number;
+  authorName: string;
+  title: string;
+  bodyPreview: string;
+  representativeImageUrl: string | null;
+  imageCount: number;
+  commentCount: number;
+  occurredDate: string;
+  createdAt: string;
+  mine: boolean;
+};
+
+type MemoryComment = {
+  id: number;
+  memoryPostId: number;
+  authorMemberId: number;
+  authorName: string;
+  body: string;
+  createdAt: string;
+  mine: boolean;
+};
+
+type MemoryPostDetail = {
+  id: number;
+  roomId: number;
+  authorMemberId: number;
+  authorName: string;
+  title: string;
+  body: string;
+  representativeImageUrl: string | null;
+  imageCount: number;
+  commentCount: number;
+  occurredDate: string;
+  createdAt: string;
+  mine: boolean;
+  comments: MemoryComment[];
+};
+
+type MemoryPostsResponse = {
+  roomId: number;
+  roomName: string;
+  posts: MemoryPostSummary[];
+};
+
+type MemoryPostForm = {
+  title: string;
+  body: string;
+  representativeImageUrl: string;
+  occurredDate: string;
+};
+
 type ApiError = {
   code: string;
   message: string;
@@ -568,6 +622,14 @@ function App() {
   const [chatLoading, setChatLoading] = useState(false);
   const [chatSending, setChatSending] = useState(false);
   const chatSendingRef = useRef(false);
+  const [memoryPosts, setMemoryPosts] = useState<MemoryPostSummary[]>([]);
+  const [selectedMemoryPost, setSelectedMemoryPost] = useState<MemoryPostDetail | null>(null);
+  const [memoryPostForm, setMemoryPostForm] = useState<MemoryPostForm>(() => initialMemoryPostForm());
+  const [memoryCommentDraft, setMemoryCommentDraft] = useState("");
+  const [memoryLoading, setMemoryLoading] = useState(false);
+  const [memoryDetailLoading, setMemoryDetailLoading] = useState(false);
+  const [memoryCreating, setMemoryCreating] = useState(false);
+  const [memoryCommentSending, setMemoryCommentSending] = useState(false);
   const [profileForm, setProfileForm] = useState({ displayName: "", profileImageUrl: "" });
   const [passwordForm, setPasswordForm] = useState({ currentPassword: "", newPassword: "" });
   const [createRoomForm, setCreateRoomForm] = useState<CreateRoomForm>({ name: "", type: "COUPLE", description: "" });
@@ -597,6 +659,12 @@ function App() {
     if ((activeView !== "chat" && activeView !== "room") || !selectedRoom) return;
 
     void loadChatMessages(selectedRoom.id);
+  }, [activeView, selectedRoom?.id]);
+
+  useEffect(() => {
+    if (activeView !== "memories" || !selectedRoom) return;
+
+    void loadMemoryPosts(selectedRoom.id);
   }, [activeView, selectedRoom?.id]);
 
   async function loadInitialData() {
@@ -832,6 +900,111 @@ function App() {
 
     const response = await safeApiGet<ChatSearchResponse>(`/rooms/${selectedRoom.id}/chat/search?keyword=${encodeURIComponent(keyword)}`);
     setChatSearchResults(response?.results ?? searchDemoChatMessages(selectedRoom.id, keyword));
+  }
+
+  async function loadMemoryPosts(roomId: number) {
+    setMemoryLoading(true);
+    setMemoryDetailLoading(false);
+
+    const response = await safeApiGet<MemoryPostsResponse>(`/rooms/${roomId}/memories`);
+    const posts = response?.posts ?? demoMemoryPosts(roomId);
+    setMemoryPosts(posts);
+    setMemoryLoading(false);
+
+    if (posts.length === 0) {
+      setSelectedMemoryPost(null);
+      return;
+    }
+
+    const stillSelected = selectedMemoryPost?.roomId === roomId
+      ? posts.find((post) => post.id === selectedMemoryPost.id)
+      : null;
+    void openMemoryPostDetail(roomId, stillSelected?.id ?? posts[0].id);
+  }
+
+  async function openMemoryPostDetail(roomId: number, memoryId: number) {
+    setMemoryDetailLoading(true);
+    const response = await safeApiGet<MemoryPostDetail>(`/rooms/${roomId}/memories/${memoryId}`);
+    setSelectedMemoryPost(response ?? demoMemoryDetail(roomId, memoryId));
+    setMemoryDetailLoading(false);
+  }
+
+  async function createMemoryPost() {
+    if (!selectedRoom) return;
+
+    const title = memoryPostForm.title.trim();
+    const body = memoryPostForm.body.trim();
+    const imageUrl = memoryPostForm.representativeImageUrl.trim();
+
+    if (!title || !body) {
+      setErrorMessage("추억 제목과 내용을 입력해 주세요.");
+      return;
+    }
+
+    setMessage(null);
+    setErrorMessage(null);
+    setMemoryCreating(true);
+
+    try {
+      const createdPost = await apiRequest<MemoryPostDetail>(`/rooms/${selectedRoom.id}/memories`, {
+        method: "POST",
+        body: {
+          title,
+          body,
+          representativeImageUrl: imageUrl || null,
+          occurredDate: memoryPostForm.occurredDate || null,
+        },
+      });
+
+      setMemoryPosts((current) => [memoryDetailToSummary(createdPost), ...current.filter((post) => post.id !== createdPost.id)]);
+      setSelectedMemoryPost(createdPost);
+      setMemoryPostForm(initialMemoryPostForm());
+      setMessage("추억 게시글이 등록되었습니다.");
+      await loadCalendarActivities(calendarRoomId);
+    } catch (error) {
+      setErrorMessage(toMessage(error));
+    } finally {
+      setMemoryCreating(false);
+    }
+  }
+
+  async function createMemoryComment() {
+    if (!selectedRoom || !selectedMemoryPost) return;
+
+    const body = memoryCommentDraft.trim();
+    if (!body) {
+      setErrorMessage("댓글을 입력해 주세요.");
+      return;
+    }
+
+    setMessage(null);
+    setErrorMessage(null);
+    setMemoryCommentSending(true);
+
+    try {
+      const createdComment = await apiRequest<MemoryComment>(`/rooms/${selectedRoom.id}/memories/${selectedMemoryPost.id}/comments`, {
+        method: "POST",
+        body: { body },
+      });
+
+      setSelectedMemoryPost((current) => {
+        if (!current || current.id !== selectedMemoryPost.id) return current;
+
+        return {
+          ...current,
+          commentCount: current.commentCount + 1,
+          comments: [...current.comments, createdComment],
+        };
+      });
+      setMemoryPosts((current) =>
+        current.map((post) => (post.id === selectedMemoryPost.id ? { ...post, commentCount: post.commentCount + 1 } : post)),
+      );
+      setMemoryCommentDraft("");
+    } catch (error) {
+      setErrorMessage(toMessage(error));
+    } finally {
+      setMemoryCommentSending(false);
+    }
   }
 
   function moveToChatMessage(messageId: number) {
@@ -1128,7 +1301,27 @@ function App() {
             onMoveToMessage={moveToChatMessage}
           />
         ) : null}
-        {activeView === "memories" ? <RoomFeatureView selectedRoom={selectedRoom} kind="memories" /> : null}
+        {activeView === "memories" ? (
+          <MemoryBoardView
+            selectedRoom={selectedRoom}
+            posts={memoryPosts}
+            selectedPost={selectedMemoryPost}
+            form={memoryPostForm}
+            commentDraft={memoryCommentDraft}
+            loading={memoryLoading}
+            detailLoading={memoryDetailLoading}
+            creating={memoryCreating}
+            commentSending={memoryCommentSending}
+            onFormChange={setMemoryPostForm}
+            onCommentDraftChange={setMemoryCommentDraft}
+            onCreatePost={createMemoryPost}
+            onOpenPost={(memoryId) => {
+              if (!selectedRoom) return;
+              void openMemoryPostDetail(selectedRoom.id, memoryId);
+            }}
+            onCreateComment={createMemoryComment}
+          />
+        ) : null}
         {activeView === "missions" ? <RoomFeatureView selectedRoom={selectedRoom} kind="missions" /> : null}
         {activeView === "letters" ? <RoomFeatureView selectedRoom={selectedRoom} kind="letters" /> : null}
         {activeView === "settings" ? (
@@ -2006,6 +2199,191 @@ function ChatView({
   );
 }
 
+function MemoryBoardView({
+  selectedRoom,
+  posts,
+  selectedPost,
+  form,
+  commentDraft,
+  loading,
+  detailLoading,
+  creating,
+  commentSending,
+  onFormChange,
+  onCommentDraftChange,
+  onCreatePost,
+  onOpenPost,
+  onCreateComment,
+}: {
+  selectedRoom: RoomSummary | null;
+  posts: MemoryPostSummary[];
+  selectedPost: MemoryPostDetail | null;
+  form: MemoryPostForm;
+  commentDraft: string;
+  loading: boolean;
+  detailLoading: boolean;
+  creating: boolean;
+  commentSending: boolean;
+  onFormChange: (form: MemoryPostForm) => void;
+  onCommentDraftChange: (value: string) => void;
+  onCreatePost: () => void;
+  onOpenPost: (memoryId: number) => void;
+  onCreateComment: () => void;
+}) {
+  return (
+    <>
+      <header className="page-header">
+        <div>
+          <h1>추억 게시판</h1>
+          <p>{selectedRoom ? `${selectedRoom.name}에 사진 URL과 글로 남긴 추억을 모아본다.` : "선택된 방이 없습니다."}</p>
+        </div>
+      </header>
+
+      <section className="memory-page">
+        <div className="memory-main-column">
+          <article className="memory-compose-card">
+            <div className="room-section-heading">
+              <h2>추억 남기기</h2>
+              <p>파일 업로드 대신 이미지 URL과 글을 입력해 Lv1 콘텐츠 서비스를 검증한다.</p>
+            </div>
+            <div className="memory-form">
+              <label>
+                제목
+                <input
+                  value={form.title}
+                  onChange={(event) => onFormChange({ ...form, title: event.target.value })}
+                  placeholder="예: 카페에서 찍은 사진"
+                />
+              </label>
+              <label>
+                날짜
+                <input
+                  type="date"
+                  value={form.occurredDate}
+                  onChange={(event) => onFormChange({ ...form, occurredDate: event.target.value })}
+                />
+              </label>
+              <label className="memory-form-wide">
+                이미지 URL
+                <input
+                  value={form.representativeImageUrl}
+                  onChange={(event) => onFormChange({ ...form, representativeImageUrl: event.target.value })}
+                  placeholder="https://example.com/photo.jpg"
+                />
+              </label>
+              <label className="memory-form-wide">
+                내용
+                <textarea
+                  value={form.body}
+                  onChange={(event) => onFormChange({ ...form, body: event.target.value })}
+                  placeholder="사진에 담긴 상황과 감정을 남겨주세요."
+                  rows={4}
+                />
+              </label>
+            </div>
+            <button className="primary-button full-width" type="button" onClick={onCreatePost} disabled={!selectedRoom || creating}>
+              {creating ? "등록 중" : "추억 등록"}
+            </button>
+          </article>
+
+          <article className="memory-list-panel">
+            <div className="memory-list-heading">
+              <div>
+                <h2>추억 목록</h2>
+                <p>{loading ? "추억을 불러오는 중입니다." : `${posts.length}개의 추억이 있습니다.`}</p>
+              </div>
+              <BookImage size={24} />
+            </div>
+            <div className="memory-post-grid">
+              {!loading && posts.length === 0 ? <p className="empty-state">아직 남긴 추억이 없습니다.</p> : null}
+              {posts.map((post) => (
+                <button
+                  className={`memory-post-card ${selectedPost?.id === post.id ? "selected" : ""}`}
+                  type="button"
+                  key={post.id}
+                  onClick={() => onOpenPost(post.id)}
+                >
+                  <MemoryImage imageUrl={post.representativeImageUrl} title={post.title} />
+                  <span>{formatDateLabel(post.occurredDate)}</span>
+                  <strong>{post.title}</strong>
+                  <p>{post.bodyPreview}</p>
+                  <small>{post.authorName} · 댓글 {post.commentCount}개</small>
+                </button>
+              ))}
+            </div>
+          </article>
+        </div>
+
+        <aside className="memory-detail-panel">
+          <div className="memory-detail-header">
+            <div>
+              <span>선택한 추억</span>
+              <h2>{selectedPost?.title ?? "게시글을 선택하세요"}</h2>
+            </div>
+            <BookImage size={24} />
+          </div>
+          {detailLoading ? <p className="empty-state">상세 내용을 불러오는 중입니다.</p> : null}
+          {!detailLoading && selectedPost ? (
+            <>
+              <MemoryImage imageUrl={selectedPost.representativeImageUrl} title={selectedPost.title} large />
+              <div className="memory-detail-meta">
+                <span>{selectedPost.authorName}</span>
+                <span>{formatDateLabel(selectedPost.occurredDate)}</span>
+                <span>댓글 {selectedPost.commentCount}개</span>
+              </div>
+              <p className="memory-detail-body">{selectedPost.body}</p>
+              <div className="memory-comments">
+                <h3>댓글</h3>
+                <div className="memory-comment-list">
+                  {selectedPost.comments.length === 0 ? <p className="empty-state">아직 댓글이 없습니다.</p> : null}
+                  {selectedPost.comments.map((comment) => (
+                    <div className={`memory-comment ${comment.mine ? "mine" : ""}`} key={comment.id}>
+                      <strong>{comment.authorName}</strong>
+                      <span>{formatChatTime(comment.createdAt)}</span>
+                      <p>{comment.body}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="memory-comment-form">
+                <textarea
+                  value={commentDraft}
+                  onChange={(event) => onCommentDraftChange(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.nativeEvent.isComposing || event.key !== "Enter" || event.shiftKey) return;
+                    event.preventDefault();
+                    onCreateComment();
+                  }}
+                  placeholder="댓글을 남겨주세요."
+                  rows={2}
+                />
+                <button className="primary-button" type="button" onClick={onCreateComment} disabled={commentSending}>
+                  {commentSending ? "등록 중" : "댓글 등록"}
+                </button>
+              </div>
+            </>
+          ) : null}
+          {!detailLoading && !selectedPost ? <p className="empty-state">왼쪽 목록에서 확인할 추억을 선택하세요.</p> : null}
+        </aside>
+      </section>
+    </>
+  );
+}
+
+function MemoryImage({ imageUrl, title, large = false }: { imageUrl: string | null; title: string; large?: boolean }) {
+  if (!imageUrl) {
+    return (
+      <div className={`memory-image-placeholder ${large ? "large" : ""}`}>
+        <BookImage size={large ? 36 : 26} />
+      </div>
+    );
+  }
+
+  return (
+    <img className={`memory-image ${large ? "large" : ""}`} src={imageUrl} alt={`${title} 대표 이미지`} />
+  );
+}
+
 function RoomFeatureView({ selectedRoom, kind }: { selectedRoom: RoomSummary | null; kind: RoomFeatureKind }) {
   const copy = roomFeatureCopy(kind);
 
@@ -2666,6 +3044,97 @@ function roomFeatureCopy(kind: RoomFeatureKind) {
     description: "편지 화면 골격이다.",
     body: "받은 편지함, 보낸 편지함, 편지 쓰기는 이후 편지 기능 이슈에서 구현한다.",
     icon: <MailPlus size={24} />,
+  };
+}
+
+function initialMemoryPostForm(): MemoryPostForm {
+  return {
+    title: "",
+    body: "",
+    representativeImageUrl: "",
+    occurredDate: todayDateKey(),
+  };
+}
+
+function demoMemoryPosts(roomId: number): MemoryPostSummary[] {
+  const room = demoRooms.find((candidate) => candidate.id === roomId) ?? demoRooms[0];
+  const authorName = room.id === 1 ? "민지" : room.id === 2 ? "아버지" : "지훈";
+
+  return [
+    {
+      id: 8701 + room.id,
+      roomId: room.id,
+      authorMemberId: room.id === 1 ? 2 : 3,
+      authorName,
+      title: `${room.name} 대표 사진`,
+      bodyPreview: "오늘 남긴 사진과 짧은 글을 추억 게시판 카드로 확인한다.",
+      representativeImageUrl: `https://picsum.photos/seed/record-room-demo-${room.id}/720/480`,
+      imageCount: 1,
+      commentCount: 2,
+      occurredDate: todayDateKey(),
+      createdAt: `${todayDateKey()}T09:30:00+09:00`,
+      mine: false,
+    },
+    {
+      id: 8801 + room.id,
+      roomId: room.id,
+      authorMemberId: 1,
+      authorName: "류성열",
+      title: "책에 담고 싶은 순간",
+      bodyPreview: "나중에 인쇄할 때 다시 고를 수 있도록 후보 기록으로 남긴다.",
+      representativeImageUrl: `https://picsum.photos/seed/record-room-demo-${room.id}-second/720/480`,
+      imageCount: 1,
+      commentCount: 1,
+      occurredDate: offsetDateKey(-1),
+      createdAt: `${offsetDateKey(-1)}T20:10:00+09:00`,
+      mine: true,
+    },
+  ];
+}
+
+function demoMemoryDetail(roomId: number, memoryId: number): MemoryPostDetail {
+  const summary = demoMemoryPosts(roomId).find((post) => post.id === memoryId) ?? demoMemoryPosts(roomId)[0];
+
+  return {
+    ...summary,
+    body: `${summary.bodyPreview} 이 화면은 서버 응답이 없을 때도 사용 흐름을 확인할 수 있게 제공하는 데모 상세 내용입니다.`,
+    comments: [
+      {
+        id: summary.id + 1000,
+        memoryPostId: summary.id,
+        authorMemberId: summary.mine ? 2 : 1,
+        authorName: summary.mine ? "민지" : "류성열",
+        body: "이 추억은 나중에 다시 보면 좋겠다.",
+        createdAt: `${summary.occurredDate}T21:10:00+09:00`,
+        mine: !summary.mine,
+      },
+      {
+        id: summary.id + 1001,
+        memoryPostId: summary.id,
+        authorMemberId: summary.authorMemberId,
+        authorName: summary.authorName,
+        body: "대표 이미지도 같이 저장해둘게.",
+        createdAt: `${summary.occurredDate}T21:18:00+09:00`,
+        mine: summary.mine,
+      },
+    ],
+  };
+}
+
+function memoryDetailToSummary(detail: MemoryPostDetail): MemoryPostSummary {
+  return {
+    id: detail.id,
+    roomId: detail.roomId,
+    authorMemberId: detail.authorMemberId,
+    authorName: detail.authorName,
+    title: detail.title,
+    bodyPreview: detail.body.length <= 80 ? detail.body : `${detail.body.slice(0, 80)}...`,
+    representativeImageUrl: detail.representativeImageUrl,
+    imageCount: detail.imageCount,
+    commentCount: detail.commentCount,
+    occurredDate: detail.occurredDate,
+    createdAt: detail.createdAt,
+    mine: detail.mine,
   };
 }
 

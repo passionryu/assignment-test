@@ -213,6 +213,7 @@ class LocalSeedRunner(
     private fun seedContents() {
         seedChatMessages()
         seedMemoryPosts()
+        seedMemoryComments()
         seedMissions()
         seedMissionSubmissions()
         seedLetters()
@@ -321,6 +322,45 @@ class LocalSeedRunner(
                 occurred_date = excluded.occurred_date,
                 created_at = excluded.created_at,
                 updated_at = excluded.updated_at,
+                deleted_at = null
+            """.trimIndent(),
+        )
+
+        jdbcTemplate.update(
+            """
+            update memory_posts
+            set
+                representative_image_url = 'https://picsum.photos/seed/record-room-' || id || '/720/480',
+                image_count = greatest(image_count, 1),
+                updated_at = now()
+            where id between 301 and 327
+            """.trimIndent(),
+        )
+    }
+
+    // 추억 상세 화면에서 댓글 흐름을 바로 검증할 수 있도록 게시글별 댓글을 준비한다.
+    private fun seedMemoryComments() {
+        jdbcTemplate.update(
+            """
+            insert into memory_comments (id, memory_post_id, author_member_id, body, created_at)
+            values
+                (501, 301, 1, '이 사진은 가족 앨범 첫 장에 넣어도 좋겠어요.', now() - interval '1 hour 50 minutes'),
+                (502, 301, 3, '다음 여행 때도 같은 구도로 한 장 더 찍어봐요.', now() - interval '1 hour 30 minutes'),
+                (503, 303, 1, '카페 분위기가 잘 담겨서 책에 넣기 좋다.', now() - interval '1 day 20 hours'),
+                (504, 303, 2, '디저트 사진도 같이 골라둘게.', now() - interval '1 day 19 hours'),
+                (505, 305, 1, '기념일 후보로 표시해둘게.', now() - interval '55 minutes'),
+                (506, 306, 4, '팀 기록으로 남기기 좋습니다.', now() - interval '2 hours 20 minutes'),
+                (507, 309, 1, '발표 준비 과정이 잘 보이네요.', now() - interval '5 hours 40 minutes'),
+                (508, 311, 3, '공원 산책 사진은 가족 책에 꼭 넣자.', now() - interval '7 hours 10 minutes'),
+                (509, 313, 2, '산책 코스도 글에 같이 남기면 좋겠다.', now() - interval '9 hours 30 minutes'),
+                (510, 317, 1, '앨범 후보 사진은 따로 모아두자.', now() - interval '13 hours 20 minutes'),
+                (511, 318, 4, '최종 발표 날 분위기가 잘 담겼어요.', now() - interval '14 hours 20 minutes'),
+                (512, 320, 3, '브런치 사진이 따뜻하게 나왔네요.', now() - interval '16 hours 45 minutes')
+            on conflict (id) do update set
+                memory_post_id = excluded.memory_post_id,
+                author_member_id = excluded.author_member_id,
+                body = excluded.body,
+                created_at = excluded.created_at,
                 deleted_at = null
             """.trimIndent(),
         )
@@ -796,6 +836,7 @@ class LocalSeedRunner(
             "room_invitations",
             "chat_messages",
             "memory_posts",
+            "memory_comments",
             "missions",
             "mission_submissions",
             "letters",
