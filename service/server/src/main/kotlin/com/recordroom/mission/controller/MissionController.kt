@@ -1,9 +1,11 @@
 package com.recordroom.mission.controller
 
 import com.recordroom.member.service.CurrentMemberResolver
+import com.recordroom.mission.model.CreateMissionCommentRequest
 import com.recordroom.mission.model.CreateMissionRequest
 import com.recordroom.mission.model.CreateMissionSubmissionRequest
 import com.recordroom.mission.model.MissionApprovalResponse
+import com.recordroom.mission.model.MissionCommentResponse
 import com.recordroom.mission.model.MissionImageUploadResponse
 import com.recordroom.mission.model.MissionListResponse
 import com.recordroom.mission.model.MissionSummaryResponse
@@ -67,6 +69,20 @@ class MissionController(
         @RequestBody request: CreateMissionSubmissionRequest,
     ): MissionSummaryResponse =
         missionService.submitMission(
+            memberId = currentMemberResolver.resolve(rawMemberId),
+            roomId = roomId,
+            missionId = missionId,
+            request = request,
+        )
+
+    @PostMapping("/missions/{missionId}/comments")
+    fun createComment(
+        @RequestHeader("X-Member-Id", required = false) rawMemberId: String?,
+        @PathVariable roomId: Long,
+        @PathVariable missionId: Long,
+        @RequestBody request: CreateMissionCommentRequest,
+    ): MissionCommentResponse =
+        missionService.createComment(
             memberId = currentMemberResolver.resolve(rawMemberId),
             roomId = roomId,
             missionId = missionId,

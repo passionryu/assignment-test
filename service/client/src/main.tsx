@@ -288,6 +288,16 @@ type MissionSubmission = {
   completed: boolean;
 };
 
+type MissionComment = {
+  id: number;
+  missionId: number;
+  authorMemberId: number;
+  authorName: string;
+  body: string;
+  createdAt: string;
+  mine: boolean;
+};
+
 type MissionSummary = {
   id: number;
   roomId: number;
@@ -299,6 +309,7 @@ type MissionSummary = {
   custom: boolean;
   completedAt: string | null;
   latestSubmission: MissionSubmission | null;
+  comments: MissionComment[];
 };
 
 type MissionListResponse = {
@@ -723,6 +734,8 @@ function App() {
   const [missionImageUploading, setMissionImageUploading] = useState(false);
   const [missionApproving, setMissionApproving] = useState<number | null>(null);
   const [missionCreateOpen, setMissionCreateOpen] = useState(false);
+  const [missionCommentDraft, setMissionCommentDraft] = useState("");
+  const [missionCommentSending, setMissionCommentSending] = useState(false);
   const [profileForm, setProfileForm] = useState({ displayName: "", profileImageUrl: "" });
   const [passwordForm, setPasswordForm] = useState({ currentPassword: "", newPassword: "" });
   const [createRoomForm, setCreateRoomForm] = useState<CreateRoomForm>({ name: "", type: "COUPLE", description: "" });
@@ -1378,6 +1391,48 @@ function App() {
     }
   }
 
+  async function createMissionComment() {
+    if (!selectedRoom || !missionSubmissionForm.missionId) return;
+
+    const body = missionCommentDraft.trim();
+    if (!body) {
+      setErrorMessage("댓글을 입력해 주세요.");
+      return;
+    }
+
+    setMessage(null);
+    setErrorMessage(null);
+    setMissionCommentSending(true);
+
+    try {
+      const createdComment = await apiRequest<MissionComment>(
+        `/rooms/${selectedRoom.id}/missions/${missionSubmissionForm.missionId}/comments`,
+        {
+          method: "POST",
+          body: { body },
+        },
+      );
+
+      setMissionList((current) => {
+        if (!current) return current;
+
+        return {
+          ...current,
+          missions: current.missions.map((mission) =>
+            mission.id === createdComment.missionId
+              ? { ...mission, comments: [...mission.comments, createdComment] }
+              : mission,
+          ),
+        };
+      });
+      setMissionCommentDraft("");
+    } catch (error) {
+      setErrorMessage(toMessage(error));
+    } finally {
+      setMissionCommentSending(false);
+    }
+  }
+
   function moveToChatMessage(messageId: number) {
     const element = document.getElementById(`chat-message-${messageId}`);
     element?.scrollIntoView({ block: "center", behavior: "smooth" });
@@ -1704,14 +1759,17 @@ function App() {
             missionList={missionList}
             missionForm={missionForm}
             submissionForm={missionSubmissionForm}
+            commentDraft={missionCommentDraft}
             createModalOpen={missionCreateOpen}
             loading={missionLoading}
             creating={missionCreating}
             submitting={missionSubmitting}
             imageUploading={missionImageUploading}
             approvingSubmissionId={missionApproving}
+            commentSending={missionCommentSending}
             onMissionFormChange={setMissionForm}
             onSubmissionFormChange={setMissionSubmissionForm}
+            onCommentDraftChange={setMissionCommentDraft}
             onOpenCreateModal={() => setMissionCreateOpen(true)}
             onCloseCreateModal={() => setMissionCreateOpen(false)}
             onCreateMission={createMission}
@@ -1719,6 +1777,7 @@ function App() {
             onImageClear={() => setMissionSubmissionForm((current) => ({ ...current, imageUrl: "", imageName: "" }))}
             onSubmitMission={submitMission}
             onApproveSubmission={approveMissionSubmission}
+            onCreateComment={createMissionComment}
           />
         ) : null}
         {activeView === "letters" ? <RoomFeatureView selectedRoom={selectedRoom} kind="letters" /> : null}
@@ -2902,14 +2961,17 @@ function MissionBoardView({
   missionList,
   missionForm,
   submissionForm,
+  commentDraft,
   createModalOpen,
   loading,
   creating,
   submitting,
   imageUploading,
   approvingSubmissionId,
+  commentSending,
   onMissionFormChange,
   onSubmissionFormChange,
+  onCommentDraftChange,
   onOpenCreateModal,
   onCloseCreateModal,
   onCreateMission,
@@ -2917,19 +2979,23 @@ function MissionBoardView({
   onImageClear,
   onSubmitMission,
   onApproveSubmission,
+  onCreateComment,
 }: {
   selectedRoom: RoomSummary | null;
   missionList: MissionListResponse | null;
   missionForm: MissionForm;
   submissionForm: MissionSubmissionForm;
+  commentDraft: string;
   createModalOpen: boolean;
   loading: boolean;
   creating: boolean;
   submitting: boolean;
   imageUploading: boolean;
   approvingSubmissionId: number | null;
+  commentSending: boolean;
   onMissionFormChange: (form: MissionForm) => void;
   onSubmissionFormChange: (form: MissionSubmissionForm) => void;
+  onCommentDraftChange: (value: string) => void;
   onOpenCreateModal: () => void;
   onCloseCreateModal: () => void;
   onCreateMission: () => void;
@@ -2937,10 +3003,14 @@ function MissionBoardView({
   onImageClear: () => void;
   onSubmitMission: () => void;
   onApproveSubmission: (submissionId: number) => void;
+  onCreateComment: () => void;
 }) {
   const missions = missionList?.missions ?? [];
   const selectedMission = missions.find((mission) => mission.id === submissionForm.missionId) ?? missions[0] ?? null;
   const uploadInputId = `mission-image-upload-${selectedRoom?.id ?? "none"}`;
+  const requiredApprovalCount = selectedRoom ? requiredMissionApprovals(selectedRoom.type, selectedRoom.memberCount) : 0;
+  const inProgressMissionCount = missions.filter((mission) => mission.latestSubmission && mission.status !== "COMPLETED").length;
+  const waitingApprovalMissionCount = missions.filter((mission) => mission.status === "WAITING_APPROVAL").length;
 
   useEffect(() => {
     if (!selectedMission || submissionForm.missionId === selectedMission.id) return;
@@ -2964,6 +3034,7 @@ function MissionBoardView({
       imageUrl: "",
       imageName: "",
     });
+    onCommentDraftChange("");
   }
 
   return (
@@ -2984,7 +3055,8 @@ function MissionBoardView({
           </div>
           <div className="mission-room-metrics">
             <Metric label="전체 미션" value={`${missions.length}개`} />
-            <Metric label="승인 대기" value={`${missions.filter((mission) => mission.status === "WAITING_APPROVAL").length}개`} />
+            <Metric label="진행 중" value={`${inProgressMissionCount}개`} />
+            <Metric label="승인 대기" value={`${waitingApprovalMissionCount}개`} />
             <Metric label="완료" value={`${missions.filter((mission) => mission.status === "COMPLETED").length}개`} />
           </div>
         </article>
@@ -2997,7 +3069,9 @@ function MissionBoardView({
                   <h2>미션 목록</h2>
                   <p>{loading ? "미션을 불러오는 중입니다." : "기본 미션과 직접 추가한 미션을 함께 확인한다."}</p>
                 </div>
-                <BadgeCheck size={24} />
+                <button className="primary-button mission-list-create-button" type="button" onClick={onOpenCreateModal} disabled={!selectedRoom}>
+                  + 커스텀 미션 추가
+                </button>
               </div>
               <div className="mission-card-grid">
                 {!loading && missions.length === 0 ? <p className="empty-state">아직 미션이 없습니다.</p> : null}
@@ -3011,23 +3085,28 @@ function MissionBoardView({
                       key={mission.id}
                       onClick={() => selectMission(mission)}
                     >
-                      {visibleStatus || mission.custom ? (
-                        <div className="mission-card-title">
-                          {visibleStatus ? (
-                            <span className={`mission-status ${visibleStatus.toLowerCase().replace("_", "-")}`}>{missionStatusLabel(visibleStatus)}</span>
-                          ) : (
-                            <span aria-hidden="true" />
-                          )}
-                          {mission.custom ? <span className="mission-custom-badge">커스텀</span> : null}
-                        </div>
-                      ) : null}
+                      <div className="mission-card-title">
+                        {visibleStatus === "WAITING_APPROVAL" ? (
+                          <span className="mission-status-group">
+                            <span className="mission-status in-progress">진행 중</span>
+                            <span className="mission-status waiting-approval">승인 대기</span>
+                          </span>
+                        ) : visibleStatus ? (
+                          <span className={`mission-status ${visibleStatus.toLowerCase().replace("_", "-")}`}>{missionStatusLabel(visibleStatus)}</span>
+                        ) : (
+                          <span className="mission-status not-started">진행 전</span>
+                        )}
+                        {mission.custom ? <span className="mission-custom-badge">커스텀</span> : <span aria-hidden="true" />}
+                      </div>
                       <strong>{mission.title}</strong>
                       <p>{mission.description}</p>
                       {mission.latestSubmission ? (
                         <small>
                           {mission.latestSubmission.submitterName} 인증 · 동의 {mission.latestSubmission.approvedCount}/{mission.latestSubmission.requiredApprovalCount}
                         </small>
-                      ) : null}
+                      ) : (
+                        <small>아직 인증 전 · 동의 0/{requiredApprovalCount}</small>
+                      )}
                     </button>
                   );
                 })}
@@ -3092,17 +3171,7 @@ function MissionBoardView({
                   <p className="empty-state">아직 제출된 인증이 없습니다. 아래에서 사진과 기록을 올려보세요.</p>
                 )}
 
-                <section className="mission-create-card mission-create-compact-card">
-                  <div>
-                    <h2>커스텀 미션 추가</h2>
-                    <p>기본 미션 외에 방 구성원이 직접 사진 인증 미션을 추가한다.</p>
-                  </div>
-                  <button className="primary-button full-width" type="button" onClick={onOpenCreateModal} disabled={!selectedRoom}>
-                    미션 추가
-                  </button>
-                </section>
-
-                {selectedMission.status !== "COMPLETED" ? (
+                {!selectedMission.latestSubmission ? (
                   <section className="mission-submit-card">
                     <div className="room-section-heading">
                       <h2>사진으로 인증하기</h2>
@@ -3168,6 +3237,40 @@ function MissionBoardView({
                     </button>
                   </section>
                 ) : null}
+
+                <section className="memory-comments mission-comments">
+                  <h3>댓글</h3>
+                  <div className="memory-comment-list mission-comment-list">
+                    {selectedMission.comments.length === 0 ? <p className="empty-state">아직 댓글이 없습니다.</p> : null}
+                    {selectedMission.comments.map((comment) => (
+                      <div className={`memory-comment-row ${comment.mine ? "mine" : "other"}`} key={comment.id}>
+                        <div className="memory-comment-meta">
+                          <strong>{comment.authorName}</strong>
+                          <span>{formatChatTime(comment.createdAt)}</span>
+                        </div>
+                        <div className="memory-comment-bubble">
+                          <p>{comment.body}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+                <div className="memory-comment-form mission-comment-form">
+                  <textarea
+                    value={commentDraft}
+                    onChange={(event) => onCommentDraftChange(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.nativeEvent.isComposing || event.key !== "Enter" || event.shiftKey) return;
+                      event.preventDefault();
+                      onCreateComment();
+                    }}
+                    placeholder="댓글을 남겨주세요."
+                    rows={2}
+                  />
+                  <button className="primary-button" type="button" onClick={onCreateComment} disabled={commentSending}>
+                    {commentSending ? "등록 중" : "댓글 등록"}
+                  </button>
+                </div>
               </>
             ) : (
               <p className="empty-state">왼쪽 목록에서 미션을 선택하세요.</p>
@@ -4127,6 +4230,14 @@ function missionProgressRate(roomType: RoomSummary["type"], approvedCount: numbe
   return Math.min(100, Math.round((approvedCount / requiredApprovalCount) * 100));
 }
 
+function requiredMissionApprovals(roomType: RoomSummary["type"], totalMemberCount: number): number {
+  if (roomType === "COUPLE") {
+    return 1;
+  }
+
+  return Math.max(1, Math.floor(totalMemberCount / 2) + 1);
+}
+
 function replaceMissionSummary(current: MissionListResponse | null, updatedMission: MissionSummary): MissionListResponse | null {
   if (!current) return current;
 
@@ -4179,6 +4290,17 @@ function demoMissionList(roomId: number): MissionListResponse {
       custom: false,
       completedAt: status === "COMPLETED" ? `${offsetDateKey(-1)}T12:00:00+09:00` : null,
       latestSubmission: submission,
+      comments: [
+        {
+          id: 9700 + room.id * 10 + index,
+          missionId: 9000 + room.id * 100 + index,
+          authorMemberId: index % 2 === 0 ? 1 : 2,
+          authorName: index % 2 === 0 ? "류성열" : "민지",
+          body: index <= 1 ? "이 미션은 책에 담기 좋겠다." : "인증할 사진을 골라보자.",
+          createdAt: `${offsetDateKey(-index)}T11:20:00+09:00`,
+          mine: index % 2 === 0,
+        },
+      ],
     };
   });
 

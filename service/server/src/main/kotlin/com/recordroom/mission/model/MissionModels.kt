@@ -22,6 +22,7 @@ data class MissionSummaryResponse(
     val custom: Boolean,
     val completedAt: OffsetDateTime?,
     val latestSubmission: MissionSubmissionResponse?,
+    val comments: List<MissionCommentResponse>,
 )
 
 data class MissionSubmissionResponse(
@@ -69,4 +70,18 @@ data class MissionImageUploadResponse(
     val imageUrl: String,
     val originalFileName: String,
     val size: Long,
+)
+
+data class MissionCommentResponse(
+    val id: Long,
+    val missionId: Long,
+    val authorMemberId: Long,
+    val authorName: String,
+    val body: String,
+    val createdAt: OffsetDateTime,
+    val mine: Boolean,
+)
+
+data class CreateMissionCommentRequest(
+    val body: String?,
 )

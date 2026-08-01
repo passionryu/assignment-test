@@ -217,6 +217,7 @@ class LocalSeedRunner(
         seedMissions()
         seedMissionSubmissions()
         seedMissionApprovals()
+        seedMissionComments()
         seedLetters()
     }
 
@@ -539,6 +540,27 @@ class LocalSeedRunner(
             on conflict (mission_submission_id, approver_member_id) do update set
                 decision = excluded.decision,
                 decided_at = excluded.decided_at
+            """.trimIndent(),
+        )
+    }
+
+    // 선택 미션 상세 카드에서 댓글 흐름을 바로 검증할 수 있도록 미션별 댓글을 준비한다.
+    private fun seedMissionComments() {
+        jdbcTemplate.update(
+            """
+            insert into mission_comments (id, mission_id, author_member_id, body, created_at)
+            values
+                (101, 101, 1, '산책 사진은 책에 넣기 좋아 보인다.', now() - interval '42 minutes'),
+                (102, 101, 2, '다음에는 같은 장소에서 밤 사진도 찍어보자.', now() - interval '36 minutes'),
+                (103, 102, 1, '이 음식 사진은 표지 후보로도 괜찮겠다.', now() - interval '1 day 1 hour'),
+                (104, 201, 3, '식탁 전체가 잘 보이게 다시 한 장 찍어도 좋겠어요.', now() - interval '3 hours'),
+                (105, 301, 4, '출석 사진은 다음 모임 자료에도 같이 쓰겠습니다.', now() - interval '5 hours')
+            on conflict (id) do update set
+                mission_id = excluded.mission_id,
+                author_member_id = excluded.author_member_id,
+                body = excluded.body,
+                created_at = excluded.created_at,
+                deleted_at = null
             """.trimIndent(),
         )
     }
@@ -945,6 +967,7 @@ class LocalSeedRunner(
             "missions",
             "mission_submissions",
             "mission_approvals",
+            "mission_comments",
             "letters",
             "notifications",
         ).forEach { tableName ->

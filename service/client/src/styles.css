@@ -1900,8 +1900,15 @@ dl {
 
 .mission-room-metrics {
   display: grid;
-  grid-template-columns: repeat(3, 118px);
+  grid-template-columns: repeat(4, 112px);
   gap: 12px;
+}
+
+.mission-list-create-button {
+  min-height: 38px;
+  padding: 0 14px;
+  font-size: 14px;
+  white-space: nowrap;
 }
 
 .mission-grid {
@@ -1986,7 +1993,8 @@ dl {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
   gap: 14px;
-  max-height: 620px;
+  max-height: none;
+  min-height: 0;
   overflow-y: auto;
   padding-right: 4px;
 }
@@ -1994,6 +2002,7 @@ dl {
 .mission-card {
   display: grid;
   gap: 10px;
+  min-height: 178px;
   border: 1px solid #e4ebf5;
   border-radius: 8px;
   background: #ffffff;
@@ -2020,6 +2029,12 @@ dl {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
+}
+
+.mission-status-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .mission-status,
@@ -2049,6 +2064,11 @@ dl {
   color: #12a150 !important;
 }
 
+.mission-status.not-started {
+  background: #f6f8fb;
+  color: #667085 !important;
+}
+
 .mission-custom-badge {
   background: #fff1f7;
   color: #f04f95 !important;
@@ -2074,8 +2094,36 @@ dl {
   top: 26px;
   display: grid;
   gap: 16px;
-  max-height: calc(100vh - 52px);
+  align-content: start;
+  max-height: min(760px, calc(100vh - 210px));
   overflow-y: auto;
+}
+
+.mission-list-panel,
+.mission-detail-panel {
+  height: min(760px, calc(100vh - 210px));
+}
+
+.mission-list-panel {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
+.mission-comments {
+  border: 1px solid #e4ebf5;
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 16px;
+}
+
+.mission-comment-list {
+  max-height: 260px;
+}
+
+.mission-comment-form {
+  border: 1px solid #e4ebf5;
+  border-radius: 8px;
+  padding: 16px;
 }
 
 .mission-proof-card,

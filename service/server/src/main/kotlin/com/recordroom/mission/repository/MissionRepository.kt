@@ -6,8 +6,13 @@ import com.recordroom.calendar.model.MissionSubmissionEntity
 import com.recordroom.calendar.model.QMissionEntity.missionEntity
 import com.recordroom.calendar.model.QMissionSubmissionEntity.missionSubmissionEntity
 import com.recordroom.mission.model.MissionApprovalEntity
+import com.recordroom.mission.model.MissionCommentEntity
+import com.recordroom.mission.model.MissionCommentResponse
 import com.recordroom.mission.model.QMissionApprovalEntity.missionApprovalEntity
+import com.recordroom.mission.model.QMissionCommentEntity.missionCommentEntity
+import com.recordroom.member.model.QMemberEntity
 import org.springframework.stereotype.Repository
+import java.time.OffsetDateTime
 
 @Repository
 class MissionRepository(
@@ -15,6 +20,7 @@ class MissionRepository(
     private val missionJpaRepository: MissionJpaRepository,
     private val missionSubmissionJpaRepository: MissionSubmissionJpaRepository,
     private val missionApprovalJpaRepository: MissionApprovalJpaRepository,
+    private val missionCommentJpaRepository: MissionCommentJpaRepository,
 ) {
     // 선택 방의 미션 현황을 진행 상태와 최신 생성순 기준으로 보여주기 위해 조회한다.
     fun findMissionsByRoom(roomId: Long): List<MissionEntity> =
@@ -79,4 +85,42 @@ class MissionRepository(
     // 같은 사용자의 재동의 요청은 기존 결정을 갱신해 중복 동의가 생기지 않게 한다.
     fun saveApproval(approval: MissionApprovalEntity): MissionApprovalEntity =
         missionApprovalJpaRepository.save(approval)
+
+    // 미션 상세 카드 아래에서 구성원 댓글 흐름을 시간순으로 확인할 수 있게 조회한다.
+    fun findComments(missionId: Long, memberId: Long): List<MissionCommentResponse> {
+        val author = QMemberEntity("missionCommentAuthor")
+
+        return queryFactory
+            .select(
+                missionCommentEntity.id,
+                missionCommentEntity.missionId,
+                missionCommentEntity.authorMemberId,
+                author.displayName,
+                missionCommentEntity.body,
+                missionCommentEntity.createdAt,
+            )
+            .from(missionCommentEntity)
+            .join(author).on(author.id.eq(missionCommentEntity.authorMemberId))
+            .where(
+                missionCommentEntity.missionId.eq(missionId),
+                missionCommentEntity.deletedAt.isNull,
+            )
+            .orderBy(missionCommentEntity.createdAt.asc(), missionCommentEntity.id.asc())
+            .fetch()
+            .map { row ->
+                MissionCommentResponse(
+                    id = row.get(missionCommentEntity.id) ?: 0L,
+                    missionId = row.get(missionCommentEntity.missionId) ?: missionId,
+                    authorMemberId = row.get(missionCommentEntity.authorMemberId) ?: 0L,
+                    authorName = row.get(author.displayName) ?: "",
+                    body = row.get(missionCommentEntity.body) ?: "",
+                    createdAt = row.get(missionCommentEntity.createdAt) ?: OffsetDateTime.now(),
+                    mine = row.get(missionCommentEntity.authorMemberId) == memberId,
+                )
+            }
+    }
+
+    // 새 미션 댓글은 선택 미션 상세에 즉시 반영할 수 있도록 저장한다.
+    fun saveComment(comment: MissionCommentEntity): MissionCommentEntity =
+        missionCommentJpaRepository.save(comment)
 }

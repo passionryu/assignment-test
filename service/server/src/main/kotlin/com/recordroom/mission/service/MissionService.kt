@@ -5,10 +5,13 @@ import com.recordroom.calendar.model.MissionSubmissionEntity
 import com.recordroom.common.ApiException
 import com.recordroom.member.repository.MemberRepository
 import com.recordroom.member.service.MemberService
+import com.recordroom.mission.model.CreateMissionCommentRequest
 import com.recordroom.mission.model.CreateMissionRequest
 import com.recordroom.mission.model.CreateMissionSubmissionRequest
 import com.recordroom.mission.model.MissionApprovalEntity
 import com.recordroom.mission.model.MissionApprovalResponse
+import com.recordroom.mission.model.MissionCommentEntity
+import com.recordroom.mission.model.MissionCommentResponse
 import com.recordroom.mission.model.MissionImageUploadResponse
 import com.recordroom.mission.model.MissionListResponse
 import com.recordroom.mission.model.MissionSubmissionResponse
@@ -87,6 +90,39 @@ class MissionService(
     }
 
     @Transactional
+    fun createComment(
+        memberId: Long,
+        roomId: Long,
+        missionId: Long,
+        request: CreateMissionCommentRequest,
+    ): MissionCommentResponse {
+        val profile = memberService.getProfile(memberId)
+
+        readRoomJoinedByMember(memberId, roomId, "POST /api/rooms/$roomId/missions/$missionId/comments")
+        readMissionInRoom(memberId, roomId, missionId, "POST /api/rooms/$roomId/missions/$missionId/comments")
+
+        val body = validateCommentBody(memberId, roomId, missionId, request.body)
+        val comment = missionRepository.saveComment(
+            MissionCommentEntity(
+                missionId = missionId,
+                authorMemberId = memberId,
+                body = body,
+                createdAt = OffsetDateTime.now(seoulZone),
+            ),
+        )
+
+        return MissionCommentResponse(
+            id = comment.id,
+            missionId = comment.missionId,
+            authorMemberId = comment.authorMemberId,
+            authorName = profile.displayName,
+            body = comment.body,
+            createdAt = comment.createdAt,
+            mine = true,
+        )
+    }
+
+    @Transactional
     fun submitMission(
         memberId: Long,
         roomId: Long,
@@ -159,6 +195,8 @@ class MissionService(
 
     private fun MissionEntity.toSummaryResponse(memberId: Long, room: RoomEntity, totalMemberCount: Int): MissionSummaryResponse {
         val submission = missionRepository.findLatestSubmission(id)
+        val latestSubmission = submission?.toSubmissionResponse(memberId, room, totalMemberCount, status)
+        val effectiveStatus = if (latestSubmission?.completed == true) STATUS_COMPLETED else status
         val createdByName = memberRepository.findActiveMember(createdByMemberId)?.displayName ?: "알 수 없음"
 
         return MissionSummaryResponse(
@@ -166,12 +204,13 @@ class MissionService(
             roomId = roomId,
             title = title,
             description = description,
-            status = status,
+            status = effectiveStatus,
             createdByMemberId = createdByMemberId,
             createdByName = createdByName,
             custom = !isPresetMissionId(id),
             completedAt = completedAt,
-            latestSubmission = submission?.toSubmissionResponse(memberId, room, totalMemberCount, status),
+            latestSubmission = latestSubmission,
+            comments = missionRepository.findComments(id, memberId),
         )
     }
 
@@ -397,6 +436,32 @@ class MissionService(
         return imageUrl
     }
 
+    private fun validateCommentBody(memberId: Long, roomId: Long, missionId: Long, rawBody: String?): String {
+        val body = rawBody?.trim()
+            ?.takeIf { it.isNotEmpty() }
+            ?: badRequest(
+                memberId,
+                roomId,
+                "POST /api/rooms/$roomId/missions/$missionId/comments",
+                "missionId:$missionId,body:null",
+                "댓글을 입력해 주세요.",
+                "MISSION_COMMENT_BODY_REQUIRED",
+            )
+
+        if (body.length > MAX_COMMENT_BODY_LENGTH) {
+            badRequest(
+                memberId,
+                roomId,
+                "POST /api/rooms/$roomId/missions/$missionId/comments",
+                "missionId:$missionId,body:length:${body.length}",
+                "댓글은 500자 이하로 입력해 주세요.",
+                "MISSION_COMMENT_BODY_TOO_LONG",
+            )
+        }
+
+        return body
+    }
+
     private fun isSubmissionCompleted(room: RoomEntity, totalMemberCount: Int, approvedCount: Int, submissionId: Long): Boolean {
         if (room.type == "COUPLE") {
             return approvedCount >= 1
@@ -454,5 +519,6 @@ class MissionService(
         private const val MAX_DESCRIPTION_LENGTH = 500
         private const val MAX_SUBMISSION_BODY_LENGTH = 1000
         private const val MAX_IMAGE_URL_LENGTH = 500
+        private const val MAX_COMMENT_BODY_LENGTH = 500
     }
 }
