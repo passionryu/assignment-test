@@ -1,4 +1,4 @@
-import { StrictMode, useEffect, useMemo, useRef, useState } from "react";
+import { StrictMode, useEffect, useMemo, useRef, useState, type DragEvent } from "react";
 import { createRoot } from "react-dom/client";
 import {
   BadgeCheck,
@@ -21,8 +21,11 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   Phone,
+  Pencil,
   Settings,
   ShieldAlert,
+  Trash2,
+  UploadCloud,
   UserRound,
   UsersRound,
   X,
@@ -198,6 +201,72 @@ type ChatSearchResponse = {
   results: ChatSearchResult[];
 };
 
+type MemoryPostSummary = {
+  id: number;
+  roomId: number;
+  authorMemberId: number;
+  authorName: string;
+  title: string;
+  bodyPreview: string;
+  representativeImageUrl: string | null;
+  imageCount: number;
+  commentCount: number;
+  occurredDate: string;
+  createdAt: string;
+  mine: boolean;
+};
+
+type MemoryComment = {
+  id: number;
+  memoryPostId: number;
+  authorMemberId: number;
+  authorName: string;
+  body: string;
+  createdAt: string;
+  mine: boolean;
+};
+
+type MemoryPostDetail = {
+  id: number;
+  roomId: number;
+  authorMemberId: number;
+  authorName: string;
+  title: string;
+  body: string;
+  representativeImageUrl: string | null;
+  imageCount: number;
+  commentCount: number;
+  occurredDate: string;
+  createdAt: string;
+  mine: boolean;
+  comments: MemoryComment[];
+};
+
+type MemoryPostsResponse = {
+  roomId: number;
+  roomName: string;
+  posts: MemoryPostSummary[];
+};
+
+type MemoryPostForm = {
+  title: string;
+  body: string;
+  representativeImageUrl: string;
+  representativeImageName: string;
+  occurredDate: string;
+};
+
+type MemoryImageUploadResponse = {
+  imageUrl: string;
+  originalFileName: string;
+  size: number;
+};
+
+type DeleteMemoryPostResponse = {
+  id: number;
+  deleted: boolean;
+};
+
 type ApiError = {
   code: string;
   message: string;
@@ -207,10 +276,13 @@ type ApiError = {
 type RoomFeatureKind = "chat" | "memories" | "missions" | "letters";
 type AppView = "home" | "rooms" | "room" | "settings" | RoomFeatureKind;
 type RoomSettingsMode = "menu" | "info" | "edit" | "delete" | null;
+type MemoryActionMode = "edit" | "delete" | null;
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8080/api";
+const apiOrigin = apiBaseUrl.replace(/\/api\/?$/, "");
 const memberHeader = { "X-Member-Id": "1" };
 const currentMonth = toDateKey(new Date()).slice(0, 7);
+const memoryPostsPerPage = 6;
 
 const demoProfile: MemberProfile = {
   id: 1,
@@ -568,6 +640,19 @@ function App() {
   const [chatLoading, setChatLoading] = useState(false);
   const [chatSending, setChatSending] = useState(false);
   const chatSendingRef = useRef(false);
+  const [memoryPosts, setMemoryPosts] = useState<MemoryPostSummary[]>([]);
+  const [selectedMemoryPost, setSelectedMemoryPost] = useState<MemoryPostDetail | null>(null);
+  const [memoryPostForm, setMemoryPostForm] = useState<MemoryPostForm>(() => initialMemoryPostForm());
+  const [memoryEditForm, setMemoryEditForm] = useState<MemoryPostForm>(() => initialMemoryPostForm());
+  const [memoryCommentDraft, setMemoryCommentDraft] = useState("");
+  const [memoryLoading, setMemoryLoading] = useState(false);
+  const [memoryDetailLoading, setMemoryDetailLoading] = useState(false);
+  const [memoryCreating, setMemoryCreating] = useState(false);
+  const [memoryImageUploading, setMemoryImageUploading] = useState(false);
+  const [memoryEditImageUploading, setMemoryEditImageUploading] = useState(false);
+  const [memoryCommentSending, setMemoryCommentSending] = useState(false);
+  const [memoryActionMode, setMemoryActionMode] = useState<MemoryActionMode>(null);
+  const [memoryActionLoading, setMemoryActionLoading] = useState(false);
   const [profileForm, setProfileForm] = useState({ displayName: "", profileImageUrl: "" });
   const [passwordForm, setPasswordForm] = useState({ currentPassword: "", newPassword: "" });
   const [createRoomForm, setCreateRoomForm] = useState<CreateRoomForm>({ name: "", type: "COUPLE", description: "" });
@@ -597,6 +682,12 @@ function App() {
     if ((activeView !== "chat" && activeView !== "room") || !selectedRoom) return;
 
     void loadChatMessages(selectedRoom.id);
+  }, [activeView, selectedRoom?.id]);
+
+  useEffect(() => {
+    if (activeView !== "memories" || !selectedRoom) return;
+
+    void loadMemoryPosts(selectedRoom.id);
   }, [activeView, selectedRoom?.id]);
 
   async function loadInitialData() {
@@ -832,6 +923,252 @@ function App() {
 
     const response = await safeApiGet<ChatSearchResponse>(`/rooms/${selectedRoom.id}/chat/search?keyword=${encodeURIComponent(keyword)}`);
     setChatSearchResults(response?.results ?? searchDemoChatMessages(selectedRoom.id, keyword));
+  }
+
+  async function loadMemoryPosts(roomId: number) {
+    setMemoryLoading(true);
+    setMemoryDetailLoading(false);
+
+    const response = await safeApiGet<MemoryPostsResponse>(`/rooms/${roomId}/memories`);
+    const posts = response?.posts ?? demoMemoryPosts(roomId);
+    setMemoryPosts(posts);
+    setMemoryLoading(false);
+
+    if (posts.length === 0) {
+      setSelectedMemoryPost(null);
+      return;
+    }
+
+    const stillSelected = selectedMemoryPost?.roomId === roomId
+      ? posts.find((post) => post.id === selectedMemoryPost.id)
+      : null;
+    void openMemoryPostDetail(roomId, stillSelected?.id ?? posts[0].id);
+  }
+
+  async function openMemoryPostDetail(roomId: number, memoryId: number) {
+    setMemoryDetailLoading(true);
+    const response = await safeApiGet<MemoryPostDetail>(`/rooms/${roomId}/memories/${memoryId}`);
+    setSelectedMemoryPost(response ?? demoMemoryDetail(roomId, memoryId));
+    setMemoryDetailLoading(false);
+  }
+
+  async function createMemoryPost() {
+    if (!selectedRoom) return;
+
+    const title = memoryPostForm.title.trim();
+    const body = memoryPostForm.body.trim();
+    const imageUrl = memoryPostForm.representativeImageUrl;
+
+    if (!title || !body) {
+      setErrorMessage("추억 제목과 내용을 입력해 주세요.");
+      return;
+    }
+
+    setMessage(null);
+    setErrorMessage(null);
+    setMemoryCreating(true);
+
+    try {
+      const createdPost = await apiRequest<MemoryPostDetail>(`/rooms/${selectedRoom.id}/memories`, {
+        method: "POST",
+        body: {
+          title,
+          body,
+          representativeImageUrl: imageUrl || null,
+          occurredDate: memoryPostForm.occurredDate || null,
+        },
+      });
+
+      setMemoryPosts((current) => [memoryDetailToSummary(createdPost), ...current.filter((post) => post.id !== createdPost.id)]);
+      setSelectedMemoryPost(createdPost);
+      setMemoryPostForm(initialMemoryPostForm());
+      setRoomFeedbackModal({ title: "추억 등록 완료", message: "새 추억이 게시판에 등록되었습니다." });
+      await loadCalendarActivities(calendarRoomId);
+    } catch (error) {
+      setErrorMessage(toMessage(error));
+    } finally {
+      setMemoryCreating(false);
+    }
+  }
+
+  async function uploadMemoryImageFile(file: File): Promise<MemoryImageUploadResponse> {
+    if (!selectedRoom) {
+      throw new Error("이미지를 업로드할 방을 선택해 주세요.");
+    }
+
+    if (!file.type.startsWith("image/")) {
+      throw new Error("이미지 파일만 선택해 주세요.");
+    }
+
+    const formData = new FormData();
+    formData.append("image", file);
+
+    return apiFormDataRequest<MemoryImageUploadResponse>(
+      `/rooms/${selectedRoom.id}/memories/images`,
+      formData,
+    );
+  }
+
+  async function uploadMemoryImage(file: File) {
+    if (!selectedRoom) return;
+
+    setMessage(null);
+    setErrorMessage(null);
+    setMemoryImageUploading(true);
+
+    try {
+      const uploadedImage = await uploadMemoryImageFile(file);
+
+      setMemoryPostForm((current) => ({
+        ...current,
+        representativeImageUrl: uploadedImage.imageUrl,
+        representativeImageName: uploadedImage.originalFileName,
+      }));
+    } catch (error) {
+      setErrorMessage(toMessage(error));
+    } finally {
+      setMemoryImageUploading(false);
+    }
+  }
+
+  async function uploadMemoryEditImage(file: File) {
+    if (!selectedRoom) return;
+
+    setMessage(null);
+    setErrorMessage(null);
+    setMemoryEditImageUploading(true);
+
+    try {
+      const uploadedImage = await uploadMemoryImageFile(file);
+
+      setMemoryEditForm((current) => ({
+        ...current,
+        representativeImageUrl: uploadedImage.imageUrl,
+        representativeImageName: uploadedImage.originalFileName,
+      }));
+    } catch (error) {
+      setErrorMessage(toMessage(error));
+    } finally {
+      setMemoryEditImageUploading(false);
+    }
+  }
+
+  async function createMemoryComment() {
+    if (!selectedRoom || !selectedMemoryPost) return;
+
+    const body = memoryCommentDraft.trim();
+    if (!body) {
+      setErrorMessage("댓글을 입력해 주세요.");
+      return;
+    }
+
+    setMessage(null);
+    setErrorMessage(null);
+    setMemoryCommentSending(true);
+
+    try {
+      const createdComment = await apiRequest<MemoryComment>(`/rooms/${selectedRoom.id}/memories/${selectedMemoryPost.id}/comments`, {
+        method: "POST",
+        body: { body },
+      });
+
+      setSelectedMemoryPost((current) => {
+        if (!current || current.id !== selectedMemoryPost.id) return current;
+
+        return {
+          ...current,
+          commentCount: current.commentCount + 1,
+          comments: [...current.comments, createdComment],
+        };
+      });
+      setMemoryPosts((current) =>
+        current.map((post) => (post.id === selectedMemoryPost.id ? { ...post, commentCount: post.commentCount + 1 } : post)),
+      );
+      setMemoryCommentDraft("");
+    } catch (error) {
+      setErrorMessage(toMessage(error));
+    } finally {
+      setMemoryCommentSending(false);
+    }
+  }
+
+  function openMemoryEditModal() {
+    if (!selectedMemoryPost) return;
+
+    setMemoryEditForm({
+      title: selectedMemoryPost.title,
+      body: selectedMemoryPost.body,
+      representativeImageUrl: selectedMemoryPost.representativeImageUrl ?? "",
+      representativeImageName: selectedMemoryPost.representativeImageUrl ? "현재 대표 사진" : "",
+      occurredDate: selectedMemoryPost.occurredDate,
+    });
+    setMemoryActionMode("edit");
+  }
+
+  async function updateMemoryPost() {
+    if (!selectedRoom || !selectedMemoryPost) return;
+
+    const title = memoryEditForm.title.trim();
+    const body = memoryEditForm.body.trim();
+
+    if (!title || !body) {
+      setErrorMessage("추억 제목과 내용을 입력해 주세요.");
+      return;
+    }
+
+    setMessage(null);
+    setErrorMessage(null);
+    setMemoryActionLoading(true);
+
+    try {
+      const updatedPost = await apiRequest<MemoryPostDetail>(`/rooms/${selectedRoom.id}/memories/${selectedMemoryPost.id}`, {
+        method: "PATCH",
+        body: {
+          title,
+          body,
+          representativeImageUrl: memoryEditForm.representativeImageUrl || null,
+          occurredDate: memoryEditForm.occurredDate || null,
+        },
+      });
+
+      setSelectedMemoryPost(updatedPost);
+      setMemoryPosts((current) => current.map((post) => (post.id === updatedPost.id ? memoryDetailToSummary(updatedPost) : post)));
+      setMemoryActionMode(null);
+      setRoomFeedbackModal({ title: "추억 수정 완료", message: "선택한 추억이 수정되었습니다." });
+      await loadCalendarActivities(calendarRoomId);
+    } catch (error) {
+      setRoomFeedbackModal({ title: "추억 수정 실패", message: toMessage(error) });
+    } finally {
+      setMemoryActionLoading(false);
+    }
+  }
+
+  async function deleteMemoryPost() {
+    if (!selectedRoom || !selectedMemoryPost) return;
+
+    const deletedPostId = selectedMemoryPost.id;
+
+    setMessage(null);
+    setErrorMessage(null);
+    setMemoryActionLoading(true);
+
+    try {
+      await apiRequest<DeleteMemoryPostResponse>(`/rooms/${selectedRoom.id}/memories/${deletedPostId}`, {
+        method: "DELETE",
+      });
+
+      setMemoryPosts((current) => current.filter((post) => post.id !== deletedPostId));
+      setSelectedMemoryPost(null);
+      setMemoryCommentDraft("");
+      setMemoryActionMode(null);
+      await loadMemoryPosts(selectedRoom.id);
+      await loadCalendarActivities(calendarRoomId);
+      setRoomFeedbackModal({ title: "추억 삭제 완료", message: "선택한 추억이 삭제되었습니다." });
+    } catch (error) {
+      setRoomFeedbackModal({ title: "추억 삭제 실패", message: toMessage(error) });
+    } finally {
+      setMemoryActionLoading(false);
+    }
   }
 
   function moveToChatMessage(messageId: number) {
@@ -1128,7 +1465,32 @@ function App() {
             onMoveToMessage={moveToChatMessage}
           />
         ) : null}
-        {activeView === "memories" ? <RoomFeatureView selectedRoom={selectedRoom} kind="memories" /> : null}
+        {activeView === "memories" ? (
+          <MemoryBoardView
+            selectedRoom={selectedRoom}
+            posts={memoryPosts}
+            selectedPost={selectedMemoryPost}
+            form={memoryPostForm}
+            commentDraft={memoryCommentDraft}
+            loading={memoryLoading}
+            detailLoading={memoryDetailLoading}
+            creating={memoryCreating}
+            imageUploading={memoryImageUploading}
+            commentSending={memoryCommentSending}
+            onFormChange={setMemoryPostForm}
+            onImageUpload={uploadMemoryImage}
+            onImageClear={() => setMemoryPostForm((current) => ({ ...current, representativeImageUrl: "", representativeImageName: "" }))}
+            onCommentDraftChange={setMemoryCommentDraft}
+            onCreatePost={createMemoryPost}
+            onOpenPost={(memoryId) => {
+              if (!selectedRoom) return;
+              void openMemoryPostDetail(selectedRoom.id, memoryId);
+            }}
+            onOpenEdit={openMemoryEditModal}
+            onOpenDelete={() => setMemoryActionMode("delete")}
+            onCreateComment={createMemoryComment}
+          />
+        ) : null}
         {activeView === "missions" ? <RoomFeatureView selectedRoom={selectedRoom} kind="missions" /> : null}
         {activeView === "letters" ? <RoomFeatureView selectedRoom={selectedRoom} kind="letters" /> : null}
         {activeView === "settings" ? (
@@ -1174,6 +1536,29 @@ function App() {
           onSave={updateRoomInfo}
           onDelete={deleteSelectedRoom}
           onClose={() => setRoomSettingsMode(null)}
+        />
+      ) : null}
+
+      {memoryActionMode === "edit" && selectedMemoryPost ? (
+        <MemoryEditModal
+          post={selectedMemoryPost}
+          form={memoryEditForm}
+          loading={memoryActionLoading}
+          imageUploading={memoryEditImageUploading}
+          onFormChange={setMemoryEditForm}
+          onImageUpload={uploadMemoryEditImage}
+          onImageClear={() => setMemoryEditForm((current) => ({ ...current, representativeImageUrl: "", representativeImageName: "" }))}
+          onSave={updateMemoryPost}
+          onClose={() => setMemoryActionMode(null)}
+        />
+      ) : null}
+
+      {memoryActionMode === "delete" && selectedMemoryPost ? (
+        <MemoryDeleteModal
+          post={selectedMemoryPost}
+          loading={memoryActionLoading}
+          onDelete={deleteMemoryPost}
+          onClose={() => setMemoryActionMode(null)}
         />
       ) : null}
 
@@ -2006,6 +2391,283 @@ function ChatView({
   );
 }
 
+function MemoryBoardView({
+  selectedRoom,
+  posts,
+  selectedPost,
+  form,
+  commentDraft,
+  loading,
+  detailLoading,
+  creating,
+  imageUploading,
+  commentSending,
+  onFormChange,
+  onImageUpload,
+  onImageClear,
+  onCommentDraftChange,
+  onCreatePost,
+  onOpenPost,
+  onOpenEdit,
+  onOpenDelete,
+  onCreateComment,
+}: {
+  selectedRoom: RoomSummary | null;
+  posts: MemoryPostSummary[];
+  selectedPost: MemoryPostDetail | null;
+  form: MemoryPostForm;
+  commentDraft: string;
+  loading: boolean;
+  detailLoading: boolean;
+  creating: boolean;
+  imageUploading: boolean;
+  commentSending: boolean;
+  onFormChange: (form: MemoryPostForm) => void;
+  onImageUpload: (file: File) => void;
+  onImageClear: () => void;
+  onCommentDraftChange: (value: string) => void;
+  onCreatePost: () => void;
+  onOpenPost: (memoryId: number) => void;
+  onOpenEdit: () => void;
+  onOpenDelete: () => void;
+  onCreateComment: () => void;
+}) {
+  const [currentPage, setCurrentPage] = useState(1);
+  const totalPages = Math.max(1, Math.ceil(posts.length / memoryPostsPerPage));
+  const safePage = Math.min(currentPage, totalPages);
+  const visiblePosts = posts.slice((safePage - 1) * memoryPostsPerPage, safePage * memoryPostsPerPage);
+  const uploadInputId = `memory-image-upload-${selectedRoom?.id ?? "none"}`;
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedRoom?.id, posts.length]);
+
+  function handleImageDrop(event: DragEvent<HTMLDivElement>) {
+    event.preventDefault();
+    const file = event.dataTransfer.files[0];
+    if (file) {
+      onImageUpload(file);
+    }
+  }
+
+  return (
+    <>
+      <header className="page-header">
+        <div>
+          <h1>추억 게시판</h1>
+          <p>{selectedRoom ? `${selectedRoom.name}에 사진과 글로 남긴 추억을 모아본다.` : "선택된 방이 없습니다."}</p>
+        </div>
+      </header>
+
+      <section className="memory-page">
+        <div className="memory-main-column">
+          <article className="memory-compose-card">
+            <div className="room-section-heading">
+              <h2>추억 남기기</h2>
+              <p>노트북의 사진을 선택하고 글을 입력해 Lv1 콘텐츠 서비스를 검증한다.</p>
+            </div>
+            <div className="memory-form">
+              <label>
+                제목
+                <input
+                  value={form.title}
+                  onChange={(event) => onFormChange({ ...form, title: event.target.value })}
+                  placeholder="예: 카페에서 찍은 사진"
+                />
+              </label>
+              <label>
+                날짜
+                <input
+                  type="date"
+                  value={form.occurredDate}
+                  onChange={(event) => onFormChange({ ...form, occurredDate: event.target.value })}
+                />
+              </label>
+              <div
+                className={`memory-upload-dropzone memory-form-wide ${form.representativeImageUrl ? "has-image" : ""}`}
+                onDragOver={(event) => event.preventDefault()}
+                onDrop={handleImageDrop}
+              >
+                <input
+                  id={uploadInputId}
+                  type="file"
+                  accept="image/*"
+                  disabled={!selectedRoom || imageUploading}
+                  onChange={(event) => {
+                    const file = event.target.files?.[0];
+                    if (file) {
+                      onImageUpload(file);
+                    }
+                    event.currentTarget.value = "";
+                  }}
+                />
+                <UploadCloud size={28} />
+                <div>
+                  <strong>{imageUploading ? "이미지 업로드 중" : "사진을 끌어놓거나 파일을 선택하세요"}</strong>
+                  <span>jpg, png, gif, webp · 5MB 이하</span>
+                </div>
+                <label className="outline-button upload-pick-button" htmlFor={uploadInputId}>
+                  파일 선택
+                </label>
+              </div>
+              {form.representativeImageUrl ? (
+                <div className="memory-upload-preview memory-form-wide">
+                  <MemoryImage imageUrl={form.representativeImageUrl} title={form.representativeImageName || "선택한 이미지"} />
+                  <div>
+                    <strong>{form.representativeImageName || "선택한 이미지"}</strong>
+                    <span>등록할 추억의 대표 사진으로 사용한다.</span>
+                  </div>
+                  <button className="icon-button" type="button" onClick={onImageClear} aria-label="선택 이미지 제거">
+                    <X size={18} />
+                  </button>
+                </div>
+              ) : null}
+              <label className="memory-form-wide">
+                내용
+                <textarea
+                  value={form.body}
+                  onChange={(event) => onFormChange({ ...form, body: event.target.value })}
+                  placeholder="사진에 담긴 상황과 감정을 남겨주세요."
+                  rows={4}
+                />
+              </label>
+            </div>
+            <button className="primary-button full-width" type="button" onClick={onCreatePost} disabled={!selectedRoom || creating}>
+              {creating ? "등록 중" : "추억 등록"}
+            </button>
+          </article>
+
+          <article className="memory-list-panel">
+            <div className="memory-list-heading">
+              <div>
+                <h2>추억 목록</h2>
+                <p>{loading ? "추억을 불러오는 중입니다." : `${posts.length}개의 추억이 있습니다. ${safePage}/${totalPages} 페이지`}</p>
+              </div>
+              <BookImage size={24} />
+            </div>
+            <div className="memory-post-grid">
+              {!loading && posts.length === 0 ? <p className="empty-state">아직 남긴 추억이 없습니다.</p> : null}
+              {visiblePosts.map((post) => (
+                <button
+                  className={`memory-post-card ${selectedPost?.id === post.id ? "selected" : ""}`}
+                  type="button"
+                  key={post.id}
+                  onClick={() => onOpenPost(post.id)}
+                >
+                  <MemoryImage imageUrl={post.representativeImageUrl} title={post.title} />
+                  <span>{formatDateLabel(post.occurredDate)}</span>
+                  <strong>{post.title}</strong>
+                  <p>{post.bodyPreview}</p>
+                  <small>{post.authorName} · 댓글 {post.commentCount}개</small>
+                </button>
+              ))}
+            </div>
+            {posts.length > memoryPostsPerPage ? (
+              <div className="memory-pagination" aria-label="추억 목록 페이지 이동">
+                <button type="button" onClick={() => setCurrentPage((page) => Math.max(1, page - 1))} disabled={safePage === 1}>
+                  이전
+                </button>
+                {Array.from({ length: totalPages }, (_, index) => index + 1).map((page) => (
+                  <button className={safePage === page ? "active" : ""} type="button" key={page} onClick={() => setCurrentPage(page)}>
+                    {page}
+                  </button>
+                ))}
+                <button type="button" onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))} disabled={safePage === totalPages}>
+                  다음
+                </button>
+              </div>
+            ) : null}
+          </article>
+        </div>
+
+        <aside className="memory-detail-panel">
+          <div className="memory-detail-header">
+            <div>
+              <span>선택한 추억</span>
+              <h2>{selectedPost?.title ?? "게시글을 선택하세요"}</h2>
+            </div>
+            <div className="memory-detail-header-side">
+              <BookImage size={24} />
+              {selectedPost?.mine ? (
+                <div className="memory-detail-actions" aria-label="추억 게시글 관리">
+                  <button className="memory-action-button" type="button" onClick={onOpenEdit}>
+                    <Pencil size={15} />
+                    수정
+                  </button>
+                  <button className="memory-action-button danger" type="button" onClick={onOpenDelete}>
+                    <Trash2 size={15} />
+                    삭제
+                  </button>
+                </div>
+              ) : null}
+            </div>
+          </div>
+          {detailLoading ? <p className="empty-state">상세 내용을 불러오는 중입니다.</p> : null}
+          {!detailLoading && selectedPost ? (
+            <>
+              <MemoryImage imageUrl={selectedPost.representativeImageUrl} title={selectedPost.title} large />
+              <div className="memory-detail-meta">
+                <span>{selectedPost.authorName}</span>
+                <span>{formatDateLabel(selectedPost.occurredDate)}</span>
+                <span>댓글 {selectedPost.commentCount}개</span>
+              </div>
+              <p className="memory-detail-body">{selectedPost.body}</p>
+              <div className="memory-comments">
+                <h3>댓글</h3>
+                <div className="memory-comment-list">
+                  {selectedPost.comments.length === 0 ? <p className="empty-state">아직 댓글이 없습니다.</p> : null}
+                  {selectedPost.comments.map((comment) => (
+                    <div className={`memory-comment-row ${comment.mine ? "mine" : "other"}`} key={comment.id}>
+                      <div className="memory-comment-meta">
+                        <strong>{comment.authorName}</strong>
+                        <span>{formatChatTime(comment.createdAt)}</span>
+                      </div>
+                      <div className="memory-comment-bubble">
+                        <p>{comment.body}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="memory-comment-form">
+                <textarea
+                  value={commentDraft}
+                  onChange={(event) => onCommentDraftChange(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.nativeEvent.isComposing || event.key !== "Enter" || event.shiftKey) return;
+                    event.preventDefault();
+                    onCreateComment();
+                  }}
+                  placeholder="댓글을 남겨주세요."
+                  rows={2}
+                />
+                <button className="primary-button" type="button" onClick={onCreateComment} disabled={commentSending}>
+                  {commentSending ? "등록 중" : "댓글 등록"}
+                </button>
+              </div>
+            </>
+          ) : null}
+          {!detailLoading && !selectedPost ? <p className="empty-state">왼쪽 목록에서 확인할 추억을 선택하세요.</p> : null}
+        </aside>
+      </section>
+    </>
+  );
+}
+
+function MemoryImage({ imageUrl, title, large = false }: { imageUrl: string | null; title: string; large?: boolean }) {
+  if (!imageUrl) {
+    return (
+      <div className={`memory-image-placeholder ${large ? "large" : ""}`}>
+        <BookImage size={large ? 36 : 26} />
+      </div>
+    );
+  }
+
+  return (
+    <img className={`memory-image ${large ? "large" : ""}`} src={resolveImageSource(imageUrl)} alt={`${title} 대표 이미지`} />
+  );
+}
+
 function RoomFeatureView({ selectedRoom, kind }: { selectedRoom: RoomSummary | null; kind: RoomFeatureKind }) {
   const copy = roomFeatureCopy(kind);
 
@@ -2293,6 +2955,168 @@ function AlertModal({ title, message, onClose }: { title: string; message: strin
         <div className="modal-actions">
           <button className="primary-button" type="button" onClick={onClose}>
             확인
+          </button>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function MemoryEditModal({
+  post,
+  form,
+  loading,
+  imageUploading,
+  onFormChange,
+  onImageUpload,
+  onImageClear,
+  onSave,
+  onClose,
+}: {
+  post: MemoryPostDetail;
+  form: MemoryPostForm;
+  loading: boolean;
+  imageUploading: boolean;
+  onFormChange: (form: MemoryPostForm) => void;
+  onImageUpload: (file: File) => void;
+  onImageClear: () => void;
+  onSave: () => void;
+  onClose: () => void;
+}) {
+  const uploadInputId = `memory-edit-image-upload-${post.id}`;
+
+  function handleImageDrop(event: DragEvent<HTMLDivElement>) {
+    event.preventDefault();
+    const file = event.dataTransfer.files[0];
+    if (file) {
+      onImageUpload(file);
+    }
+  }
+
+  return (
+    <div className="modal-backdrop" role="presentation">
+      <section className="modal memory-edit-modal" role="dialog" aria-modal="true" aria-labelledby="memory-edit-title">
+        <div className="modal-title-row">
+          <div>
+            <h2 id="memory-edit-title">추억 수정</h2>
+            <p>작성한 추억의 제목, 날짜, 사진, 내용을 수정한다.</p>
+          </div>
+          <button className="icon-button" type="button" onClick={onClose} aria-label="닫기">
+            <X size={18} />
+          </button>
+        </div>
+        <div className="memory-form memory-edit-form">
+          <label>
+            제목
+            <input
+              value={form.title}
+              onChange={(event) => onFormChange({ ...form, title: event.target.value })}
+              placeholder="추억 제목"
+            />
+          </label>
+          <label>
+            날짜
+            <input
+              type="date"
+              value={form.occurredDate}
+              onChange={(event) => onFormChange({ ...form, occurredDate: event.target.value })}
+            />
+          </label>
+          <div
+            className={`memory-upload-dropzone memory-form-wide ${form.representativeImageUrl ? "has-image" : ""}`}
+            onDragOver={(event) => event.preventDefault()}
+            onDrop={handleImageDrop}
+          >
+            <input
+              id={uploadInputId}
+              type="file"
+              accept="image/*"
+              disabled={imageUploading || loading}
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                if (file) {
+                  onImageUpload(file);
+                }
+                event.currentTarget.value = "";
+              }}
+            />
+            <UploadCloud size={28} />
+            <div>
+              <strong>{imageUploading ? "이미지 업로드 중" : "대표 사진 변경"}</strong>
+              <span>사진을 끌어놓거나 파일을 선택한다.</span>
+            </div>
+            <label className="outline-button upload-pick-button" htmlFor={uploadInputId}>
+              파일 선택
+            </label>
+          </div>
+          {form.representativeImageUrl ? (
+            <div className="memory-upload-preview memory-form-wide">
+              <MemoryImage imageUrl={form.representativeImageUrl} title={form.representativeImageName || "대표 사진"} />
+              <div>
+                <strong>{form.representativeImageName || "대표 사진"}</strong>
+                <span>수정 후 대표 사진으로 사용한다.</span>
+              </div>
+              <button className="icon-button" type="button" onClick={onImageClear} aria-label="선택 이미지 제거">
+                <X size={18} />
+              </button>
+            </div>
+          ) : null}
+          <label className="memory-form-wide">
+            내용
+            <textarea
+              value={form.body}
+              onChange={(event) => onFormChange({ ...form, body: event.target.value })}
+              placeholder="추억 내용을 입력해 주세요."
+              rows={5}
+            />
+          </label>
+        </div>
+        <div className="modal-actions">
+          <button className="outline-button" type="button" onClick={onClose} disabled={loading}>
+            취소
+          </button>
+          <button className="primary-button" type="button" onClick={onSave} disabled={loading || imageUploading}>
+            {loading ? "수정 중" : "수정 완료"}
+          </button>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function MemoryDeleteModal({
+  post,
+  loading,
+  onDelete,
+  onClose,
+}: {
+  post: MemoryPostDetail;
+  loading: boolean;
+  onDelete: () => void;
+  onClose: () => void;
+}) {
+  return (
+    <div className="modal-backdrop" role="presentation">
+      <section className="modal" role="alertdialog" aria-modal="true" aria-labelledby="memory-delete-title">
+        <div className="modal-title-row">
+          <div>
+            <h2 id="memory-delete-title">추억을 삭제할까요?</h2>
+            <p>삭제한 추억은 목록과 캘린더 기록 흐름에서 보이지 않는다.</p>
+          </div>
+          <button className="icon-button" type="button" onClick={onClose} aria-label="닫기">
+            <X size={18} />
+          </button>
+        </div>
+        <div className="delete-warning">
+          <strong>{post.title}</strong>
+          <span>삭제 후에는 이번 MVP 화면에서 다시 복구할 수 없다.</span>
+        </div>
+        <div className="modal-actions">
+          <button className="outline-button" type="button" onClick={onClose} disabled={loading}>
+            취소
+          </button>
+          <button className="danger-button" type="button" onClick={onDelete} disabled={loading}>
+            {loading ? "삭제 중" : "삭제"}
           </button>
         </div>
       </section>
@@ -2669,6 +3493,98 @@ function roomFeatureCopy(kind: RoomFeatureKind) {
   };
 }
 
+function initialMemoryPostForm(): MemoryPostForm {
+  return {
+    title: "",
+    body: "",
+    representativeImageUrl: "",
+    representativeImageName: "",
+    occurredDate: todayDateKey(),
+  };
+}
+
+function demoMemoryPosts(roomId: number): MemoryPostSummary[] {
+  const room = demoRooms.find((candidate) => candidate.id === roomId) ?? demoRooms[0];
+  const authorName = room.id === 1 ? "민지" : room.id === 2 ? "아버지" : "지훈";
+
+  return [
+    {
+      id: 8701 + room.id,
+      roomId: room.id,
+      authorMemberId: room.id === 1 ? 2 : 3,
+      authorName,
+      title: `${room.name} 대표 사진`,
+      bodyPreview: "오늘 남긴 사진과 짧은 글을 추억 게시판 카드로 확인한다.",
+      representativeImageUrl: `https://picsum.photos/seed/record-room-demo-${room.id}/720/480`,
+      imageCount: 1,
+      commentCount: 2,
+      occurredDate: todayDateKey(),
+      createdAt: `${todayDateKey()}T09:30:00+09:00`,
+      mine: false,
+    },
+    {
+      id: 8801 + room.id,
+      roomId: room.id,
+      authorMemberId: 1,
+      authorName: "류성열",
+      title: "책에 담고 싶은 순간",
+      bodyPreview: "나중에 인쇄할 때 다시 고를 수 있도록 후보 기록으로 남긴다.",
+      representativeImageUrl: `https://picsum.photos/seed/record-room-demo-${room.id}-second/720/480`,
+      imageCount: 1,
+      commentCount: 1,
+      occurredDate: offsetDateKey(-1),
+      createdAt: `${offsetDateKey(-1)}T20:10:00+09:00`,
+      mine: true,
+    },
+  ];
+}
+
+function demoMemoryDetail(roomId: number, memoryId: number): MemoryPostDetail {
+  const summary = demoMemoryPosts(roomId).find((post) => post.id === memoryId) ?? demoMemoryPosts(roomId)[0];
+
+  return {
+    ...summary,
+    body: `${summary.bodyPreview} 이 화면은 서버 응답이 없을 때도 사용 흐름을 확인할 수 있게 제공하는 데모 상세 내용입니다.`,
+    comments: [
+      {
+        id: summary.id + 1000,
+        memoryPostId: summary.id,
+        authorMemberId: summary.mine ? 2 : 1,
+        authorName: summary.mine ? "민지" : "류성열",
+        body: "이 추억은 나중에 다시 보면 좋겠다.",
+        createdAt: `${summary.occurredDate}T21:10:00+09:00`,
+        mine: !summary.mine,
+      },
+      {
+        id: summary.id + 1001,
+        memoryPostId: summary.id,
+        authorMemberId: summary.authorMemberId,
+        authorName: summary.authorName,
+        body: "대표 이미지도 같이 저장해둘게.",
+        createdAt: `${summary.occurredDate}T21:18:00+09:00`,
+        mine: summary.mine,
+      },
+    ],
+  };
+}
+
+function memoryDetailToSummary(detail: MemoryPostDetail): MemoryPostSummary {
+  return {
+    id: detail.id,
+    roomId: detail.roomId,
+    authorMemberId: detail.authorMemberId,
+    authorName: detail.authorName,
+    title: detail.title,
+    bodyPreview: detail.body.length <= 80 ? detail.body : `${detail.body.slice(0, 80)}...`,
+    representativeImageUrl: detail.representativeImageUrl,
+    imageCount: detail.imageCount,
+    commentCount: detail.commentCount,
+    occurredDate: detail.occurredDate,
+    createdAt: detail.createdAt,
+    mine: detail.mine,
+  };
+}
+
 function demoChatMessages(roomId: number): ChatMessage[] {
   const room = demoRooms.find((candidate) => candidate.id === roomId) ?? demoRooms[0];
   const baseDate = todayDateKey();
@@ -2923,6 +3839,21 @@ async function safeApiRequest<T>(path: string, options: { method: string; body?:
   }
 }
 
+async function apiFormDataRequest<T>(path: string, formData: FormData): Promise<T> {
+  const response = await fetch(`${apiBaseUrl}${path}`, {
+    method: "POST",
+    headers: memberHeader,
+    body: formData,
+  });
+
+  const payload = (await response.json()) as T | ApiError;
+  if (!response.ok) {
+    throw new Error((payload as ApiError).message ?? `HTTP ${response.status}`);
+  }
+
+  return payload as T;
+}
+
 async function apiRequest<T>(path: string, options: { method: string; body?: unknown }): Promise<T> {
   const response = await fetch(`${apiBaseUrl}${path}`, {
     method: options.method,
@@ -2939,6 +3870,18 @@ async function apiRequest<T>(path: string, options: { method: string; body?: unk
   }
 
   return payload as T;
+}
+
+function resolveImageSource(imageUrl: string): string {
+  if (imageUrl.startsWith("http://") || imageUrl.startsWith("https://") || imageUrl.startsWith("data:")) {
+    return imageUrl;
+  }
+
+  if (imageUrl.startsWith("/")) {
+    return `${apiOrigin}${imageUrl}`;
+  }
+
+  return imageUrl;
 }
 
 function toMessage(error: unknown): string {

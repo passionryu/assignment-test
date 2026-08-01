@@ -16,6 +16,10 @@ spring:
     enabled: true
   jackson:
     time-zone: Asia/Seoul
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 6MB
   ai:
     openai:
       api-key: ${OPENAI_API_KEY:local-missing-openai-api-key}
@@ -35,6 +39,9 @@ management:
 app:
   seed:
     enabled: ${SEED_ENABLED:true}
+  upload:
+    memory-dir: ${MEMORY_UPLOAD_DIR:uploads/memories}
+    memory-public-path: ${MEMORY_UPLOAD_PUBLIC_PATH:/uploads/memories}
 
 logging:
   pattern:

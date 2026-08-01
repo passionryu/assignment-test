@@ -1403,6 +1403,464 @@ dl {
   line-height: 1.45;
 }
 
+.memory-page {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 390px;
+  gap: 22px;
+  align-items: start;
+}
+
+.memory-main-column {
+  display: grid;
+  gap: 18px;
+}
+
+.memory-compose-card,
+.memory-list-panel,
+.memory-detail-panel {
+  border: 1px solid #dfe7f2;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 18px 48px rgba(49, 70, 107, 0.1);
+  padding: 24px;
+}
+
+.memory-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 160px;
+  gap: 14px;
+}
+
+.memory-form label,
+.memory-comment-form {
+  display: grid;
+  gap: 8px;
+}
+
+.memory-form label {
+  color: #667085;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.memory-form-wide {
+  grid-column: 1 / -1;
+}
+
+.memory-form input,
+.memory-form textarea,
+.memory-comment-form textarea {
+  width: 100%;
+  border: 1px solid #dfe7f2;
+  border-radius: 8px;
+  background: #fbfcff;
+  color: #253248;
+  padding: 13px 14px;
+  font: inherit;
+  font-weight: 800;
+  outline: none;
+}
+
+.memory-form textarea,
+.memory-comment-form textarea {
+  resize: vertical;
+  line-height: 1.55;
+}
+
+.memory-form input:focus,
+.memory-form textarea:focus,
+.memory-comment-form textarea:focus {
+  border-color: #f04f95;
+  box-shadow: 0 0 0 3px rgba(240, 79, 149, 0.13);
+}
+
+.memory-upload-dropzone {
+  min-height: 118px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  border: 1px dashed #b8c7dc;
+  border-radius: 8px;
+  background: #fbfcff;
+  color: #667085;
+  padding: 18px;
+  transition:
+    border-color 0.18s ease,
+    background-color 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.memory-upload-dropzone:hover,
+.memory-upload-dropzone.has-image {
+  border-color: #f04f95;
+  background: #fff7fb;
+  box-shadow: 0 12px 28px rgba(240, 79, 149, 0.08);
+}
+
+.memory-upload-dropzone input[type="file"] {
+  display: none;
+}
+
+.memory-upload-dropzone svg {
+  color: #f04f95;
+}
+
+.memory-upload-dropzone strong,
+.memory-upload-preview strong {
+  display: block;
+  color: #253248;
+  font-size: 15px;
+}
+
+.memory-upload-dropzone span,
+.memory-upload-preview span {
+  display: block;
+  margin-top: 5px;
+  color: #667085;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.upload-pick-button {
+  min-height: 38px;
+  cursor: pointer;
+}
+
+.memory-upload-preview {
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  border: 1px solid #e7edf7;
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 12px;
+}
+
+.memory-upload-preview .memory-image,
+.memory-upload-preview .memory-image-placeholder {
+  aspect-ratio: 4 / 3;
+}
+
+.memory-compose-card .primary-button {
+  margin-top: 14px;
+}
+
+.memory-list-heading,
+.memory-detail-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.memory-list-heading h2,
+.memory-detail-header h2 {
+  color: #253248;
+  font-size: 22px;
+}
+
+.memory-list-heading p {
+  margin-top: 6px;
+  color: #667085;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.memory-list-heading svg,
+.memory-detail-header svg {
+  color: #0c9fa8;
+}
+
+.memory-detail-header span {
+  color: #f04f95;
+  font-size: 13px;
+  font-weight: 950;
+}
+
+.memory-detail-header-side {
+  display: grid;
+  justify-items: end;
+  gap: 10px;
+}
+
+.memory-detail-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.memory-action-button {
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 1px solid #dfe7f2;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #253248;
+  padding: 0 11px;
+  font-size: 12px;
+  font-weight: 950;
+  transition:
+    border-color 0.16s ease,
+    box-shadow 0.16s ease,
+    transform 0.16s ease;
+}
+
+.memory-action-button:hover,
+.memory-action-button:focus-visible {
+  border-color: #f04f95;
+  box-shadow: 0 0 0 3px rgba(240, 79, 149, 0.12);
+  outline: none;
+  transform: translateY(-1px);
+}
+
+.memory-action-button svg {
+  color: #f04f95;
+}
+
+.memory-action-button.danger {
+  color: #d64545;
+}
+
+.memory-action-button.danger svg {
+  color: #d64545;
+}
+
+.memory-post-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+}
+
+.memory-post-card {
+  display: grid;
+  gap: 10px;
+  border: 1px solid #e4ebf5;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #253248;
+  padding: 14px;
+  text-align: left;
+  transition:
+    border-color 0.18s ease,
+    box-shadow 0.18s ease,
+    transform 0.18s ease;
+}
+
+.memory-post-card:hover,
+.memory-post-card:focus-visible,
+.memory-post-card.selected {
+  border-color: #0c9fa8;
+  box-shadow: 0 12px 28px rgba(12, 159, 168, 0.14);
+  outline: none;
+  transform: translateY(-1px);
+}
+
+.memory-post-card > span,
+.memory-post-card small,
+.memory-detail-meta {
+  color: #667085;
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.memory-post-card strong {
+  color: #253248;
+  font-size: 17px;
+}
+
+.memory-post-card p {
+  color: #667085;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.5;
+}
+
+.memory-pagination {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 18px;
+}
+
+.memory-pagination button {
+  min-width: 38px;
+  height: 38px;
+  border: 1px solid #dfe7f2;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #667085;
+  font-weight: 900;
+}
+
+.memory-pagination button:hover,
+.memory-pagination button.active {
+  border-color: #f04f95;
+  background: #fff7fb;
+  color: #f04f95;
+}
+
+.memory-pagination button:disabled {
+  background: #eef3fb;
+  color: #a9b4c4;
+  cursor: not-allowed;
+}
+
+.memory-image,
+.memory-image-placeholder {
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  border: 1px solid #dfe7f2;
+  border-radius: 8px;
+  background: #eefcfc;
+}
+
+.memory-image {
+  display: block;
+  object-fit: cover;
+}
+
+.memory-image.large,
+.memory-image-placeholder.large {
+  aspect-ratio: 16 / 9;
+  margin-bottom: 14px;
+}
+
+.memory-image-placeholder {
+  display: grid;
+  place-items: center;
+  color: #0c9fa8;
+}
+
+.memory-detail-panel {
+  position: sticky;
+  top: 26px;
+  display: grid;
+  align-content: start;
+  gap: 14px;
+  max-height: calc(100vh - 52px);
+  overflow-y: auto;
+}
+
+.memory-detail-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+}
+
+.memory-detail-body {
+  color: #253248;
+  font-size: 15px;
+  font-weight: 800;
+  line-height: 1.7;
+}
+
+.memory-comments {
+  display: grid;
+  gap: 12px;
+  border-top: 1px solid #e8eef7;
+  padding-top: 16px;
+}
+
+.memory-comments h3 {
+  margin: 0;
+  color: #253248;
+  font-size: 18px;
+}
+
+.memory-comment-list {
+  display: grid;
+  gap: 12px;
+  max-height: min(360px, 42vh);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: 6px;
+}
+
+.memory-comment-row {
+  display: grid;
+  gap: 6px;
+  justify-items: start;
+}
+
+.memory-comment-row.mine {
+  justify-items: end;
+}
+
+.memory-comment-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #98a2b3;
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.memory-comment-meta strong {
+  color: #253248;
+  font-size: 14px;
+}
+
+.memory-comment-meta span {
+  color: #98a2b3;
+}
+
+.memory-comment-bubble {
+  max-width: min(82%, 280px);
+  border: 1px solid #dce8f8;
+  border-radius: 8px;
+  background: #eef5ff;
+  padding: 12px 14px;
+}
+
+.memory-comment-row.mine .memory-comment-bubble {
+  border-color: #ffd5e7;
+  background: #fff1f7;
+}
+
+.memory-comment-bubble p {
+  color: #4c5a6f;
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1.55;
+}
+
+.memory-comment-form {
+  grid-template-columns: minmax(0, 1fr);
+  border-top: 1px solid #e8eef7;
+  padding-top: 14px;
+  background: #ffffff;
+}
+
+.memory-comment-form textarea {
+  min-height: 92px;
+  max-height: 130px;
+}
+
+.memory-edit-modal {
+  width: min(720px, 100%);
+  max-height: min(780px, calc(100vh - 40px));
+  overflow-y: auto;
+}
+
+.memory-edit-form {
+  margin-top: 16px;
+}
+
+.empty-state {
+  color: #667085;
+  font-size: 14px;
+  font-weight: 850;
+  line-height: 1.5;
+}
+
 .room-hub-grid {
   display: grid;
   grid-template-columns: 1.25fr 1.45fr 0.9fr;

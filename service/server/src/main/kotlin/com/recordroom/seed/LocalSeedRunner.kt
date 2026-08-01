@@ -213,6 +213,7 @@ class LocalSeedRunner(
     private fun seedContents() {
         seedChatMessages()
         seedMemoryPosts()
+        seedMemoryComments()
         seedMissions()
         seedMissionSubmissions()
         seedLetters()
@@ -310,7 +311,25 @@ class LocalSeedRunner(
                 (324, 2, 3, '목요일 가족 간식', '목요일 가족 간식 사진', null, 2, date_trunc('month', now() at time zone 'Asia/Seoul')::date + 19, now() - interval '21 hours', now() - interval '21 hours'),
                 (325, 1, 2, '일요일 영화 기록', '일요일에 함께 본 영화 기록', null, 1, date_trunc('month', now() at time zone 'Asia/Seoul')::date + 22, now() - interval '22 hours', now() - interval '22 hours'),
                 (326, 3, 4, '목요일 최종 점검', '목요일 최종 점검 사진', null, 2, date_trunc('month', now() at time zone 'Asia/Seoul')::date + 26, now() - interval '23 hours', now() - interval '23 hours'),
-                (327, 2, 3, '월말 가족 기록', '월말 가족 모임 사진', null, 4, date_trunc('month', now() at time zone 'Asia/Seoul')::date + 29, now() - interval '24 hours', now() - interval '24 hours')
+                (327, 2, 3, '월말 가족 기록', '월말 가족 모임 사진', null, 4, date_trunc('month', now() at time zone 'Asia/Seoul')::date + 29, now() - interval '24 hours', now() - interval '24 hours'),
+                (328, 1, 2, '아침 산책 풍경', '아침 산책길에 남긴 사진과 짧은 기록', null, 1, date_trunc('month', now() at time zone 'Asia/Seoul')::date + 2, now() - interval '25 hours', now() - interval '25 hours'),
+                (329, 1, 1, '둘이 고른 책갈피', '책에 넣고 싶은 작은 물건을 기록했다.', null, 1, date_trunc('month', now() at time zone 'Asia/Seoul')::date + 3, now() - interval '26 hours', now() - interval '26 hours'),
+                (330, 1, 2, '주말 브런치 사진', '주말에 같이 먹은 브런치 사진 기록', null, 2, date_trunc('month', now() at time zone 'Asia/Seoul')::date + 5, now() - interval '27 hours', now() - interval '27 hours'),
+                (331, 1, 1, '저녁 노을 기록', '퇴근 후 같이 본 노을을 남겼다.', null, 1, date_trunc('month', now() at time zone 'Asia/Seoul')::date + 7, now() - interval '28 hours', now() - interval '28 hours'),
+                (332, 1, 2, '기념일 메뉴 후보', '기념일에 먹고 싶은 메뉴 후보를 사진으로 남김', null, 2, date_trunc('month', now() at time zone 'Asia/Seoul')::date + 9, now() - interval '29 hours', now() - interval '29 hours'),
+                (333, 1, 1, '공원 벤치 사진', '같이 앉았던 공원 벤치와 주변 풍경', null, 1, date_trunc('month', now() at time zone 'Asia/Seoul')::date + 12, now() - interval '30 hours', now() - interval '30 hours'),
+                (334, 1, 2, '작은 선물 기록', '서로에게 준 작은 선물을 기록했다.', null, 2, date_trunc('month', now() at time zone 'Asia/Seoul')::date + 14, now() - interval '31 hours', now() - interval '31 hours'),
+                (335, 1, 1, '비 오는 날 사진', '비 오는 날 함께 걸었던 거리 기록', null, 1, date_trunc('month', now() at time zone 'Asia/Seoul')::date + 15, now() - interval '32 hours', now() - interval '32 hours'),
+                (336, 1, 2, '같이 본 전시', '전시장에서 남긴 기억을 정리했다.', null, 3, date_trunc('month', now() at time zone 'Asia/Seoul')::date + 17, now() - interval '33 hours', now() - interval '33 hours'),
+                (337, 1, 1, '야식 사진', '늦은 밤 같이 먹은 야식 기록', null, 1, date_trunc('month', now() at time zone 'Asia/Seoul')::date + 19, now() - interval '34 hours', now() - interval '34 hours'),
+                (338, 1, 2, '서점 데이트', '서점에서 고른 책과 책장 사진', null, 2, date_trunc('month', now() at time zone 'Asia/Seoul')::date + 21, now() - interval '35 hours', now() - interval '35 hours'),
+                (339, 1, 1, '함께 만든 저녁', '집에서 같이 만든 저녁 기록', null, 2, date_trunc('month', now() at time zone 'Asia/Seoul')::date + 24, now() - interval '36 hours', now() - interval '36 hours'),
+                (340, 1, 2, '편지 쓰던 날', '편지를 쓰며 남긴 책상 위 사진', null, 1, date_trunc('month', now() at time zone 'Asia/Seoul')::date + 25, now() - interval '37 hours', now() - interval '37 hours'),
+                (341, 1, 1, '여름 산책 사진', '더운 날 같이 걸었던 산책길 기록', null, 1, date_trunc('month', now() at time zone 'Asia/Seoul')::date + 26, now() - interval '38 hours', now() - interval '38 hours'),
+                (342, 1, 2, '카페 창가 자리', '창가 자리에 앉아 찍은 사진', null, 2, date_trunc('month', now() at time zone 'Asia/Seoul')::date + 27, now() - interval '39 hours', now() - interval '39 hours'),
+                (343, 1, 1, '월말 회고 메모', '이번 달 함께한 순간을 정리한 메모', null, 1, date_trunc('month', now() at time zone 'Asia/Seoul')::date + 28, now() - interval '40 hours', now() - interval '40 hours'),
+                (344, 1, 2, '다음 달 약속 후보', '다음 달에 가고 싶은 장소 후보 기록', null, 1, date_trunc('month', now() at time zone 'Asia/Seoul')::date + 29, now() - interval '41 hours', now() - interval '41 hours'),
+                (345, 1, 1, '책에 넣을 사진 후보', '최종 책 후보로 표시하고 싶은 사진', null, 3, date_trunc('month', now() at time zone 'Asia/Seoul')::date + 30, now() - interval '42 hours', now() - interval '42 hours')
             on conflict (id) do update set
                 room_id = excluded.room_id,
                 author_member_id = excluded.author_member_id,
@@ -321,6 +340,53 @@ class LocalSeedRunner(
                 occurred_date = excluded.occurred_date,
                 created_at = excluded.created_at,
                 updated_at = excluded.updated_at,
+                deleted_at = null
+            """.trimIndent(),
+        )
+
+        jdbcTemplate.update(
+            """
+            update memory_posts
+            set
+                representative_image_url = 'https://picsum.photos/seed/record-room-' || id || '/720/480',
+                image_count = greatest(image_count, 1),
+                updated_at = now()
+            where id between 301 and 345
+            """.trimIndent(),
+        )
+    }
+
+    // 추억 상세 화면에서 댓글 흐름을 바로 검증할 수 있도록 게시글별 댓글을 준비한다.
+    private fun seedMemoryComments() {
+        jdbcTemplate.update(
+            """
+            insert into memory_comments (id, memory_post_id, author_member_id, body, created_at)
+            values
+                (501, 301, 1, '이 사진은 가족 앨범 첫 장에 넣어도 좋겠어요.', now() - interval '1 hour 50 minutes'),
+                (502, 301, 3, '다음 여행 때도 같은 구도로 한 장 더 찍어봐요.', now() - interval '1 hour 30 minutes'),
+                (503, 303, 1, '카페 분위기가 잘 담겨서 책에 넣기 좋다.', now() - interval '1 day 20 hours'),
+                (504, 303, 2, '디저트 사진도 같이 골라둘게.', now() - interval '1 day 19 hours'),
+                (505, 305, 1, '기념일 후보로 표시해둘게.', now() - interval '55 minutes'),
+                (506, 306, 4, '팀 기록으로 남기기 좋습니다.', now() - interval '2 hours 20 minutes'),
+                (507, 309, 1, '발표 준비 과정이 잘 보이네요.', now() - interval '5 hours 40 minutes'),
+                (508, 311, 3, '공원 산책 사진은 가족 책에 꼭 넣자.', now() - interval '7 hours 10 minutes'),
+                (509, 313, 2, '산책 코스도 글에 같이 남기면 좋겠다.', now() - interval '9 hours 30 minutes'),
+                (510, 317, 1, '앨범 후보 사진은 따로 모아두자.', now() - interval '13 hours 20 minutes'),
+                (511, 318, 4, '최종 발표 날 분위기가 잘 담겼어요.', now() - interval '14 hours 20 minutes'),
+                (512, 320, 3, '브런치 사진이 따뜻하게 나왔네요.', now() - interval '16 hours 45 minutes'),
+                (513, 328, 1, '이 산책길 사진은 첫 페이지 후보로 두자.', now() - interval '17 hours 10 minutes'),
+                (514, 329, 2, '책갈피 색이 사진이랑 잘 어울린다.', now() - interval '17 hours 30 minutes'),
+                (515, 330, 1, '브런치 사진은 날짜랑 같이 남겨두면 좋겠다.', now() - interval '18 hours'),
+                (516, 333, 2, '공원 벤치 사진은 분위기가 좋네.', now() - interval '18 hours 20 minutes'),
+                (517, 336, 1, '전시 이름도 본문에 같이 적어둘게.', now() - interval '19 hours'),
+                (518, 338, 2, '서점 기록은 나중에 다시 읽기 좋겠다.', now() - interval '20 hours'),
+                (519, 340, 1, '편지 쓰던 날 사진은 편지 페이지랑 연결하면 좋겠다.', now() - interval '21 hours'),
+                (520, 345, 2, '이 사진은 책 후보로 꼭 표시해두자.', now() - interval '22 hours')
+            on conflict (id) do update set
+                memory_post_id = excluded.memory_post_id,
+                author_member_id = excluded.author_member_id,
+                body = excluded.body,
+                created_at = excluded.created_at,
                 deleted_at = null
             """.trimIndent(),
         )
@@ -796,6 +862,7 @@ class LocalSeedRunner(
             "room_invitations",
             "chat_messages",
             "memory_posts",
+            "memory_comments",
             "missions",
             "mission_submissions",
             "letters",

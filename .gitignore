@@ -23,6 +23,10 @@ npm-debug.log*
 pnpm-debug.log*
 yarn-debug.log*
 
+# Local uploaded files
+uploads/
+service/server/uploads/
+
 # OS/editor
 .DS_Store
 .idea/
