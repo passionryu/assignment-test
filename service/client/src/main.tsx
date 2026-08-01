@@ -1,4 +1,4 @@
-import { StrictMode, useEffect, useMemo, useState } from "react";
+import { StrictMode, useEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import {
   BadgeCheck,
@@ -57,6 +57,16 @@ type RoomSummary = {
   pendingMissionCount: number;
 };
 
+type RoomDetail = {
+  id: number;
+  name: string;
+  description: string | null;
+  type: RoomSummary["type"];
+  role: RoomSummary["role"];
+  memberCount: number;
+  canManage: boolean;
+};
+
 type CreateRoomForm = {
   name: string;
   type: RoomSummary["type"];
@@ -73,6 +83,11 @@ type CreateRoomResponse = {
   name: string;
   type: RoomSummary["type"];
   role: RoomSummary["role"];
+};
+
+type DeleteRoomResponse = {
+  id: number;
+  deleted: boolean;
 };
 
 type PendingRoomInvitation = {
@@ -145,6 +160,44 @@ type CalendarResponse = {
   days: CalendarDayActivity[];
 };
 
+type ChatMessage = {
+  id: number;
+  roomId: number;
+  senderMemberId: number;
+  senderName: string;
+  senderType: "MEMBER" | "ASSISTANT";
+  body: string;
+  sentAt: string;
+  occurredDate: string;
+  mine: boolean;
+};
+
+type ChatMessagesResponse = {
+  roomId: number;
+  roomName: string;
+  date: string | null;
+  messages: ChatMessage[];
+};
+
+type SendChatMessageResponse = {
+  roomId: number;
+  createdMessages: ChatMessage[];
+};
+
+type ChatSearchResult = {
+  messageId: number;
+  senderName: string;
+  body: string;
+  sentAt: string;
+  occurredDate: string;
+};
+
+type ChatSearchResponse = {
+  roomId: number;
+  keyword: string;
+  results: ChatSearchResult[];
+};
+
 type ApiError = {
   code: string;
   message: string;
@@ -153,6 +206,7 @@ type ApiError = {
 
 type RoomFeatureKind = "chat" | "memories" | "missions" | "letters";
 type AppView = "home" | "rooms" | "room" | "settings" | RoomFeatureKind;
+type RoomSettingsMode = "menu" | "info" | "edit" | "delete" | null;
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8080/api";
 const memberHeader = { "X-Member-Id": "1" };
@@ -469,6 +523,29 @@ function demoCalendarDay(day: number, rooms: CalendarRoomActivity[]): CalendarDa
   };
 }
 
+function roomSummaryToDetail(room: RoomSummary): RoomDetail {
+  return {
+    id: room.id,
+    name: room.name,
+    description: room.description,
+    type: room.type,
+    role: room.role,
+    memberCount: room.memberCount,
+    canManage: room.role === "OWNER",
+  };
+}
+
+function mergeRoomSummary(room: RoomSummary, detail: RoomDetail): RoomSummary {
+  return {
+    ...room,
+    name: detail.name,
+    description: detail.description,
+    type: detail.type,
+    role: detail.role,
+    memberCount: detail.memberCount,
+  };
+}
+
 function App() {
   const [profile, setProfile] = useState<MemberProfile | null>(null);
   const [settings, setSettings] = useState<NotificationSettings | null>(null);
@@ -484,10 +561,21 @@ function App() {
   const [expandedRoomId, setExpandedRoomId] = useState<number | null>(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [activeView, setActiveView] = useState<AppView>("home");
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [chatDraft, setChatDraft] = useState("");
+  const [chatSearchKeyword, setChatSearchKeyword] = useState("");
+  const [chatSearchResults, setChatSearchResults] = useState<ChatSearchResult[]>([]);
+  const [chatLoading, setChatLoading] = useState(false);
+  const [chatSending, setChatSending] = useState(false);
+  const chatSendingRef = useRef(false);
   const [profileForm, setProfileForm] = useState({ displayName: "", profileImageUrl: "" });
   const [passwordForm, setPasswordForm] = useState({ currentPassword: "", newPassword: "" });
   const [createRoomForm, setCreateRoomForm] = useState<CreateRoomForm>({ name: "", type: "COUPLE", description: "" });
   const [inviteContacts, setInviteContacts] = useState<Record<number, string>>({});
+  const [roomSettingsMode, setRoomSettingsMode] = useState<RoomSettingsMode>(null);
+  const [roomDetail, setRoomDetail] = useState<RoomDetail | null>(null);
+  const [roomEditForm, setRoomEditForm] = useState({ name: "", description: "" });
+  const [roomActionLoading, setRoomActionLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [roomFeedbackModal, setRoomFeedbackModal] = useState<{ title: string; message: string } | null>(null);
@@ -504,6 +592,12 @@ function App() {
   useEffect(() => {
     void loadInitialData();
   }, []);
+
+  useEffect(() => {
+    if ((activeView !== "chat" && activeView !== "room") || !selectedRoom) return;
+
+    void loadChatMessages(selectedRoom.id);
+  }, [activeView, selectedRoom?.id]);
 
   async function loadInitialData() {
     setErrorMessage(null);
@@ -690,6 +784,63 @@ function App() {
     setActiveView(view);
   }
 
+  async function loadChatMessages(roomId: number) {
+    setChatLoading(true);
+    const response = await safeApiGet<ChatMessagesResponse>(`/rooms/${roomId}/chat/messages`);
+    setChatMessages(response?.messages ?? demoChatMessages(roomId));
+    setChatLoading(false);
+  }
+
+  async function sendChatMessage() {
+    if (!selectedRoom) return;
+    if (chatSendingRef.current) return;
+
+    const body = chatDraft.trim();
+    if (!body) {
+      setErrorMessage("메시지를 입력해 주세요.");
+      return;
+    }
+
+    setMessage(null);
+    setErrorMessage(null);
+    chatSendingRef.current = true;
+    setChatSending(true);
+    try {
+      const response = await apiRequest<SendChatMessageResponse>(`/rooms/${selectedRoom.id}/chat/messages`, {
+        method: "POST",
+        body: { body },
+      });
+      setChatMessages((current) => [...current, ...response.createdMessages]);
+      setChatDraft("");
+      await loadCalendarActivities(calendarRoomId);
+    } catch (error) {
+      setErrorMessage(toMessage(error));
+    } finally {
+      chatSendingRef.current = false;
+      setChatSending(false);
+    }
+  }
+
+  async function searchChatMessages() {
+    if (!selectedRoom) return;
+
+    const keyword = chatSearchKeyword.trim();
+    if (!keyword) {
+      setChatSearchResults([]);
+      return;
+    }
+
+    const response = await safeApiGet<ChatSearchResponse>(`/rooms/${selectedRoom.id}/chat/search?keyword=${encodeURIComponent(keyword)}`);
+    setChatSearchResults(response?.results ?? searchDemoChatMessages(selectedRoom.id, keyword));
+  }
+
+  function moveToChatMessage(messageId: number) {
+    const element = document.getElementById(`chat-message-${messageId}`);
+    element?.scrollIntoView({ block: "center", behavior: "smooth" });
+    element?.classList.add("is-targeted");
+    window.setTimeout(() => element?.classList.remove("is-targeted"), 1200);
+  }
+
   function changeCalendarRoomFilter(nextRoomId: number | null) {
     setCalendarRoomId(nextRoomId);
     void loadCalendarActivities(nextRoomId);
@@ -811,6 +962,87 @@ function App() {
     }
   }
 
+  async function openRoomSettings() {
+    if (!selectedRoom) return;
+
+    const fallbackDetail = roomSummaryToDetail(selectedRoom);
+    setMessage(null);
+    setErrorMessage(null);
+    setRoomFeedbackModal(null);
+    setRoomDetail(fallbackDetail);
+    setRoomEditForm({
+      name: fallbackDetail.name,
+      description: fallbackDetail.description ?? "",
+    });
+    setRoomSettingsMode("menu");
+
+    const response = await safeApiGet<RoomDetail>(`/rooms/${selectedRoom.id}`);
+    if (!response) return;
+
+    setRoomDetail(response);
+    setRoomEditForm({
+      name: response.name,
+      description: response.description ?? "",
+    });
+  }
+
+  async function updateRoomInfo() {
+    if (!roomDetail) return;
+
+    setRoomActionLoading(true);
+    setMessage(null);
+    setErrorMessage(null);
+    try {
+      const updatedRoom = await apiRequest<RoomDetail>(`/rooms/${roomDetail.id}`, {
+        method: "PATCH",
+        body: {
+          name: roomEditForm.name,
+          description: roomEditForm.description || null,
+        },
+      });
+
+      setRoomDetail(updatedRoom);
+      setRooms((currentRooms) => currentRooms.map((room) => (room.id === updatedRoom.id ? mergeRoomSummary(room, updatedRoom) : room)));
+      setRoomSettingsMode(null);
+      setRoomFeedbackModal({ title: "방 정보 수정 완료", message: "방 이름과 설명이 수정되었습니다." });
+    } catch (error) {
+      setRoomSettingsMode(null);
+      setRoomFeedbackModal({ title: "방 정보 수정 실패", message: toMessage(error) });
+    } finally {
+      setRoomActionLoading(false);
+    }
+  }
+
+  async function deleteSelectedRoom() {
+    if (!roomDetail) return;
+
+    setRoomActionLoading(true);
+    setMessage(null);
+    setErrorMessage(null);
+    try {
+      await apiRequest<DeleteRoomResponse>(`/rooms/${roomDetail.id}`, {
+        method: "DELETE",
+      });
+
+      const nextRooms = await loadRooms();
+      const nextRoomId = nextRooms[0]?.id ?? null;
+      const nextCalendarRoomId = calendarRoomId === roomDetail.id ? null : calendarRoomId;
+      setSelectedRoomId(nextRoomId);
+      setExpandedRoomId(nextRoomId);
+      setCalendarRoomId(nextCalendarRoomId);
+      setActiveView(nextRoomId ? "rooms" : "home");
+      await loadCalendarActivities(nextCalendarRoomId);
+      setRoomSettingsMode(null);
+      setRoomDetail(null);
+      setRoomFeedbackModal({ title: "방 삭제 완료", message: "선택한 방을 삭제했습니다." });
+    } catch (error) {
+      setRoomSettingsMode(null);
+      setRoomFeedbackModal({ title: "방 삭제 실패", message: toMessage(error) });
+    } finally {
+      setRoomActionLoading(false);
+    }
+  }
+
   return (
     <main className={`workspace ${sidebarCollapsed ? "sidebar-collapsed" : ""}`}>
       <Sidebar
@@ -851,6 +1083,13 @@ function App() {
         {activeView === "room" ? (
           <RoomHomeView
             selectedRoom={selectedRoom}
+            messages={chatMessages}
+            draft={chatDraft}
+            loading={chatLoading}
+            sending={chatSending}
+            onDraftChange={setChatDraft}
+            onSend={sendChatMessage}
+            onOpenRoomSettings={openRoomSettings}
             onMoveRoomFeature={(view) => {
               if (!selectedRoom) return;
               moveToRoomFeature(selectedRoom.id, view);
@@ -873,7 +1112,22 @@ function App() {
             onSelectRoom={openRoomHome}
           />
         ) : null}
-        {activeView === "chat" ? <RoomFeatureView selectedRoom={selectedRoom} kind="chat" /> : null}
+        {activeView === "chat" ? (
+          <ChatView
+            selectedRoom={selectedRoom}
+            messages={chatMessages}
+            draft={chatDraft}
+            searchKeyword={chatSearchKeyword}
+            searchResults={chatSearchResults}
+            loading={chatLoading}
+            sending={chatSending}
+            onDraftChange={setChatDraft}
+            onSend={sendChatMessage}
+            onSearchKeywordChange={setChatSearchKeyword}
+            onSearch={searchChatMessages}
+            onMoveToMessage={moveToChatMessage}
+          />
+        ) : null}
         {activeView === "memories" ? <RoomFeatureView selectedRoom={selectedRoom} kind="memories" /> : null}
         {activeView === "missions" ? <RoomFeatureView selectedRoom={selectedRoom} kind="missions" /> : null}
         {activeView === "letters" ? <RoomFeatureView selectedRoom={selectedRoom} kind="letters" /> : null}
@@ -907,6 +1161,20 @@ function App() {
 
       {roomFeedbackModal ? (
         <AlertModal title={roomFeedbackModal.title} message={roomFeedbackModal.message} onClose={() => setRoomFeedbackModal(null)} />
+      ) : null}
+
+      {roomSettingsMode ? (
+        <RoomSettingsModal
+          mode={roomSettingsMode}
+          room={roomDetail}
+          editForm={roomEditForm}
+          loading={roomActionLoading}
+          onModeChange={setRoomSettingsMode}
+          onEditFormChange={setRoomEditForm}
+          onSave={updateRoomInfo}
+          onDelete={deleteSelectedRoom}
+          onClose={() => setRoomSettingsMode(null)}
+        />
       ) : null}
 
       {notificationsModalOpen ? (
@@ -1295,9 +1563,23 @@ function isInteractiveTarget(target: EventTarget | null) {
 
 function RoomHomeView({
   selectedRoom,
+  messages,
+  draft,
+  loading,
+  sending,
+  onDraftChange,
+  onSend,
+  onOpenRoomSettings,
   onMoveRoomFeature,
 }: {
   selectedRoom: RoomSummary | null;
+  messages: ChatMessage[];
+  draft: string;
+  loading: boolean;
+  sending: boolean;
+  onDraftChange: (value: string) => void;
+  onSend: () => void;
+  onOpenRoomSettings: () => void;
   onMoveRoomFeature: (view: RoomFeatureKind) => void;
 }) {
   if (!selectedRoom) {
@@ -1341,30 +1623,45 @@ function RoomHomeView({
             <h2>{selectedRoom.name}</h2>
             <p>{selectedRoom.description ?? "설명 없음"}</p>
           </div>
-          <dl className="room-home-meta">
-            <div>
-              <dt>역할</dt>
-              <dd>{selectedRoom.role === "OWNER" ? "방장" : "멤버"}</dd>
-            </div>
-            <div>
-              <dt>멤버</dt>
-              <dd>{selectedRoom.memberCount}명</dd>
-            </div>
-          </dl>
+          <div className="room-home-control">
+            <dl className="room-home-meta">
+              <div>
+                <dt>역할</dt>
+                <dd>{selectedRoom.role === "OWNER" ? "방장" : "멤버"}</dd>
+              </div>
+              <div>
+                <dt>멤버</dt>
+                <dd>{selectedRoom.memberCount}명</dd>
+              </div>
+            </dl>
+            <button className="room-settings-button" type="button" aria-label="방 설정 열기" onClick={onOpenRoomSettings}>
+              <Settings size={22} />
+            </button>
+          </div>
         </article>
 
         <div className="room-home-content">
           <article className="room-chat-preview">
             <div className="room-section-heading">
               <h2>최근 대화</h2>
-              <p>방의 메인 소통 흐름을 먼저 보여준다.</p>
+              <p>방의 메인 소통 흐름을 먼저 보여주고 바로 대화를 남긴다.</p>
             </div>
-            <div className="chat-date-divider">{formatDateLabel(todayDateKey())}</div>
-            <div className="chat-preview-list">
-              <p className="chat-bubble other">민지: 오늘 사진 진짜 잘 나왔다.</p>
-              <p className="chat-bubble mine">류성열: 이날 기록은 나중에 꼭 다시 보자.</p>
-              <p className="chat-bubble other">민지: 편지도 하나 보냈어.</p>
-              <p className="chat-bubble mine">류성열: 미션 인증도 확인할게.</p>
+            <ChatMessageTimeline messages={messages} loading={loading} compact />
+            <div className="chat-input-row compact-chat-input">
+              <textarea
+                value={draft}
+                onChange={(event) => onDraftChange(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.nativeEvent.isComposing || event.key !== "Enter" || event.shiftKey) return;
+                  event.preventDefault();
+                  onSend();
+                }}
+                placeholder="이 방에 남길 메시지"
+                rows={1}
+              />
+              <button className="primary-button" type="button" onClick={onSend} disabled={!selectedRoom || sending}>
+                {sending ? "전송 중" : "보내기"}
+              </button>
             </div>
           </article>
 
@@ -1403,6 +1700,41 @@ function RoomHomeView({
         </div>
       </section>
     </>
+  );
+}
+
+function ChatMessageTimeline({ messages, loading, compact = false }: { messages: ChatMessage[]; loading: boolean; compact?: boolean }) {
+  const endRef = useRef<HTMLDivElement | null>(null);
+  const groupedMessages = useMemo(() => groupChatMessagesByDate(messages), [messages]);
+
+  useEffect(() => {
+    endRef.current?.scrollIntoView({ block: "end" });
+  }, [messages.length]);
+
+  return (
+    <div className={`chat-message-area ${compact ? "compact-chat-area" : ""}`} aria-live="polite">
+      {loading ? <p className="chat-empty">대화를 불러오는 중입니다.</p> : null}
+      {!loading && groupedMessages.length === 0 ? <p className="chat-empty">아직 남긴 대화가 없습니다.</p> : null}
+      {groupedMessages.map((group) => (
+        <div className="chat-day-group" key={group.date}>
+          <div className="chat-date-divider">{formatDateLabel(group.date)}</div>
+          {group.messages.map((message) => (
+            <div
+              className={`chat-message-row ${message.mine ? "mine" : ""} ${message.senderType === "ASSISTANT" ? "assistant" : ""}`}
+              id={`chat-message-${message.id}`}
+              key={message.id}
+            >
+              <div className="chat-message-meta">
+                <strong>{message.senderName}</strong>
+                <span>{formatChatTime(message.sentAt)}</span>
+              </div>
+              <p className="chat-message-bubble">{message.body}</p>
+            </div>
+          ))}
+        </div>
+      ))}
+      <div ref={endRef} />
+    </div>
   );
 }
 
@@ -1568,6 +1900,107 @@ function RoomsView({
             </article>
           );
         })}
+      </section>
+    </>
+  );
+}
+
+function ChatView({
+  selectedRoom,
+  messages,
+  draft,
+  searchKeyword,
+  searchResults,
+  loading,
+  sending,
+  onDraftChange,
+  onSend,
+  onSearchKeywordChange,
+  onSearch,
+  onMoveToMessage,
+}: {
+  selectedRoom: RoomSummary | null;
+  messages: ChatMessage[];
+  draft: string;
+  searchKeyword: string;
+  searchResults: ChatSearchResult[];
+  loading: boolean;
+  sending: boolean;
+  onDraftChange: (value: string) => void;
+  onSend: () => void;
+  onSearchKeywordChange: (value: string) => void;
+  onSearch: () => void;
+  onMoveToMessage: (messageId: number) => void;
+}) {
+  return (
+    <>
+      <header className="page-header">
+        <div>
+          <h1>채팅</h1>
+          <p>{selectedRoom ? `${selectedRoom.name}의 날짜별 대화 기록을 확인하고 새 메시지를 남긴다.` : "선택된 방이 없습니다."}</p>
+        </div>
+      </header>
+
+      <section className="chat-page">
+        <article className="chat-window">
+          <div className="chat-window-header">
+            <div>
+              <span>{selectedRoom ? roomTypeLabel(selectedRoom.type) : "방 없음"}</span>
+              <h2>{selectedRoom?.name ?? "참여 방 없음"}</h2>
+            </div>
+            <MessageCircle size={24} />
+          </div>
+
+          <ChatMessageTimeline messages={messages} loading={loading} />
+
+          <div className="chat-input-row">
+            <textarea
+              value={draft}
+              onChange={(event) => onDraftChange(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.nativeEvent.isComposing || event.key !== "Enter" || event.shiftKey) return;
+                event.preventDefault();
+                onSend();
+              }}
+              placeholder="메시지를 입력하면 방 구성원이 답장합니다."
+              rows={2}
+            />
+            <button className="primary-button" type="button" onClick={onSend} disabled={!selectedRoom || sending}>
+              {sending ? "전송 중" : "보내기"}
+            </button>
+          </div>
+        </article>
+
+        <aside className="chat-search-panel">
+          <div className="room-section-heading">
+            <h2>대화 검색</h2>
+            <p>검색 결과를 누르면 해당 메시지 위치로 이동한다.</p>
+          </div>
+          <div className="chat-search-form">
+            <input
+              value={searchKeyword}
+              onChange={(event) => onSearchKeywordChange(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key !== "Enter") return;
+                onSearch();
+              }}
+              placeholder="검색어 입력"
+            />
+            <button className="outline-button" type="button" onClick={onSearch}>
+              검색
+            </button>
+          </div>
+          <div className="chat-search-results">
+            {searchResults.length === 0 ? <p>검색 결과가 여기에 표시됩니다.</p> : null}
+            {searchResults.map((result) => (
+              <button type="button" key={result.messageId} onClick={() => onMoveToMessage(result.messageId)}>
+                <strong>{result.senderName}</strong>
+                <span>{formatDateLabel(result.occurredDate)} · {formatChatTime(result.sentAt)}</span>
+                <p>{result.body}</p>
+              </button>
+            ))}
+          </div>
+        </aside>
       </section>
     </>
   );
@@ -1867,6 +2300,209 @@ function AlertModal({ title, message, onClose }: { title: string; message: strin
   );
 }
 
+function RoomSettingsModal({
+  mode,
+  room,
+  editForm,
+  loading,
+  onModeChange,
+  onEditFormChange,
+  onSave,
+  onDelete,
+  onClose,
+}: {
+  mode: RoomSettingsMode;
+  room: RoomDetail | null;
+  editForm: { name: string; description: string };
+  loading: boolean;
+  onModeChange: (mode: RoomSettingsMode) => void;
+  onEditFormChange: (form: { name: string; description: string }) => void;
+  onSave: () => void;
+  onDelete: () => void;
+  onClose: () => void;
+}) {
+  const canManage = room?.canManage ?? false;
+
+  if (!room) {
+    return (
+      <div className="modal-backdrop" role="presentation">
+        <section className="modal" role="dialog" aria-modal="true" aria-labelledby="room-settings-loading-title">
+          <h2 id="room-settings-loading-title">방 설정</h2>
+          <p>방 정보를 불러오는 중입니다.</p>
+          <div className="modal-actions">
+            <button className="outline-button" type="button" onClick={onClose}>
+              닫기
+            </button>
+          </div>
+        </section>
+      </div>
+    );
+  }
+
+  if (mode === "info") {
+    return (
+      <div className="modal-backdrop" role="presentation">
+        <section className="modal room-settings-modal" role="dialog" aria-modal="true" aria-labelledby="room-info-title">
+          <div className="modal-title-row">
+            <div>
+              <h2 id="room-info-title">방 정보 조회</h2>
+              <p>현재 방의 기본 정보와 내 권한을 확인한다.</p>
+            </div>
+            <button className="icon-button" type="button" aria-label="닫기" onClick={onClose}>
+              <X size={18} />
+            </button>
+          </div>
+          <dl className="room-detail-list">
+            <div>
+              <dt>방 이름</dt>
+              <dd>{room.name}</dd>
+            </div>
+            <div>
+              <dt>방 설명</dt>
+              <dd>{room.description ?? "설명 없음"}</dd>
+            </div>
+            <div>
+              <dt>방 타입</dt>
+              <dd>{roomTypeLabel(room.type)}</dd>
+            </div>
+            <div>
+              <dt>내 역할</dt>
+              <dd>{room.role === "OWNER" ? "방장" : "멤버"}</dd>
+            </div>
+            <div>
+              <dt>멤버</dt>
+              <dd>{room.memberCount}명</dd>
+            </div>
+          </dl>
+          <div className="modal-actions">
+            <button className="outline-button" type="button" onClick={() => onModeChange("menu")}>
+              이전
+            </button>
+            <button className="primary-button" type="button" onClick={onClose}>
+              확인
+            </button>
+          </div>
+        </section>
+      </div>
+    );
+  }
+
+  if (mode === "edit") {
+    return (
+      <div className="modal-backdrop" role="presentation">
+        <section className="modal room-settings-modal" role="dialog" aria-modal="true" aria-labelledby="room-edit-title">
+          <div className="modal-title-row">
+            <div>
+              <h2 id="room-edit-title">방 정보 수정</h2>
+              <p>방장만 방 이름과 설명을 수정할 수 있다.</p>
+            </div>
+            <button className="icon-button" type="button" aria-label="닫기" onClick={onClose}>
+              <X size={18} />
+            </button>
+          </div>
+          <label className="field">
+            방 이름
+            <input
+              value={editForm.name}
+              onChange={(event) => onEditFormChange({ ...editForm, name: event.target.value })}
+              disabled={!canManage || loading}
+              placeholder="방 이름"
+            />
+          </label>
+          <label className="field">
+            방 설명
+            <textarea
+              value={editForm.description}
+              onChange={(event) => onEditFormChange({ ...editForm, description: event.target.value })}
+              disabled={!canManage || loading}
+              placeholder="방 설명"
+              rows={4}
+            />
+          </label>
+          {!canManage ? <p className="modal-help-text">멤버는 방 정보를 수정할 수 없습니다.</p> : null}
+          <div className="modal-actions">
+            <button className="outline-button" type="button" onClick={() => onModeChange("menu")} disabled={loading}>
+              이전
+            </button>
+            <button className="primary-button" type="button" onClick={onSave} disabled={!canManage || loading || !editForm.name.trim()}>
+              {loading ? "저장 중" : "저장"}
+            </button>
+          </div>
+        </section>
+      </div>
+    );
+  }
+
+  if (mode === "delete") {
+    return (
+      <div className="modal-backdrop" role="presentation">
+        <section className="modal room-settings-modal" role="alertdialog" aria-modal="true" aria-labelledby="room-delete-title">
+          <div className="modal-title-row">
+            <div>
+              <h2 id="room-delete-title">방 삭제</h2>
+              <p>삭제한 방은 목록과 캘린더에서 더 이상 보이지 않는다.</p>
+            </div>
+            <button className="icon-button" type="button" aria-label="닫기" onClick={onClose}>
+              <X size={18} />
+            </button>
+          </div>
+          <div className="delete-warning">
+            <strong>{room.name}</strong>
+            <span>이 방을 삭제하려면 방장 권한이 필요하다.</span>
+          </div>
+          <div className="modal-actions">
+            <button className="outline-button" type="button" onClick={() => onModeChange("menu")} disabled={loading}>
+              이전
+            </button>
+            <button className="danger-button" type="button" onClick={onDelete} disabled={!canManage || loading}>
+              {loading ? "삭제 중" : "삭제"}
+            </button>
+          </div>
+        </section>
+      </div>
+    );
+  }
+
+  return (
+    <div className="modal-backdrop" role="presentation">
+      <section className="modal room-settings-modal" role="dialog" aria-modal="true" aria-labelledby="room-settings-title">
+        <div className="modal-title-row">
+          <div>
+            <h2 id="room-settings-title">방 설정</h2>
+            <p>{room.name}의 정보 확인, 수정, 삭제를 선택한다.</p>
+          </div>
+          <button className="icon-button" type="button" aria-label="닫기" onClick={onClose}>
+            <X size={18} />
+          </button>
+        </div>
+        <div className="room-settings-actions">
+          <button type="button" onClick={() => onModeChange("info")}>
+            <BookOpen size={22} />
+            <span>
+              <strong>방 정보 조회</strong>
+              <small>방 이름, 설명, 타입, 멤버 수 확인</small>
+            </span>
+          </button>
+          <button type="button" onClick={() => onModeChange("edit")} disabled={!canManage}>
+            <FileText size={22} />
+            <span>
+              <strong>방 정보 수정</strong>
+              <small>방장만 제목과 방 설명 수정 가능</small>
+            </span>
+          </button>
+          <button className="danger-action" type="button" onClick={() => onModeChange("delete")} disabled={!canManage}>
+            <ShieldAlert size={22} />
+            <span>
+              <strong>방 삭제</strong>
+              <small>방장만 방 삭제 가능</small>
+            </span>
+          </button>
+        </div>
+      </section>
+    </div>
+  );
+}
+
 function NotificationsModal({
   notifications,
   onNotificationClick,
@@ -2031,6 +2667,86 @@ function roomFeatureCopy(kind: RoomFeatureKind) {
     body: "받은 편지함, 보낸 편지함, 편지 쓰기는 이후 편지 기능 이슈에서 구현한다.",
     icon: <MailPlus size={24} />,
   };
+}
+
+function demoChatMessages(roomId: number): ChatMessage[] {
+  const room = demoRooms.find((candidate) => candidate.id === roomId) ?? demoRooms[0];
+  const baseDate = todayDateKey();
+  const yesterday = offsetDateKey(-1);
+
+  return [
+    {
+      id: 8001,
+      roomId: room.id,
+      senderMemberId: room.id === 1 ? 2 : 3,
+      senderName: room.id === 1 ? "민지" : room.id === 2 ? "아버지" : "지훈",
+      senderType: "MEMBER",
+      body: `${room.name}에 오늘 기록 남겨둘게.`,
+      sentAt: `${yesterday}T20:10:00+09:00`,
+      occurredDate: yesterday,
+      mine: false,
+    },
+    {
+      id: 8002,
+      roomId: room.id,
+      senderMemberId: 1,
+      senderName: "류성열",
+      senderType: "MEMBER",
+      body: "좋아. 나중에 책에 담을 수 있게 대화도 잘 남겨보자.",
+      sentAt: `${yesterday}T20:12:00+09:00`,
+      occurredDate: yesterday,
+      mine: true,
+    },
+    {
+      id: 8003,
+      roomId: room.id,
+      senderMemberId: room.id === 1 ? 2 : 3,
+      senderName: room.id === 1 ? "민지" : room.id === 2 ? "아버지" : "지훈",
+      senderType: "MEMBER",
+      body: "이 대화는 날짜별 기록으로 남겨두면 다시 돌아보기 좋겠다.",
+      sentAt: `${baseDate}T09:05:00+09:00`,
+      occurredDate: baseDate,
+      mine: false,
+    },
+  ];
+}
+
+function searchDemoChatMessages(roomId: number, keyword: string): ChatSearchResult[] {
+  return demoChatMessages(roomId)
+    .filter((message) => message.body.toLowerCase().includes(keyword.toLowerCase()))
+    .map((message) => ({
+      messageId: message.id,
+      senderName: message.senderName,
+      body: message.body,
+      sentAt: message.sentAt,
+      occurredDate: message.occurredDate,
+    }));
+}
+
+function groupChatMessagesByDate(messages: ChatMessage[]): Array<{ date: string; messages: ChatMessage[] }> {
+  const groups = new Map<string, ChatMessage[]>();
+
+  messages.forEach((message) => {
+    const date = message.occurredDate;
+    groups.set(date, [...(groups.get(date) ?? []), message]);
+  });
+
+  return Array.from(groups.entries()).map(([date, groupedMessages]) => ({
+    date,
+    messages: groupedMessages,
+  }));
+}
+
+function formatChatTime(value: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  return date.toLocaleTimeString("ko-KR", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 
 function notificationTargetView(notification: NotificationItem): AppView {

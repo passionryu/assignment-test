@@ -30,6 +30,7 @@ class LocalSeedRunner(
             seedNotificationSettings()
             seedContents()
             seedNotifications()
+            deleteLegacyChatAssistantFallbackMessages()
             syncIdentitySequences()
         }.onSuccess {
             log.info("[시드 데이터] 로컬 시드 생성 완료. who=system, what=LocalSeedRunner.run, requestData=profile:local, reason=completed")
@@ -53,6 +54,7 @@ class LocalSeedRunner(
                 (2, '민지', 'minji', 'minji@example.com', '010-2222-3333', null, 'local-dummy-hash', false),
                 (3, '아버지', 'father', 'father@example.com', '010-3333-4444', null, 'local-dummy-hash', false),
                 (4, '지훈', 'jihun', 'jihun@example.com', '010-4444-5555', null, 'local-dummy-hash', false),
+                (99, '기록방 AI', 'recordbot', 'recordbot@example.com', '010-9999-0000', null, 'local-dummy-hash', false),
                 (20, '초대회원0', 'invitee0', 'invitee0@example.com', '010-0000-0000', null, 'local-dummy-hash', false),
                 (21, '초대회원1', 'invitee1', 'invitee1@example.com', '010-1111-1111', null, 'local-dummy-hash', false),
                 (22, '초대회원2', 'invitee2', 'invitee2@example.com', '010-2222-2222', null, 'local-dummy-hash', false),
@@ -765,6 +767,22 @@ class LocalSeedRunner(
                 occurred_date = excluded.occurred_date,
                 read_at = excluded.read_at,
                 created_at = excluded.created_at
+            """.trimIndent(),
+        )
+    }
+
+    // 이전 로컬 fallback 응답이 화면에 남아 최신 채팅 정책과 섞이지 않도록 제거한다.
+    private fun deleteLegacyChatAssistantFallbackMessages() {
+        jdbcTemplate.update(
+            """
+            delete from chat_messages
+            where sender_member_id = 99
+              and body in (
+                  '좋아요. 이 대화도 오늘의 기록으로 남겨둘게요.',
+                  '좋아요. 이 사진 이야기는 나중에 책에 담기에도 좋겠어요.',
+                  '편지로 남기면 더 오래 기억될 것 같아요.',
+                  '미션 기록으로 남겨두면 함께 확인하기 좋겠어요.'
+              )
             """.trimIndent(),
         )
     }

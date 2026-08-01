@@ -16,6 +16,16 @@ data class RoomSummaryResponse(
     val pendingMissionCount: Int,
 )
 
+data class RoomDetailResponse(
+    val id: Long,
+    val name: String,
+    val description: String?,
+    val type: String,
+    val role: String,
+    val memberCount: Int,
+    val canManage: Boolean,
+)
+
 data class CreateRoomRequest(
     val name: String?,
     val description: String?,
@@ -27,6 +37,16 @@ data class CreateRoomResponse(
     val name: String,
     val type: String,
     val role: String,
+)
+
+data class UpdateRoomRequest(
+    val name: String?,
+    val description: String?,
+)
+
+data class DeleteRoomResponse(
+    val id: Long,
+    val deleted: Boolean,
 )
 
 data class CreateRoomInvitationRequest(

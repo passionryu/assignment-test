@@ -8,12 +8,15 @@ import com.recordroom.room.model.CreateRoomInvitationRequest
 import com.recordroom.room.model.CreateRoomInvitationResponse
 import com.recordroom.room.model.CreateRoomRequest
 import com.recordroom.room.model.CreateRoomResponse
+import com.recordroom.room.model.DeleteRoomResponse
 import com.recordroom.room.model.PendingRoomInvitationsResponse
 import com.recordroom.room.model.RespondRoomInvitationResponse
+import com.recordroom.room.model.RoomDetailResponse
 import com.recordroom.room.model.RoomEntity
 import com.recordroom.room.model.RoomInvitationEntity
 import com.recordroom.room.model.RoomMemberEntity
 import com.recordroom.room.model.RoomsResponse
+import com.recordroom.room.model.UpdateRoomRequest
 import com.recordroom.room.repository.RoomRepository
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
@@ -40,6 +43,22 @@ class RoomService(
         return RoomsResponse(
             rooms = joinedRooms,
             pendingInvitationCount = pendingInvitationCount,
+        )
+    }
+
+    fun getRoomDetail(memberId: Long, roomId: Long): RoomDetailResponse {
+        memberService.getProfile(memberId)
+
+        val room = roomRepository.findActiveRoom(roomId) ?: roomNotFound(memberId, roomId, "RoomService.getRoomDetail")
+
+        val membership = roomRepository.findActiveRoomMember(roomId, memberId)
+            ?: memberNotJoinedRoom(memberId, roomId, "RoomService.getRoomDetail")
+
+        val memberCount = roomRepository.countActiveRoomMembers(roomId)
+
+        return room.toDetailResponse(
+            role = membership.role,
+            memberCount = memberCount,
         )
     }
 
@@ -81,6 +100,52 @@ class RoomService(
     }
 
     @Transactional
+    fun updateRoom(memberId: Long, roomId: Long, request: UpdateRoomRequest): RoomDetailResponse {
+        memberService.getProfile(memberId)
+
+        val room = roomRepository.findActiveRoom(roomId) ?: roomNotFound(memberId, roomId, "RoomService.updateRoom")
+
+        val membership = roomRepository.findActiveRoomMember(roomId, memberId)
+            ?: memberNotJoinedRoom(memberId, roomId, "RoomService.updateRoom")
+
+        validateMemberCanManageRoom(memberId, roomId, membership.role, "RoomService.updateRoom")
+
+        val roomName = validateRoomName(memberId, "PATCH /api/rooms/$roomId", request.name)
+        val description = validateRoomDescription(memberId, roomId, request.description)
+
+        room.name = roomName
+        room.description = description
+        room.updatedAt = OffsetDateTime.now()
+
+        val savedRoom = roomRepository.saveRoom(room)
+        val memberCount = roomRepository.countActiveRoomMembers(roomId)
+
+        return savedRoom.toDetailResponse(
+            role = membership.role,
+            memberCount = memberCount,
+        )
+    }
+
+    @Transactional
+    fun deleteRoom(memberId: Long, roomId: Long): DeleteRoomResponse {
+        memberService.getProfile(memberId)
+
+        val room = roomRepository.findActiveRoom(roomId) ?: roomNotFound(memberId, roomId, "RoomService.deleteRoom")
+
+        val membership = roomRepository.findActiveRoomMember(roomId, memberId)
+            ?: memberNotJoinedRoom(memberId, roomId, "RoomService.deleteRoom")
+
+        validateMemberCanManageRoom(memberId, roomId, membership.role, "RoomService.deleteRoom")
+
+        val now = OffsetDateTime.now()
+        room.archivedAt = now
+        room.updatedAt = now
+        roomRepository.saveRoom(room)
+
+        return DeleteRoomResponse(id = room.id, deleted = true)
+    }
+
+    @Transactional
     fun createInvitation(
         memberId: Long,
         roomId: Long,
@@ -88,10 +153,10 @@ class RoomService(
     ): CreateRoomInvitationResponse {
         memberService.getProfile(memberId)
 
-        roomRepository.findActiveRoom(roomId) ?: roomNotFound(memberId, roomId)
+        roomRepository.findActiveRoom(roomId) ?: roomNotFound(memberId, roomId, "RoomService.createInvitation")
 
         val inviterMembership = roomRepository.findActiveRoomMember(roomId, memberId)
-            ?: memberNotJoinedRoom(memberId, roomId)
+            ?: memberNotJoinedRoom(memberId, roomId, "RoomService.createInvitation")
 
         validateMemberCanInvite(memberId, roomId, inviterMembership.role)
 
@@ -181,16 +246,35 @@ class RoomService(
         )
     }
 
-    private fun validateRoomName(memberId: Long, rawName: String?): String {
+    private fun validateRoomName(memberId: Long, rawName: String?): String =
+        validateRoomName(memberId, "POST /api/rooms", rawName)
+
+    private fun validateRoomName(memberId: Long, what: String, rawName: String?): String {
         val name = rawName?.trim()
             ?.takeIf { it.isNotEmpty() }
-            ?: badRequest(memberId, "POST /api/rooms", "name:null", "방 이름을 입력해 주세요.", "ROOM_NAME_REQUIRED")
+            ?: badRequest(memberId, what, "name:null", "방 이름을 입력해 주세요.", "ROOM_NAME_REQUIRED")
 
         if (name.length > MAX_ROOM_NAME_LENGTH) {
-            badRequest(memberId, "POST /api/rooms", "name:length:${name.length}", "방 이름은 80자 이하로 입력해 주세요.", "ROOM_NAME_TOO_LONG")
+            badRequest(memberId, what, "name:length:${name.length}", "방 이름은 80자 이하로 입력해 주세요.", "ROOM_NAME_TOO_LONG")
         }
 
         return name
+    }
+
+    private fun validateRoomDescription(memberId: Long, roomId: Long, rawDescription: String?): String? {
+        val description = rawDescription?.trim()?.takeIf { it.isNotEmpty() }
+
+        if ((description?.length ?: 0) > MAX_ROOM_DESCRIPTION_LENGTH) {
+            badRequest(
+                memberId = memberId,
+                what = "PATCH /api/rooms/$roomId",
+                requestData = "description:length:${description?.length}",
+                message = "방 설명은 255자 이하로 입력해 주세요.",
+                code = "ROOM_DESCRIPTION_TOO_LONG",
+            )
+        }
+
+        return description
     }
 
     private fun validateRoomType(memberId: Long, rawType: String?): String {
@@ -212,6 +296,18 @@ class RoomService(
                 roomId,
             )
             throw ApiException(HttpStatus.FORBIDDEN, "ROOM_OWNER_REQUIRED", "방장만 초대할 수 있습니다.")
+        }
+    }
+
+    private fun validateMemberCanManageRoom(memberId: Long, roomId: Long, role: String, what: String) {
+        if (role != "OWNER") {
+            log.warn(
+                "[방 관리] 방 관리 권한 검증 실패. who=memberId:{}, what={}, requestData=roomId:{}, reason=owner_required",
+                memberId,
+                what,
+                roomId,
+            )
+            throw ApiException(HttpStatus.FORBIDDEN, "ROOM_OWNER_REQUIRED", "방장만 방 정보를 수정하거나 삭제할 수 있습니다.")
         }
     }
 
@@ -307,22 +403,35 @@ class RoomService(
         }
     }
 
-    private fun roomNotFound(memberId: Long, roomId: Long): Nothing {
+    private fun RoomEntity.toDetailResponse(role: String, memberCount: Int): RoomDetailResponse =
+        RoomDetailResponse(
+            id = id,
+            name = name,
+            description = description,
+            type = type,
+            role = role,
+            memberCount = memberCount,
+            canManage = role == "OWNER",
+        )
+
+    private fun roomNotFound(memberId: Long, roomId: Long, what: String): Nothing {
         log.warn(
-            "[방 조회] 방 조회 실패. who=memberId:{}, what=RoomService.createInvitation, requestData=roomId:{}, reason=room_not_found",
+            "[방 조회] 방 조회 실패. who=memberId:{}, what={}, requestData=roomId:{}, reason=room_not_found",
             memberId,
+            what,
             roomId,
         )
         throw ApiException(HttpStatus.NOT_FOUND, "ROOM_NOT_FOUND", "방을 찾을 수 없습니다.")
     }
 
-    private fun memberNotJoinedRoom(memberId: Long, roomId: Long): Nothing {
+    private fun memberNotJoinedRoom(memberId: Long, roomId: Long, what: String): Nothing {
         log.warn(
-            "[방 초대] 방 참여 여부 검증 실패. who=memberId:{}, what=RoomService.createInvitation, requestData=roomId:{}, reason=member_not_joined",
+            "[방 참여] 방 참여 여부 검증 실패. who=memberId:{}, what={}, requestData=roomId:{}, reason=member_not_joined",
             memberId,
+            what,
             roomId,
         )
-        throw ApiException(HttpStatus.FORBIDDEN, "ROOM_MEMBER_REQUIRED", "참여 중인 방에서만 초대할 수 있습니다.")
+        throw ApiException(HttpStatus.FORBIDDEN, "ROOM_MEMBER_REQUIRED", "참여 중인 방에서만 사용할 수 있습니다.")
     }
 
     private fun invitationNotFound(memberId: Long, invitationId: Long): Nothing {
@@ -370,6 +479,7 @@ class RoomService(
 
     companion object {
         private const val MAX_ROOM_NAME_LENGTH = 80
+        private const val MAX_ROOM_DESCRIPTION_LENGTH = 255
         private const val INVITATION_EXPIRATION_DAYS = 7L
         private val SUPPORTED_ROOM_TYPES = setOf("COUPLE", "FAMILY", "GROUP")
         private val EMAIL_PATTERN = Regex("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$")

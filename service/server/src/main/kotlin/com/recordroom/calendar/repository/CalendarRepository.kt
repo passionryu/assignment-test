@@ -3,7 +3,7 @@ package com.recordroom.calendar.repository
 import com.querydsl.jpa.impl.JPAQueryFactory
 import com.recordroom.calendar.model.CalendarActivityAggregate
 import com.recordroom.calendar.model.CalendarActivityType
-import com.recordroom.calendar.model.QChatMessageEntity.chatMessageEntity
+import com.recordroom.chat.model.QChatMessageEntity.chatMessageEntity
 import com.recordroom.calendar.model.QLetterEntity.letterEntity
 import com.recordroom.calendar.model.QMemoryPostEntity.memoryPostEntity
 import com.recordroom.calendar.model.QMissionEntity.missionEntity
