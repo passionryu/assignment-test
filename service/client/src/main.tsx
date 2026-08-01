@@ -722,6 +722,7 @@ function App() {
   const [missionSubmitting, setMissionSubmitting] = useState(false);
   const [missionImageUploading, setMissionImageUploading] = useState(false);
   const [missionApproving, setMissionApproving] = useState<number | null>(null);
+  const [missionCreateOpen, setMissionCreateOpen] = useState(false);
   const [profileForm, setProfileForm] = useState({ displayName: "", profileImageUrl: "" });
   const [passwordForm, setPasswordForm] = useState({ currentPassword: "", newPassword: "" });
   const [createRoomForm, setCreateRoomForm] = useState<CreateRoomForm>({ name: "", type: "COUPLE", description: "" });
@@ -1287,6 +1288,7 @@ function App() {
       });
       setMissionSubmissionForm(initialMissionSubmissionForm(createdMission.id));
       setMissionForm(initialMissionForm());
+      setMissionCreateOpen(false);
       setRoomFeedbackModal({ title: "미션 추가 완료", message: "새 커스텀 미션이 추가되었습니다." });
     } catch (error) {
       setErrorMessage(toMessage(error));
@@ -1702,6 +1704,7 @@ function App() {
             missionList={missionList}
             missionForm={missionForm}
             submissionForm={missionSubmissionForm}
+            createModalOpen={missionCreateOpen}
             loading={missionLoading}
             creating={missionCreating}
             submitting={missionSubmitting}
@@ -1709,6 +1712,8 @@ function App() {
             approvingSubmissionId={missionApproving}
             onMissionFormChange={setMissionForm}
             onSubmissionFormChange={setMissionSubmissionForm}
+            onOpenCreateModal={() => setMissionCreateOpen(true)}
+            onCloseCreateModal={() => setMissionCreateOpen(false)}
             onCreateMission={createMission}
             onImageUpload={uploadMissionImage}
             onImageClear={() => setMissionSubmissionForm((current) => ({ ...current, imageUrl: "", imageName: "" }))}
@@ -2897,6 +2902,7 @@ function MissionBoardView({
   missionList,
   missionForm,
   submissionForm,
+  createModalOpen,
   loading,
   creating,
   submitting,
@@ -2904,6 +2910,8 @@ function MissionBoardView({
   approvingSubmissionId,
   onMissionFormChange,
   onSubmissionFormChange,
+  onOpenCreateModal,
+  onCloseCreateModal,
   onCreateMission,
   onImageUpload,
   onImageClear,
@@ -2914,6 +2922,7 @@ function MissionBoardView({
   missionList: MissionListResponse | null;
   missionForm: MissionForm;
   submissionForm: MissionSubmissionForm;
+  createModalOpen: boolean;
   loading: boolean;
   creating: boolean;
   submitting: boolean;
@@ -2921,6 +2930,8 @@ function MissionBoardView({
   approvingSubmissionId: number | null;
   onMissionFormChange: (form: MissionForm) => void;
   onSubmissionFormChange: (form: MissionSubmissionForm) => void;
+  onOpenCreateModal: () => void;
+  onCloseCreateModal: () => void;
   onCreateMission: () => void;
   onImageUpload: (file: File) => void;
   onImageClear: () => void;
@@ -2980,34 +2991,6 @@ function MissionBoardView({
 
         <div className="mission-grid">
           <div className="mission-main-column">
-            <article className="mission-create-card">
-              <div className="room-section-heading">
-                <h2>커스텀 미션 추가</h2>
-                <p>기본 미션 외에 방 구성원이 직접 사진 인증 미션을 추가한다.</p>
-              </div>
-              <div className="mission-create-form">
-                <label>
-                  제목
-                  <input
-                    value={missionForm.title}
-                    onChange={(event) => onMissionFormChange({ ...missionForm, title: event.target.value })}
-                    placeholder="예: 주말 산책 사진"
-                  />
-                </label>
-                <label>
-                  설명
-                  <input
-                    value={missionForm.description}
-                    onChange={(event) => onMissionFormChange({ ...missionForm, description: event.target.value })}
-                    placeholder="사진으로 인증할 조건을 적어주세요."
-                  />
-                </label>
-                <button className="primary-button" type="button" onClick={onCreateMission} disabled={!selectedRoom || creating}>
-                  {creating ? "추가 중" : "미션 추가"}
-                </button>
-              </div>
-            </article>
-
             <article className="mission-list-panel">
               <div className="memory-list-heading">
                 <div>
@@ -3018,28 +3001,36 @@ function MissionBoardView({
               </div>
               <div className="mission-card-grid">
                 {!loading && missions.length === 0 ? <p className="empty-state">아직 미션이 없습니다.</p> : null}
-                {missions.map((mission) => (
-                  <button
-                    className={`mission-card ${selectedMission?.id === mission.id ? "selected" : ""}`}
-                    type="button"
-                    key={mission.id}
-                    onClick={() => selectMission(mission)}
-                  >
-                    <div className="mission-card-title">
-                      <span className={`mission-status ${mission.status.toLowerCase().replace("_", "-")}`}>{missionStatusLabel(mission.status)}</span>
-                      {mission.custom ? <span className="mission-custom-badge">커스텀</span> : null}
-                    </div>
-                    <strong>{mission.title}</strong>
-                    <p>{mission.description}</p>
-                    {mission.latestSubmission ? (
-                      <small>
-                        {mission.latestSubmission.submitterName} 인증 · 동의 {mission.latestSubmission.approvedCount}/{mission.latestSubmission.requiredApprovalCount}
-                      </small>
-                    ) : (
-                      <small>아직 인증 요청 없음</small>
-                    )}
-                  </button>
-                ))}
+                {missions.map((mission) => {
+                  const visibleStatus = mission.latestSubmission ? mission.status : null;
+
+                  return (
+                    <button
+                      className={`mission-card ${selectedMission?.id === mission.id ? "selected" : ""}`}
+                      type="button"
+                      key={mission.id}
+                      onClick={() => selectMission(mission)}
+                    >
+                      {visibleStatus || mission.custom ? (
+                        <div className="mission-card-title">
+                          {visibleStatus ? (
+                            <span className={`mission-status ${visibleStatus.toLowerCase().replace("_", "-")}`}>{missionStatusLabel(visibleStatus)}</span>
+                          ) : (
+                            <span aria-hidden="true" />
+                          )}
+                          {mission.custom ? <span className="mission-custom-badge">커스텀</span> : null}
+                        </div>
+                      ) : null}
+                      <strong>{mission.title}</strong>
+                      <p>{mission.description}</p>
+                      {mission.latestSubmission ? (
+                        <small>
+                          {mission.latestSubmission.submitterName} 인증 · 동의 {mission.latestSubmission.approvedCount}/{mission.latestSubmission.requiredApprovalCount}
+                        </small>
+                      ) : null}
+                    </button>
+                  );
+                })}
               </div>
             </article>
           </div>
@@ -3100,6 +3091,16 @@ function MissionBoardView({
                 ) : (
                   <p className="empty-state">아직 제출된 인증이 없습니다. 아래에서 사진과 기록을 올려보세요.</p>
                 )}
+
+                <section className="mission-create-card mission-create-compact-card">
+                  <div>
+                    <h2>커스텀 미션 추가</h2>
+                    <p>기본 미션 외에 방 구성원이 직접 사진 인증 미션을 추가한다.</p>
+                  </div>
+                  <button className="primary-button full-width" type="button" onClick={onOpenCreateModal} disabled={!selectedRoom}>
+                    미션 추가
+                  </button>
+                </section>
 
                 {selectedMission.status !== "COMPLETED" ? (
                   <section className="mission-submit-card">
@@ -3174,7 +3175,74 @@ function MissionBoardView({
           </aside>
         </div>
       </section>
+
+      {createModalOpen ? (
+        <MissionCreateModal
+          missionForm={missionForm}
+          creating={creating}
+          onMissionFormChange={onMissionFormChange}
+          onCreateMission={onCreateMission}
+          onClose={onCloseCreateModal}
+        />
+      ) : null}
     </>
+  );
+}
+
+function MissionCreateModal({
+  missionForm,
+  creating,
+  onMissionFormChange,
+  onCreateMission,
+  onClose,
+}: {
+  missionForm: MissionForm;
+  creating: boolean;
+  onMissionFormChange: (form: MissionForm) => void;
+  onCreateMission: () => void;
+  onClose: () => void;
+}) {
+  return (
+    <div className="modal-backdrop" role="presentation">
+      <section className="modal mission-create-modal" role="dialog" aria-modal="true" aria-labelledby="mission-create-title">
+        <div className="modal-title-row">
+          <div>
+            <h2 id="mission-create-title">커스텀 미션 추가</h2>
+            <p>방 구성원이 직접 사진으로 인증할 미션을 추가한다.</p>
+          </div>
+          <button className="icon-button" type="button" onClick={onClose} aria-label="닫기">
+            <X size={18} />
+          </button>
+        </div>
+        <div className="mission-create-form">
+          <label>
+            제목
+            <input
+              value={missionForm.title}
+              onChange={(event) => onMissionFormChange({ ...missionForm, title: event.target.value })}
+              placeholder="예: 주말 산책 사진"
+            />
+          </label>
+          <label>
+            설명
+            <textarea
+              value={missionForm.description}
+              onChange={(event) => onMissionFormChange({ ...missionForm, description: event.target.value })}
+              placeholder="사진으로 인증할 조건을 적어주세요."
+              rows={4}
+            />
+          </label>
+        </div>
+        <div className="modal-actions">
+          <button className="outline-button" type="button" onClick={onClose} disabled={creating}>
+            취소
+          </button>
+          <button className="primary-button" type="button" onClick={onCreateMission} disabled={creating}>
+            {creating ? "추가 중" : "미션 추가"}
+          </button>
+        </div>
+      </section>
+    </div>
   );
 }
 
@@ -4048,6 +4116,17 @@ function missionStatusLabel(status: MissionStatus): string {
   return "진행 중";
 }
 
+function missionProgressRate(roomType: RoomSummary["type"], approvedCount: number, totalMemberCount: number): number {
+  if (totalMemberCount <= 0) return 0;
+
+  if (roomType === "COUPLE") {
+    return Math.min(100, Math.round(((approvedCount + 1) / totalMemberCount) * 100));
+  }
+
+  const requiredApprovalCount = Math.max(1, Math.floor(totalMemberCount / 2) + 1);
+  return Math.min(100, Math.round((approvedCount / requiredApprovalCount) * 100));
+}
+
 function replaceMissionSummary(current: MissionListResponse | null, updatedMission: MissionSummary): MissionListResponse | null {
   if (!current) return current;
 
@@ -4082,7 +4161,7 @@ function demoMissionList(roomId: number): MissionListResponse {
           approvedCount: status === "COMPLETED" ? 1 : 0,
           totalMemberCount: room.memberCount,
           requiredApprovalCount: room.type === "COUPLE" ? 1 : Math.max(1, Math.floor(room.memberCount / 2) + 1),
-          approvalRate: status === "COMPLETED" ? 100 : 0,
+          approvalRate: missionProgressRate(room.type, status === "COMPLETED" ? 1 : 0, room.memberCount),
           myDecision: null,
           canApprove: status === "WAITING_APPROVAL",
           completed: status === "COMPLETED",

@@ -152,7 +152,7 @@ class MissionService(
             approvedCount = approvedCount,
             totalMemberCount = totalMemberCount,
             requiredApprovalCount = requiredApprovalCount(room.type, totalMemberCount),
-            approvalRate = approvalRate(approvedCount, totalMemberCount),
+            approvalRate = approvalRate(room.type, approvedCount, totalMemberCount),
             completed = completed,
         )
     }
@@ -199,7 +199,7 @@ class MissionService(
             approvedCount = approvedCount,
             totalMemberCount = totalMemberCount,
             requiredApprovalCount = requiredApprovalCount(room.type, totalMemberCount),
-            approvalRate = approvalRate(approvedCount, totalMemberCount),
+            approvalRate = approvalRate(room.type, approvedCount, totalMemberCount),
             myDecision = myDecision,
             canApprove = submitterMemberId != memberId && myDecision == null && !completed,
             completed = completed,
@@ -414,10 +414,17 @@ class MissionService(
         return max(1, totalMemberCount / 2 + 1)
     }
 
-    private fun approvalRate(approvedCount: Int, totalMemberCount: Int): Int {
+    private fun approvalRate(roomType: String, approvedCount: Int, totalMemberCount: Int): Int {
         if (totalMemberCount <= 0) return 0
 
-        return ((approvedCount.toDouble() / totalMemberCount.toDouble()) * 100).roundToInt()
+        val rate = if (roomType == "COUPLE") {
+            ((approvedCount + 1).toDouble() / totalMemberCount.toDouble()) * 100
+        } else {
+            val requiredApprovalCount = requiredApprovalCount(roomType, totalMemberCount)
+            if (requiredApprovalCount <= 0) 0.0 else (approvedCount.toDouble() / requiredApprovalCount.toDouble()) * 100
+        }
+
+        return rate.roundToInt().coerceIn(0, 100)
     }
 
     private fun completionRuleLabel(roomType: String): String =

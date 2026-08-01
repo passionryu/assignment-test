@@ -1959,6 +1959,29 @@ dl {
   resize: vertical;
 }
 
+.mission-create-compact-card {
+  display: grid;
+  gap: 14px;
+  background: #fff8fc;
+}
+
+.mission-create-compact-card h2 {
+  color: #253248;
+  font-size: 20px;
+}
+
+.mission-create-compact-card p {
+  margin-top: 6px;
+  color: #667085;
+  font-size: 14px;
+  font-weight: 850;
+  line-height: 1.55;
+}
+
+.mission-create-modal {
+  max-width: 560px;
+}
+
 .mission-card-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
