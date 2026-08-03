@@ -1034,9 +1034,14 @@ function App() {
   const [profileForm, setProfileForm] = useState<ProfileForm>({ displayName: "", profileImageUrl: "" });
   const [createRoomForm, setCreateRoomForm] = useState<CreateRoomForm>({ name: "", type: "COUPLE", description: "" });
   const [inviteContacts, setInviteContacts] = useState<Record<number, string>>({});
-  const [inviteSearchResults, setInviteSearchResults] = useState<Record<number, InviteeSearchResult[]>>({});
   const [inviteSearchingRoomId, setInviteSearchingRoomId] = useState<number | null>(null);
   const [invitingMemberId, setInvitingMemberId] = useState<number | null>(null);
+  const [inviteCandidateModal, setInviteCandidateModal] = useState<{
+    roomId: number;
+    roomName: string;
+    keyword: string;
+    candidates: InviteeSearchResult[];
+  } | null>(null);
   const [roomSettingsMode, setRoomSettingsMode] = useState<RoomSettingsMode>(null);
   const [roomDetail, setRoomDetail] = useState<RoomDetail | null>(null);
   const [roomEditForm, setRoomEditForm] = useState({ name: "", description: "" });
@@ -2075,6 +2080,7 @@ function App() {
     setMessage(null);
     setErrorMessage(null);
     setRoomFeedbackModal(null);
+    setInviteCandidateModal(null);
 
     if (!contact) {
       setRoomFeedbackModal({ title: "검색 실패", message: "검색어를 입력해 주세요." });
@@ -2086,13 +2092,25 @@ function App() {
       const response = await apiGet<InviteeSearchResponse>(
         `/rooms/${roomId}/invitation-candidates?keyword=${encodeURIComponent(contact)}`,
       );
-      setInviteSearchResults((current) => ({ ...current, [roomId]: response.results }));
 
       if (response.results.length === 0) {
         setRoomFeedbackModal({ title: "검색 결과 없음", message: "초대할 회원을 찾을 수 없습니다." });
+        return;
       }
+
+      const exactUsernameInvitee = response.results.find((invitee) => invitee.username.toLowerCase() === contact.toLowerCase());
+      if (exactUsernameInvitee) {
+        await sendRoomInvitation(roomId, exactUsernameInvitee.id);
+        return;
+      }
+
+      setInviteCandidateModal({
+        roomId,
+        roomName: rooms.find((room) => room.id === roomId)?.name ?? "선택한 방",
+        keyword: response.keyword,
+        candidates: response.results,
+      });
     } catch (error) {
-      setInviteSearchResults((current) => ({ ...current, [roomId]: [] }));
       setRoomFeedbackModal({ title: "검색 실패", message: toMessage(error) });
     } finally {
       setInviteSearchingRoomId(null);
@@ -2111,7 +2129,7 @@ function App() {
         body: { memberId: inviteeMemberId },
       });
       setInviteContacts((current) => ({ ...current, [roomId]: "" }));
-      setInviteSearchResults((current) => ({ ...current, [roomId]: [] }));
+      setInviteCandidateModal(null);
       await loadRooms();
       setRoomFeedbackModal({ title: "초대 완료", message: "초대를 보냈습니다." });
     } catch (error) {
@@ -2292,14 +2310,11 @@ function App() {
             pendingInvitations={pendingInvitations}
             createRoomForm={createRoomForm}
             inviteContacts={inviteContacts}
-            inviteSearchResults={inviteSearchResults}
             inviteSearchingRoomId={inviteSearchingRoomId}
-            invitingMemberId={invitingMemberId}
             onCreateRoomFormChange={setCreateRoomForm}
             onCreateRoom={createRoom}
             onInviteContactChange={(roomId, value) => setInviteContacts((current) => ({ ...current, [roomId]: value }))}
             onSearchInvitees={searchRoomInvitees}
-            onSendInvitation={sendRoomInvitation}
             onRespondInvitation={respondInvitation}
             onSelectRoom={openRoomHome}
           />
@@ -2424,6 +2439,17 @@ function App() {
       ) : null}
 
       {logoutOpen ? <LogoutModal onClose={() => setLogoutOpen(false)} onConfirm={logoutToMemberSelection} /> : null}
+
+      {inviteCandidateModal ? (
+        <InviteeSelectionModal
+          roomName={inviteCandidateModal.roomName}
+          keyword={inviteCandidateModal.keyword}
+          candidates={inviteCandidateModal.candidates}
+          invitingMemberId={invitingMemberId}
+          onInvite={(inviteeMemberId) => sendRoomInvitation(inviteCandidateModal.roomId, inviteeMemberId)}
+          onClose={() => setInviteCandidateModal(null)}
+        />
+      ) : null}
 
       {roomFeedbackModal ? (
         <AlertModal title={roomFeedbackModal.title} message={roomFeedbackModal.message} onClose={() => setRoomFeedbackModal(null)} />
@@ -3073,14 +3099,11 @@ function RoomsView({
   pendingInvitations,
   createRoomForm,
   inviteContacts,
-  inviteSearchResults,
   inviteSearchingRoomId,
-  invitingMemberId,
   onCreateRoomFormChange,
   onCreateRoom,
   onInviteContactChange,
   onSearchInvitees,
-  onSendInvitation,
   onRespondInvitation,
   onSelectRoom,
 }: {
@@ -3090,14 +3113,11 @@ function RoomsView({
   pendingInvitations: PendingRoomInvitation[];
   createRoomForm: CreateRoomForm;
   inviteContacts: Record<number, string>;
-  inviteSearchResults: Record<number, InviteeSearchResult[]>;
   inviteSearchingRoomId: number | null;
-  invitingMemberId: number | null;
   onCreateRoomFormChange: (form: CreateRoomForm) => void;
   onCreateRoom: () => void;
   onInviteContactChange: (roomId: number, value: string) => void;
   onSearchInvitees: (roomId: number) => void;
-  onSendInvitation: (roomId: number, inviteeMemberId: number) => void;
   onRespondInvitation: (invitationId: number, action: "accept" | "decline") => void;
   onSelectRoom: (roomId: number) => void;
 }) {
@@ -3185,7 +3205,6 @@ function RoomsView({
       <section className="joined-room-list">
         {rooms.map((room) => {
           const canInvite = room.role === "OWNER";
-          const inviteeResults = inviteSearchResults[room.id] ?? [];
 
           return (
             <article
@@ -3210,17 +3229,17 @@ function RoomsView({
                 <h2>{room.name}</h2>
                 <p>{room.description ?? "설명 없음"}</p>
               </div>
-              <dl className="room-meta">
-                <div>
-                  <dt>역할</dt>
-                  <dd>{canInvite ? "방장" : "멤버"}</dd>
-                </div>
-                <div>
-                  <dt>멤버</dt>
-                  <dd>{room.memberCount}명</dd>
-                </div>
-              </dl>
               <div className="room-card-actions">
+                <dl className="room-meta">
+                  <div>
+                    <dt>역할</dt>
+                    <dd>{canInvite ? "방장" : "멤버"}</dd>
+                  </div>
+                  <div>
+                    <dt>멤버</dt>
+                    <dd>{room.memberCount}명</dd>
+                  </div>
+                </dl>
                 <div className="invite-search-area" onClick={(event) => event.stopPropagation()}>
                   <div className={`invite-inline-form ${canInvite ? "" : "is-disabled"}`}>
                     <input
@@ -3244,37 +3263,6 @@ function RoomsView({
                       {inviteSearchingRoomId === room.id ? "검색 중" : "검색"}
                     </button>
                   </div>
-
-                  {inviteeResults.length > 0 ? (
-                    <div className="invite-search-results" aria-label={`${room.name} 초대 검색 결과`}>
-                      {inviteeResults.map((invitee) => (
-                        <div className="invitee-card" key={invitee.id}>
-                          <div className="invitee-avatar" aria-hidden="true">
-                            {invitee.profileImageUrl ? (
-                              <img src={resolveImageSource(invitee.profileImageUrl)} alt="" />
-                            ) : (
-                              invitee.displayName.slice(0, 1)
-                            )}
-                          </div>
-                          <div className="invitee-info">
-                            <strong>{invitee.displayName}</strong>
-                            <span>아이디 {invitee.username}</span>
-                            <p>
-                              {invitee.maskedEmail} · {invitee.maskedPhoneNumber}
-                            </p>
-                          </div>
-                          <button
-                            className="primary-button small-button"
-                            type="button"
-                            onClick={() => onSendInvitation(room.id, invitee.id)}
-                            disabled={invitingMemberId === invitee.id}
-                          >
-                            {invitingMemberId === invitee.id ? "초대 중" : "초대"}
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  ) : null}
                 </div>
               </div>
             </article>
@@ -4610,6 +4598,71 @@ function LogoutModal({ onClose, onConfirm }: { onClose: () => void; onConfirm: (
           </button>
           <button className="primary-button" type="button" onClick={onConfirm}>
             로그아웃
+          </button>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function InviteeSelectionModal({
+  roomName,
+  keyword,
+  candidates,
+  invitingMemberId,
+  onInvite,
+  onClose,
+}: {
+  roomName: string;
+  keyword: string;
+  candidates: InviteeSearchResult[];
+  invitingMemberId: number | null;
+  onInvite: (inviteeMemberId: number) => void;
+  onClose: () => void;
+}) {
+  return (
+    <div className="modal-backdrop" role="presentation">
+      <section className="modal invitee-selection-modal" role="dialog" aria-modal="true" aria-labelledby="invitee-selection-title">
+        <div className="modal-title-row">
+          <div>
+            <h2 id="invitee-selection-title">초대할 회원 선택</h2>
+            <p>
+              {roomName}에 초대할 대상을 선택한다. 검색어: <strong>{keyword}</strong>
+            </p>
+          </div>
+          <button className="icon-button" type="button" aria-label="닫기" onClick={onClose}>
+            <X size={18} />
+          </button>
+        </div>
+
+        <div className="invitee-selection-list">
+          {candidates.map((invitee) => (
+            <div className="invitee-card" key={invitee.id}>
+              <div className="invitee-avatar" aria-hidden="true">
+                {invitee.profileImageUrl ? <img src={resolveImageSource(invitee.profileImageUrl)} alt="" /> : invitee.displayName.slice(0, 1)}
+              </div>
+              <div className="invitee-info">
+                <strong>{invitee.displayName}</strong>
+                <span>아이디 {invitee.username}</span>
+                <p>
+                  {invitee.maskedEmail} · {invitee.maskedPhoneNumber}
+                </p>
+              </div>
+              <button
+                className="primary-button small-button"
+                type="button"
+                onClick={() => onInvite(invitee.id)}
+                disabled={invitingMemberId === invitee.id}
+              >
+                {invitingMemberId === invitee.id ? "초대 중" : "초대"}
+              </button>
+            </div>
+          ))}
+        </div>
+
+        <div className="modal-actions">
+          <button className="outline-button" type="button" onClick={onClose}>
+            닫기
           </button>
         </div>
       </section>

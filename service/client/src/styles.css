@@ -3007,7 +3007,7 @@ dl {
 
 .room-card {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto minmax(360px, 520px);
+  grid-template-columns: minmax(0, 1fr) minmax(620px, auto);
   align-items: center;
   gap: 18px;
   padding: 22px;
@@ -3081,21 +3081,21 @@ dl {
 }
 
 .room-card-actions {
-  display: grid;
-  align-items: start;
-  gap: 10px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
   justify-content: flex-end;
+  flex-wrap: nowrap;
 }
 
 .invite-search-area {
-  display: grid;
-  gap: 10px;
-  width: min(100%, 520px);
+  width: auto;
 }
 
 .invite-inline-form input {
   flex: 1;
-  width: min(100%, 300px);
+  width: min(360px, 28vw);
+  min-width: 230px;
   min-height: 44px;
   border: 1px solid #dfe7f2;
   border-radius: 8px;
@@ -3120,14 +3120,6 @@ dl {
 .invite-inline-form.is-disabled button {
   cursor: not-allowed;
   opacity: 0.58;
-}
-
-.invite-search-results {
-  display: grid;
-  gap: 8px;
-  max-height: 218px;
-  overflow-y: auto;
-  padding-right: 4px;
 }
 
 .invitee-card {
@@ -3179,6 +3171,18 @@ dl {
   font-size: 12px;
   font-weight: 800;
   overflow-wrap: anywhere;
+}
+
+.invitee-selection-modal {
+  width: min(620px, 100%);
+}
+
+.invitee-selection-list {
+  display: grid;
+  gap: 10px;
+  max-height: min(420px, calc(100vh - 260px));
+  overflow-y: auto;
+  padding-right: 4px;
 }
 
 .skeleton-list {
@@ -3835,6 +3839,14 @@ dl {
   .room-meta,
   .room-card-actions {
     justify-content: flex-start;
+  }
+
+  .room-card-actions {
+    flex-wrap: wrap;
+  }
+
+  .invite-inline-form input {
+    width: min(360px, 60vw);
   }
 
   .row-button {
