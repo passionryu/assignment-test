@@ -604,7 +604,7 @@ dl {
   display: grid;
   grid-template-columns: 360px minmax(0, 1fr);
   gap: 22px;
-  align-items: start;
+  align-items: stretch;
 }
 
 .profile-panel,
@@ -648,7 +648,8 @@ dl {
 }
 
 .settings-stack {
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 16px;
 }
 
@@ -3712,6 +3713,7 @@ dl {
 
 .notification-card {
   min-height: 560px;
+  height: 100%;
 }
 
 .notification-list-settings {
