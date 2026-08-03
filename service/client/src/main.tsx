@@ -9,6 +9,7 @@ import {
   CheckCircle2,
   ChevronDown,
   Clock,
+  CircleHelp,
   FileText,
   Home,
   Image as ImageIcon,
@@ -2682,7 +2683,6 @@ function HomeView({
       <header className="page-header">
         <div>
           <h1>메인 페이지</h1>
-          <p>방 기준 사이드바로 이동하고, 프로필/알림/캘린더에서 오늘의 흐름을 확인한다.</p>
         </div>
       </header>
 
@@ -2915,6 +2915,27 @@ function isInteractiveTarget(target: EventTarget | null) {
   return target instanceof HTMLElement && Boolean(target.closest("button, input, select, textarea, a"));
 }
 
+function HelpButton({ title, message }: { title: string; message: string }) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <>
+      <button
+        className="help-icon-button"
+        type="button"
+        aria-label={`${title} 도움말`}
+        onClick={(event) => {
+          event.stopPropagation();
+          setOpen(true);
+        }}
+      >
+        <CircleHelp size={16} />
+      </button>
+      {open ? <AlertModal title={title} message={message} onClose={() => setOpen(false)} /> : null}
+    </>
+  );
+}
+
 function RoomHomeView({
   selectedRoom,
   messages,
@@ -2966,7 +2987,6 @@ function RoomHomeView({
       <header className="page-header">
         <div>
           <h1>{selectedRoom.name}</h1>
-          <p>최근 대화와 기록 기능을 한 곳에서 확인한다.</p>
         </div>
       </header>
 
@@ -2997,8 +3017,10 @@ function RoomHomeView({
         <div className="room-home-content">
           <article className="room-chat-preview">
             <div className="room-section-heading">
-              <h2>최근 대화</h2>
-              <p>방의 메인 소통 흐름을 먼저 보여주고 바로 대화를 남긴다.</p>
+              <div className="heading-help-row">
+                <h2>최근 대화</h2>
+                <HelpButton title="최근 대화" message="방 구성원이 남긴 최근 메시지를 확인하고 바로 새 메시지를 남길 수 있습니다." />
+              </div>
             </div>
             <ChatMessageTimeline messages={messages} loading={loading} compact />
             <div className="chat-input-row compact-chat-input">
@@ -3021,8 +3043,10 @@ function RoomHomeView({
 
           <article className="room-feature-panel">
             <div className="room-section-heading">
-              <h2>방 기능</h2>
-              <p>대화에서 파생된 기록을 기능별로 확인한다.</p>
+              <div className="heading-help-row">
+                <h2>방 기능</h2>
+                <HelpButton title="방 기능" message="추억 게시판, 미션 인증, 편지 화면으로 이동해 방의 기록을 기능별로 확인합니다." />
+              </div>
             </div>
             <div className="room-feature-list">
               <button className="room-feature-card memory" type="button" onClick={() => onMoveRoomFeature("memories")}>
@@ -3126,7 +3150,6 @@ function RoomsView({
       <header className="page-header">
         <div>
           <h1>방 리스트</h1>
-          <p>방을 만들고, 초대를 보내고, 받은 초대를 수락하거나 거절한다.</p>
         </div>
       </header>
 
@@ -3195,10 +3218,11 @@ function RoomsView({
         </article>
 
         <article className="hub-card">
-          <span>참여 방</span>
+          <div className="hub-card-heading">
+            <span>참여 방</span>
+            <HelpButton title="참여 방" message="현재 선택한 사용자가 참여 중인 방입니다. 방장인 방에서는 사용자를 검색한 뒤 초대 대상을 선택할 수 있습니다." />
+          </div>
           <strong>{rooms.length}개</strong>
-          <p>현재 멤버가 참여 중인 기록방 목록이다.</p>
-          <p>방장인 방에서는 사용자를 검색한 뒤 초대 대상을 선택한다.</p>
         </article>
       </section>
 

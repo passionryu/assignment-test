@@ -554,6 +554,41 @@ dl {
   letter-spacing: 0;
 }
 
+.heading-help-row,
+.hub-card-heading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.hub-card-heading {
+  justify-content: space-between;
+}
+
+.help-icon-button {
+  width: 28px;
+  height: 28px;
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 auto;
+  border: 1px solid #e4ebf5;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #f04f95;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease,
+    transform 0.15s ease;
+}
+
+.help-icon-button:hover,
+.help-icon-button:focus-visible {
+  border-color: #f04f95;
+  box-shadow: 0 0 0 4px rgba(240, 79, 149, 0.12);
+  outline: none;
+  transform: translateY(-1px);
+}
+
 .panel-heading svg,
 .row-title svg {
   color: #f04f95;
@@ -1149,7 +1184,6 @@ dl {
 
 .room-section-heading {
   display: grid;
-  gap: 7px;
   margin-bottom: 22px;
 }
 
@@ -2909,6 +2943,10 @@ dl {
 .hub-card strong {
   color: #253248;
   font-size: 25px;
+}
+
+.hub-card-heading span {
+  margin-bottom: 0;
 }
 
 .hub-card p,
