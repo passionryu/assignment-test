@@ -1160,7 +1160,7 @@ function App() {
       setSettings(demoSettings);
       setRooms(fallbackRooms);
       setPendingInvitations(fallbackInvitations);
-      setLatestNotifications(fallbackNotifications.filter((notification) => !notification.read && isHomeNotification(notification)).slice(0, 3));
+      setLatestNotifications(fallbackNotifications.filter(isHomeNotification).slice(0, 3));
       setAllNotifications(fallbackNotifications.filter(isHomeNotification));
       setCalendar(demoCalendar);
       setSelectedCalendarDate(demoCalendar.selectedDate ?? demoCalendar.days[0]?.date ?? null);
@@ -1176,10 +1176,10 @@ function App() {
   async function loadLatestNotifications() {
     const fallbackNotifications = demoNotificationsForMember(selectedDemoMember?.id ?? defaultDemoMember.id);
     const latestResponse = await safeApiGet<NotificationsResponse>("/notifications/latest");
-    const latestItems = latestResponse?.items.filter(isHomeNotification) ?? [];
-    const fallbackItems = fallbackNotifications.filter((notification) => !notification.read && isHomeNotification(notification)).slice(0, 3);
+    const latestItems = latestResponse?.items.filter(isHomeNotification);
+    const fallbackItems = fallbackNotifications.filter(isHomeNotification).slice(0, 3);
 
-    setLatestNotifications(latestItems.length ? latestItems : fallbackItems);
+    setLatestNotifications(latestItems ?? fallbackItems);
   }
 
   async function loadRooms() {
@@ -1216,8 +1216,27 @@ function App() {
     );
   }
 
+  function markRoomFeatureNotificationsAsRead(roomId: number, feature: RoomFeatureKind) {
+    const targetTypes = notificationTypesForRoomFeature(feature);
+    const markAsRead = (item: NotificationItem) =>
+      item.roomId === roomId && targetTypes.includes(item.type) ? { ...item, read: true } : item;
+
+    setLatestNotifications((current) => current.map(markAsRead));
+    setAllNotifications((current) => current.map(markAsRead));
+  }
+
+  function notificationTypesForRoomFeature(feature: RoomFeatureKind): NotificationType[] {
+    if (feature === "chat") return ["CHAT"];
+    if (feature === "memories") return ["MEMORY"];
+    if (feature === "missions") return ["MISSION_APPROVAL_REQUEST", "MISSION_PROGRESS"];
+    if (feature === "letters") return ["LETTER"];
+
+    return [];
+  }
+
   async function readRoomFeatureNotifications(roomId: number, feature: RoomFeatureKind) {
     clearRoomFeatureBadge(roomId, feature);
+    markRoomFeatureNotificationsAsRead(roomId, feature);
 
     try {
       await safeApiRequest<{ read: boolean }>(`/notifications/rooms/${roomId}/features/${feature}/read`, { method: "POST" });
@@ -1251,8 +1270,8 @@ function App() {
     setNotificationsModalOpen(true);
     const fallbackNotifications = demoNotificationsForMember(selectedDemoMember?.id ?? defaultDemoMember.id);
     const response = await safeApiGet<NotificationsResponse>("/notifications?page=0&size=20");
-    const notificationItems = response?.items.filter(isHomeNotification) ?? [];
-    setAllNotifications(notificationItems.length ? notificationItems : fallbackNotifications.filter(isHomeNotification));
+    const notificationItems = response?.items.filter(isHomeNotification);
+    setAllNotifications(notificationItems ?? fallbackNotifications.filter(isHomeNotification));
   }
 
   async function handleNotificationClick(notification: NotificationItem) {

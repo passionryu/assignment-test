@@ -15,13 +15,12 @@ class NotificationRepository(
     private val queryFactory: JPAQueryFactory,
     private val notificationJpaRepository: NotificationJpaRepository,
 ) {
-    // 메인 화면에는 현재 회원이 아직 확인하지 않은 최신 알림만 최대 3개 노출한다.
+    // 메인 화면에는 읽음 여부와 무관하게 현재 회원의 최신 알림을 최대 3개 노출한다.
     fun findLatestNotifications(memberId: Long): List<NotificationResponse> =
         findNotifications(
             memberId = memberId,
             offset = 0,
             limit = 3,
-            unreadOnly = true,
             excludedTypes = setOf(CHAT_NOTIFICATION_TYPE),
         )
 
