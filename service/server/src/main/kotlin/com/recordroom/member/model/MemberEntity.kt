@@ -28,7 +28,7 @@ class MemberEntity(
     @Column(name = "phone_number", nullable = false, length = 30)
     var phoneNumber: String = "",
 
-    @Column(name = "profile_image_url", length = 500)
+    @Column(name = "profile_image_url", columnDefinition = "text")
     var profileImageUrl: String? = null,
 
     @Column(name = "password_hash", nullable = false, length = 255)

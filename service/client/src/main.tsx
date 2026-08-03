@@ -12,7 +12,6 @@ import {
   FileText,
   Home,
   Image as ImageIcon,
-  KeyRound,
   List,
   LogOut,
   Mail,
@@ -39,6 +38,11 @@ type MemberProfile = {
   email: string;
   phoneNumber: string;
   profileImageUrl: string | null;
+};
+
+type ProfileForm = {
+  displayName: string;
+  profileImageUrl: string;
 };
 
 type DemoMemberOption = MemberProfile & {
@@ -421,6 +425,8 @@ const selectedMemberStorageKey = "record-room:selected-member-id";
 const currentMonth = toDateKey(new Date()).slice(0, 7);
 const memoryPostsPerPage = 6;
 const letterPageSize = 10;
+const profileImageMaxBytes = 5 * 1024 * 1024;
+const profileImageAllowedTypes = ["image/jpeg", "image/png", "image/gif", "image/webp"];
 
 const demoMemberOptions: DemoMemberOption[] = [
   {
@@ -1011,8 +1017,7 @@ function App() {
   const [missionCreateOpen, setMissionCreateOpen] = useState(false);
   const [missionCommentDraft, setMissionCommentDraft] = useState("");
   const [missionCommentSending, setMissionCommentSending] = useState(false);
-  const [profileForm, setProfileForm] = useState({ displayName: "", profileImageUrl: "" });
-  const [passwordForm, setPasswordForm] = useState({ currentPassword: "", newPassword: "" });
+  const [profileForm, setProfileForm] = useState<ProfileForm>({ displayName: "", profileImageUrl: "" });
   const [createRoomForm, setCreateRoomForm] = useState<CreateRoomForm>({ name: "", type: "COUPLE", description: "" });
   const [inviteContacts, setInviteContacts] = useState<Record<number, string>>({});
   const [roomSettingsMode, setRoomSettingsMode] = useState<RoomSettingsMode>(null);
@@ -1322,24 +1327,9 @@ function App() {
         profileImageUrl: updatedProfile.profileImageUrl ?? "",
       });
       setProfileEditOpen(false);
-      setMessage("프로필이 수정되었습니다.");
+      setRoomFeedbackModal({ title: "프로필 수정 완료", message: "프로필 정보가 저장되었습니다." });
     } catch (error) {
-      setErrorMessage(toMessage(error));
-    }
-  }
-
-  async function changePassword() {
-    setMessage(null);
-    setErrorMessage(null);
-    try {
-      await apiRequest<{ changed: boolean }>("/members/me/password", {
-        method: "POST",
-        body: passwordForm,
-      });
-      setPasswordForm({ currentPassword: "", newPassword: "" });
-      setMessage("비밀번호 변경 요청이 처리되었습니다.");
-    } catch (error) {
-      setErrorMessage(toMessage(error));
+      setRoomFeedbackModal({ title: "프로필 수정 실패", message: toMessage(error) });
     }
   }
 
@@ -2366,12 +2356,8 @@ function App() {
           <SettingsView
             profile={profile}
             settings={settings}
-            profileForm={profileForm}
-            passwordForm={passwordForm}
             initials={initials}
             onOpenProfileEdit={() => setProfileEditOpen(true)}
-            onPasswordFormChange={setPasswordForm}
-            onChangePassword={changePassword}
             onToggleAllNotifications={toggleAllNotifications}
             onToggleIndividualNotification={toggleIndividualNotification}
             onLogout={() => setLogoutOpen(true)}
@@ -2381,6 +2367,7 @@ function App() {
 
       {profileEditOpen ? (
         <ProfileEditModal
+          profile={profile}
           profileForm={profileForm}
           onProfileFormChange={setProfileForm}
           onSave={saveProfile}
@@ -4235,24 +4222,16 @@ function RoomFeatureView({ selectedRoom, kind }: { selectedRoom: RoomSummary | n
 function SettingsView({
   profile,
   settings,
-  profileForm,
-  passwordForm,
   initials,
   onOpenProfileEdit,
-  onPasswordFormChange,
-  onChangePassword,
   onToggleAllNotifications,
   onToggleIndividualNotification,
   onLogout,
 }: {
   profile: MemberProfile | null;
   settings: NotificationSettings | null;
-  profileForm: { displayName: string; profileImageUrl: string };
-  passwordForm: { currentPassword: string; newPassword: string };
   initials: string;
   onOpenProfileEdit: () => void;
-  onPasswordFormChange: (form: { currentPassword: string; newPassword: string }) => void;
-  onChangePassword: () => void;
   onToggleAllNotifications: (checked: boolean) => void;
   onToggleIndividualNotification: (key: keyof Omit<NotificationSettings, "allEnabled">, checked: boolean) => void;
   onLogout: () => void;
@@ -4303,33 +4282,6 @@ function SettingsView({
         </article>
 
         <section className="settings-stack">
-          <article className="settings-row password-row">
-            <div className="row-title">
-              <KeyRound size={22} />
-              <div>
-                <h2>비밀번호 변경</h2>
-                <p>새 비밀번호는 8자 이상으로 입력한다.</p>
-              </div>
-            </div>
-            <div className="password-fields">
-              <input
-                type="password"
-                value={passwordForm.currentPassword}
-                onChange={(event) => onPasswordFormChange({ ...passwordForm, currentPassword: event.target.value })}
-                placeholder="현재 비밀번호"
-              />
-              <input
-                type="password"
-                value={passwordForm.newPassword}
-                onChange={(event) => onPasswordFormChange({ ...passwordForm, newPassword: event.target.value })}
-                placeholder="새 비밀번호"
-              />
-            </div>
-            <button className="primary-button row-button" type="button" onClick={onChangePassword}>
-              변경
-            </button>
-          </article>
-
           <article className="settings-card notification-card">
             <div className="panel-heading">
               <div>
@@ -4414,21 +4366,71 @@ function SettingsView({
 }
 
 function ProfileEditModal({
+  profile,
   profileForm,
   onProfileFormChange,
   onSave,
   onClose,
 }: {
-  profileForm: { displayName: string; profileImageUrl: string };
-  onProfileFormChange: (form: { displayName: string; profileImageUrl: string }) => void;
+  profile: MemberProfile | null;
+  profileForm: ProfileForm;
+  onProfileFormChange: (form: ProfileForm) => void;
   onSave: () => void;
   onClose: () => void;
 }) {
+  const [profileImageError, setProfileImageError] = useState<string | null>(null);
+  const uploadInputId = "profile-image-upload";
+  const previewInitial = profileForm.displayName.trim().slice(0, 1) || profile?.displayName.slice(0, 1) || "나";
+
+  function updateProfileImage(file: File) {
+    setProfileImageError(null);
+
+    const hasAllowedType = profileImageAllowedTypes.includes(file.type);
+    const hasAllowedExtension = /\.(jpe?g|png|gif|webp)$/i.test(file.name);
+
+    if (!hasAllowedType && !hasAllowedExtension) {
+      setProfileImageError("jpg, png, gif, webp 형식의 이미지만 선택할 수 있습니다.");
+      return;
+    }
+
+    if (file.size > profileImageMaxBytes) {
+      setProfileImageError("프로필 이미지는 5MB 이하 파일만 선택할 수 있습니다.");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result !== "string") {
+        setProfileImageError("이미지를 읽는 중 문제가 발생했습니다.");
+        return;
+      }
+
+      onProfileFormChange({ ...profileForm, profileImageUrl: reader.result });
+    };
+    reader.onerror = () => setProfileImageError("이미지를 읽는 중 문제가 발생했습니다.");
+    reader.readAsDataURL(file);
+  }
+
+  function handleImageDrop(event: DragEvent<HTMLDivElement>) {
+    event.preventDefault();
+    const file = event.dataTransfer.files[0];
+    if (file) {
+      updateProfileImage(file);
+    }
+  }
+
   return (
     <div className="modal-backdrop" role="presentation">
-      <section className="modal" role="dialog" aria-modal="true" aria-labelledby="profile-edit-title">
-        <h2 id="profile-edit-title">프로필 수정</h2>
-        <p>이름과 프로필 이미지만 수정할 수 있다. 아이디, 이메일, 전화번호는 초대와 식별에 사용하므로 수정하지 않는다.</p>
+      <section className="modal profile-edit-modal" role="dialog" aria-modal="true" aria-labelledby="profile-edit-title">
+        <div className="modal-title-row">
+          <div>
+            <h2 id="profile-edit-title">프로필 수정</h2>
+            <p>이름과 프로필 이미지만 수정한다. 아이디, 이메일, 전화번호는 초대와 식별에 사용하므로 수정하지 않는다.</p>
+          </div>
+          <button className="icon-button" type="button" onClick={onClose} aria-label="닫기">
+            <X size={18} />
+          </button>
+        </div>
         <label className="field">
           이름
           <input
@@ -4437,14 +4439,52 @@ function ProfileEditModal({
             placeholder="이름"
           />
         </label>
-        <label className="field">
-          프로필 이미지 URL
+
+        <div
+          className={`profile-upload-dropzone ${profileForm.profileImageUrl ? "has-image" : ""}`}
+          onDragOver={(event) => event.preventDefault()}
+          onDrop={handleImageDrop}
+        >
           <input
-            value={profileForm.profileImageUrl}
-            onChange={(event) => onProfileFormChange({ ...profileForm, profileImageUrl: event.target.value })}
-            placeholder="https://example.com/profile.png"
+            id={uploadInputId}
+            type="file"
+            accept="image/jpeg,image/png,image/gif,image/webp"
+            onChange={(event) => {
+              const file = event.target.files?.[0];
+              if (file) {
+                updateProfileImage(file);
+              }
+              event.currentTarget.value = "";
+            }}
           />
-        </label>
+          <div className="profile-upload-preview" aria-label="프로필 이미지 미리보기">
+            {profileForm.profileImageUrl ? <img src={profileForm.profileImageUrl} alt="" /> : <span>{previewInitial}</span>}
+          </div>
+          <div>
+            <strong>프로필 이미지</strong>
+            <span>사진을 끌어놓거나 파일을 선택하세요.</span>
+            <small>jpg, png, gif, webp · 5MB 이하</small>
+          </div>
+          <label className="outline-button upload-pick-button" htmlFor={uploadInputId}>
+            파일 선택
+          </label>
+        </div>
+        {profileImageError ? <p className="profile-form-error">{profileImageError}</p> : null}
+
+        <dl className="profile-readonly-grid" aria-label="수정할 수 없는 회원 식별 정보">
+          <div>
+            <dt>아이디</dt>
+            <dd>{profile?.username ?? "-"}</dd>
+          </div>
+          <div>
+            <dt>이메일</dt>
+            <dd>{profile?.email ?? "-"}</dd>
+          </div>
+          <div>
+            <dt>전화번호</dt>
+            <dd>{profile?.phoneNumber ?? "-"}</dd>
+          </div>
+        </dl>
         <div className="modal-actions">
           <button className="outline-button" type="button" onClick={onClose}>
             취소
