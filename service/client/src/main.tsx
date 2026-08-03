@@ -4389,36 +4389,31 @@ function SettingsView({
   onOpenProfileEdit: () => void;
   onLogout: () => void;
 }) {
+  const [openQaTitle, setOpenQaTitle] = useState<string | null>("해당 서비스는 회원가입이 없나요?");
   const qaItems = [
     {
-      title: "체험 사용자는 어떻게 바꾸나요?",
-      summary: "로그아웃 후 사용자 선택",
-      help: "로그아웃을 누르면 계정이 삭제되는 것이 아니라, 준비된 체험 사용자 선택 화면으로 돌아갑니다.",
+      title: "해당 서비스는 회원가입이 없나요?",
+      help: '네, 해당 서비스는 "과제 안내문"의 "실행 직후 로그인 없이도 서비스를 바로 확인할 수 있는 서비스"의 조건을 충족 시키기 위해, 사전에 미리 세팅 된 4개의 유저들을 선택하여 로그인할 수 있게 기획되었습니다.',
     },
     {
-      title: "프로필에서 수정 가능한 정보는 무엇인가요?",
-      summary: "이름과 프로필 이미지",
-      help: "아이디, 이메일, 전화번호는 초대와 사용자 식별에 쓰이므로 Lv1 MVP에서는 수정하지 않습니다.",
+      title: "방에서 유저의 권한에 따라 접근 가능한 기능이 다른가요?",
+      help: "네, 방장에게만 친구 초대, 방 정보 수정, 방 삭제 등의 기능이 지원되며, 멤버의 경우는 위 기능들이 지원되지 않습니다.",
     },
     {
-      title: "새 알림은 어디서 확인하나요?",
-      summary: "홈 최신 알림과 좌측 배지",
-      help: "편지, 추억, 미션 알림은 홈 최신 알림에 남고, 채팅과 기능별 미확인 상태는 좌측 사이드바 배지로 확인합니다.",
-    },
-  ];
-
-  const scopeItems = [
-    {
-      title: "Lv1 지원",
-      value: "기록방, 채팅, 추억 게시판, 미션 인증, 편지",
+      title: "추억 게시판은 어떠한 기능인가요?",
+      help: "추억 게시판은 멤버들끼리 함께한 추억을 사진과 글을 통해 기록하며, 채팅형 댓글을 통해 멤버들과 추억을 기록할 수 있는 게시판입니다.",
     },
     {
-      title: "Lv1 제외",
-      value: "회원 탈퇴, 실제 약관 문서, 결제/인쇄 연동",
+      title: "미션 인증은 어떠한 기능인가요?",
+      help: "미션 인증은 각 방의 Type 별로 사전 세팅된 20개의 기본 미션에 커스텀 미션(사용자가 추가 가능)이 추가된 기능입니다. 미션에 맞는 사진과 글을 업로드 하고 채팅형 댓글을 통해 멤버들과 미션을 인증할 수 있는 게시판입니다.",
     },
     {
-      title: "다음 단계",
-      value: "Book Print API와 주문 흐름은 Lv2에서 확장",
+      title: "편지는 어떠한 기능인가요?",
+      help: "편지는 방 구성원 중 한명에게만 편지를 전달할 수 있는 기능입니다. 이는 방 내 다른 멤버들이 조회가 불가능합니다.",
+    },
+    {
+      title: "방의 타입은 무엇이 있나요?",
+      help: "방의 타입은 커플/가족/학급 및 동아리가 있습니다. 이는 다양한 연령대의 유저들의 일상을 기록하기 위함입니다.",
     },
   ];
 
@@ -4482,60 +4477,22 @@ function SettingsView({
               <CircleHelp size={24} />
             </div>
 
-            <div className="settings-info-list" aria-label="도움말 목록">
+            <div className="settings-accordion-list" aria-label="도움말 목록">
               {qaItems.map((item) => (
-                <div className="settings-info-row" key={item.title}>
-                  <div>
+                <button
+                  className={`settings-accordion-item ${openQaTitle === item.title ? "open" : ""}`}
+                  key={item.title}
+                  type="button"
+                  aria-expanded={openQaTitle === item.title}
+                  onClick={() => setOpenQaTitle((current) => (current === item.title ? null : item.title))}
+                >
+                  <span className="settings-accordion-question">
                     <strong>{item.title}</strong>
-                    <span>{item.summary}</span>
-                  </div>
-                  <HelpButton title={item.title} message={item.help} />
-                </div>
+                    <ChevronDown size={18} />
+                  </span>
+                  <span className="settings-accordion-answer">{item.help}</span>
+                </button>
               ))}
-            </div>
-          </article>
-
-          <article className="settings-card settings-guide-card">
-            <div className="panel-heading">
-              <div>
-                <span>서비스 안내</span>
-                <h2>Lv1 MVP 범위</h2>
-              </div>
-              <BookOpen size={24} />
-            </div>
-
-            <div className="settings-scope-grid" aria-label="서비스 범위">
-              {scopeItems.map((item) => (
-                <div className="settings-scope-item" key={item.title}>
-                  <strong>{item.title}</strong>
-                  <span>{item.value}</span>
-                </div>
-              ))}
-            </div>
-          </article>
-
-          <article className="settings-card settings-guide-card">
-            <div className="panel-heading">
-              <div>
-                <span>앱 정보</span>
-                <h2>데모 사용 안내</h2>
-              </div>
-              <FileText size={24} />
-            </div>
-
-            <div className="settings-info-list compact">
-              <div className="settings-info-row">
-                <div>
-                  <strong>데모 데이터</strong>
-                  <span>여러 체험 사용자와 기록방 시드로 기능을 확인합니다.</span>
-                </div>
-              </div>
-              <div className="settings-info-row">
-                <div>
-                  <strong>약관/개인정보 문서</strong>
-                  <span>Lv1 MVP에서는 별도 운영 문서 연결 없이 데모 범위로 제한합니다.</span>
-                </div>
-              </div>
             </div>
           </article>
         </section>
