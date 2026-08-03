@@ -7,4 +7,6 @@ interface RoomMemberJpaRepository : JpaRepository<RoomMemberEntity, Long> {
     fun findByRoomIdAndMemberIdAndLeftAtIsNull(roomId: Long, memberId: Long): RoomMemberEntity?
 
     fun existsByRoomIdAndMemberIdAndLeftAtIsNull(roomId: Long, memberId: Long): Boolean
+
+    fun findByRoomIdAndLeftAtIsNull(roomId: Long): List<RoomMemberEntity>
 }

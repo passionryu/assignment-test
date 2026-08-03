@@ -3,8 +3,6 @@ package com.recordroom.chat.model
 import java.time.LocalDate
 import java.time.OffsetDateTime
 
-const val AI_ASSISTANT_MEMBER_ID: Long = 99L
-
 data class ChatMessagesResponse(
     val roomId: Long,
     val roomName: String,
@@ -24,11 +22,6 @@ data class ChatMessageResponse(
     val mine: Boolean,
 )
 
-data class ChatReplyCandidate(
-    val memberId: Long,
-    val displayName: String,
-)
-
 data class SendChatMessageRequest(
     val body: String?,
 )
@@ -36,6 +29,11 @@ data class SendChatMessageRequest(
 data class SendChatMessageResponse(
     val roomId: Long,
     val createdMessages: List<ChatMessageResponse>,
+)
+
+data class ChatReadResponse(
+    val read: Boolean,
+    val readCount: Int,
 )
 
 data class ChatSearchResponse(

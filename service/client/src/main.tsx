@@ -41,6 +41,11 @@ type MemberProfile = {
   profileImageUrl: string | null;
 };
 
+type DemoMemberOption = MemberProfile & {
+  roleDescription: string;
+  roomHint: string;
+};
+
 type NotificationSettings = {
   allEnabled: boolean;
   chatEnabled: boolean;
@@ -57,6 +62,8 @@ type RoomSummary = {
   role: "OWNER" | "MEMBER";
   memberCount: number;
   unreadChatCount: number;
+  unreadMemoryCount: number;
+  unreadLetterCount: number;
   pendingMissionCount: number;
 };
 
@@ -410,19 +417,83 @@ type MemoryActionMode = "edit" | "delete" | null;
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8080/api";
 const apiOrigin = apiBaseUrl.replace(/\/api\/?$/, "");
-const memberHeader = { "X-Member-Id": "1" };
+const selectedMemberStorageKey = "record-room:selected-member-id";
 const currentMonth = toDateKey(new Date()).slice(0, 7);
 const memoryPostsPerPage = 6;
 const letterPageSize = 10;
 
-const demoProfile: MemberProfile = {
-  id: 1,
-  displayName: "류성열",
-  username: "recordryu",
-  email: "ryu@example.com",
-  phoneNumber: "010-1234-5678",
-  profileImageUrl: null,
-};
+const demoMemberOptions: DemoMemberOption[] = [
+  {
+    id: 1,
+    displayName: "류성열",
+    username: "recordryu",
+    email: "ryu@example.com",
+    phoneNumber: "010-1234-5678",
+    profileImageUrl: null,
+    roleDescription: "커플/가족/프로젝트방 방장",
+    roomHint: "우리 둘의 100일, 7월 가족, 여름 프로젝트반",
+  },
+  {
+    id: 2,
+    displayName: "여자친구",
+    username: "girlfriend",
+    email: "girlfriend@example.com",
+    phoneNumber: "010-2222-3333",
+    profileImageUrl: null,
+    roleDescription: "커플방 구성원",
+    roomHint: "우리 둘의 100일, 여자친구의 여행 준비방",
+  },
+  {
+    id: 3,
+    displayName: "아버지",
+    username: "father",
+    email: "father@example.com",
+    phoneNumber: "010-3333-4444",
+    profileImageUrl: null,
+    roleDescription: "가족방 구성원",
+    roomHint: "7월 가족, 가족 여행 사진방",
+  },
+  {
+    id: 4,
+    displayName: "지훈",
+    username: "jihun",
+    email: "jihun@example.com",
+    phoneNumber: "010-4444-5555",
+    profileImageUrl: null,
+    roleDescription: "프로젝트방 구성원",
+    roomHint: "여름 프로젝트반, 4학년 1반",
+  },
+];
+
+const defaultDemoMember = demoMemberOptions[0];
+
+function readStoredDemoMember(): DemoMemberOption | null {
+  if (typeof window === "undefined") return null;
+
+  const rawMemberId = window.localStorage.getItem(selectedMemberStorageKey);
+  const memberId = rawMemberId ? Number(rawMemberId) : NaN;
+
+  return demoMemberOptions.find((member) => member.id === memberId) ?? null;
+}
+
+function buildMemberHeader(): Record<string, string> {
+  const selectedMember = readStoredDemoMember() ?? defaultDemoMember;
+
+  return { "X-Member-Id": String(selectedMember.id) };
+}
+
+function demoProfileForMember(memberId: number): MemberProfile {
+  const selectedMember = demoMemberOptions.find((member) => member.id === memberId) ?? defaultDemoMember;
+
+  return {
+    id: selectedMember.id,
+    displayName: selectedMember.displayName,
+    username: selectedMember.username,
+    email: selectedMember.email,
+    phoneNumber: selectedMember.phoneNumber,
+    profileImageUrl: selectedMember.profileImageUrl,
+  };
+}
 
 const demoSettings: NotificationSettings = {
   allEnabled: true,
@@ -441,6 +512,8 @@ const demoRooms: RoomSummary[] = [
     role: "OWNER",
     memberCount: 2,
     unreadChatCount: 1,
+    unreadMemoryCount: 1,
+    unreadLetterCount: 1,
     pendingMissionCount: 2,
   },
   {
@@ -451,6 +524,8 @@ const demoRooms: RoomSummary[] = [
     role: "MEMBER",
     memberCount: 5,
     unreadChatCount: 0,
+    unreadMemoryCount: 1,
+    unreadLetterCount: 0,
     pendingMissionCount: 1,
   },
   {
@@ -461,17 +536,77 @@ const demoRooms: RoomSummary[] = [
     role: "MEMBER",
     memberCount: 12,
     unreadChatCount: 3,
+    unreadMemoryCount: 0,
+    unreadLetterCount: 1,
     pendingMissionCount: 0,
   },
 ];
+
+function demoRoomsForMember(memberId: number): RoomSummary[] {
+  if (memberId === 2) {
+    return [
+      { ...demoRooms[0], role: "MEMBER", unreadChatCount: 0, unreadMemoryCount: 1, unreadLetterCount: 0, pendingMissionCount: 1 },
+      {
+        id: 4,
+        name: "여자친구의 여행 준비방",
+        description: "여행 준비 과정을 같이 모으는 방",
+        type: "GROUP",
+        role: "OWNER",
+        memberCount: 1,
+        unreadChatCount: 0,
+        unreadMemoryCount: 0,
+        unreadLetterCount: 0,
+        pendingMissionCount: 0,
+      },
+    ];
+  }
+
+  if (memberId === 3) {
+    return [
+      { ...demoRooms[1], role: "MEMBER", memberCount: 7 },
+      {
+        id: 40,
+        name: "가족 여행 사진방",
+        description: "가족 여행 사진을 함께 모으는 방",
+        type: "FAMILY",
+        role: "OWNER",
+        memberCount: 1,
+        unreadChatCount: 0,
+        unreadMemoryCount: 0,
+        unreadLetterCount: 0,
+        pendingMissionCount: 0,
+      },
+    ];
+  }
+
+  if (memberId === 4) {
+    return [
+      { ...demoRooms[2], role: "MEMBER", memberCount: 6 },
+      {
+        id: 41,
+        name: "4학년 1반",
+        description: "반 기록을 함께 모으는 학급방",
+        type: "GROUP",
+        role: "OWNER",
+        memberCount: 1,
+        unreadChatCount: 0,
+        unreadMemoryCount: 0,
+        unreadLetterCount: 0,
+        pendingMissionCount: 0,
+      },
+    ];
+  }
+
+  return demoRooms;
+}
 
 const demoPendingInvitations: PendingRoomInvitation[] = [
   {
     id: 1,
     roomId: 4,
-    roomName: "달콤이의 여행 준비방",
+    roomName: "여자친구의 여행 준비방",
     roomType: "GROUP",
-    inviterName: "달콤이",
+    inviterName: "여자친구",
     createdAt: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
     expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
   },
@@ -495,13 +630,17 @@ const demoPendingInvitations: PendingRoomInvitation[] = [
   },
 ];
 
+function demoPendingInvitationsForMember(memberId: number): PendingRoomInvitation[] {
+  return memberId === 1 ? demoPendingInvitations : [];
+}
+
 const demoNotifications: NotificationItem[] = [
   {
     id: 9001,
     type: "MISSION_APPROVAL_REQUEST",
     roomId: 1,
     roomName: "우리 둘의 100일",
-    actorName: "달콤이",
+    actorName: "여자친구",
     summary: "미션 인증 동의를 기다립니다.",
     occurredAt: new Date(Date.now() - 8 * 60 * 1000).toISOString(),
     read: false,
@@ -512,7 +651,7 @@ const demoNotifications: NotificationItem[] = [
     type: "CHAT",
     roomId: 1,
     roomName: "우리 둘의 100일",
-    actorName: "달콤이",
+    actorName: "여자친구",
     summary: "새 채팅을 보냈습니다.",
     occurredAt: new Date(Date.now() - 22 * 60 * 1000).toISOString(),
     read: false,
@@ -556,7 +695,7 @@ const demoNotifications: NotificationItem[] = [
     const typeCycle: NotificationType[] = ["CHAT", "LETTER", "MEMORY", "MISSION_APPROVAL_REQUEST", "MISSION_PROGRESS"];
     const type = typeCycle[index % typeCycle.length];
     const room = demoRooms[index % demoRooms.length];
-    const actorNames = ["달콤이", "아버지", "지훈"];
+    const actorNames = ["여자친구", "아버지", "지훈"];
     const targetType: NotificationTarget["type"] = type === "CHAT" ? "CHAT" : type === "LETTER" ? "LETTER" : type === "MEMORY" ? "MEMORY" : "MISSION";
     const feature = targetType === "CHAT" ? "chat" : targetType === "LETTER" ? "letters" : targetType === "MEMORY" ? "memories" : "missions";
 
@@ -573,6 +712,69 @@ const demoNotifications: NotificationItem[] = [
     };
   }),
 ];
+
+function demoNotificationsForMember(memberId: number): NotificationItem[] {
+  if (memberId === 2) {
+    return [
+      {
+        id: 9201,
+        type: "CHAT",
+        roomId: 1,
+        roomName: "우리 둘의 100일",
+        actorName: "류성열",
+        summary: "새 채팅을 보냈습니다.",
+        occurredAt: new Date(Date.now() - 10 * 60 * 1000).toISOString(),
+        read: false,
+        target: { type: "CHAT", id: 233, url: "/rooms/1/chat?targetId=233" },
+      },
+      {
+        id: 9202,
+        type: "LETTER",
+        roomId: 1,
+        roomName: "우리 둘의 100일",
+        actorName: "류성열",
+        summary: "보낸 편지가 도착했습니다.",
+        occurredAt: new Date(Date.now() - 40 * 60 * 1000).toISOString(),
+        read: true,
+        target: { type: "LETTER", id: 440, url: "/rooms/1/letters?targetId=440" },
+      },
+    ];
+  }
+
+  if (memberId === 3) {
+    return [
+      {
+        id: 9301,
+        type: "MEMORY",
+        roomId: 2,
+        roomName: "7월 가족",
+        actorName: "류성열",
+        summary: "가족 여행 사진을 올렸습니다.",
+        occurredAt: new Date(Date.now() - 35 * 60 * 1000).toISOString(),
+        read: false,
+        target: { type: "MEMORY", id: 301, url: "/rooms/2/memories?targetId=301" },
+      },
+    ];
+  }
+
+  if (memberId === 4) {
+    return [
+      {
+        id: 9401,
+        type: "MISSION_APPROVAL_REQUEST",
+        roomId: 3,
+        roomName: "여름 프로젝트반",
+        actorName: "류성열",
+        summary: "미션 인증 동의를 기다립니다.",
+        occurredAt: new Date(Date.now() - 50 * 60 * 1000).toISOString(),
+        read: false,
+        target: { type: "MISSION", id: 105, url: "/rooms/3/missions?targetId=105" },
+      },
+    ];
+  }
+
+  return demoNotifications;
+}
 
 const demoCalendar: CalendarResponse = {
   month: currentMonth,
@@ -750,6 +952,7 @@ function mergeRoomSummary(room: RoomSummary, detail: RoomDetail): RoomSummary {
 }
 
 function App() {
+  const [selectedDemoMember, setSelectedDemoMember] = useState<DemoMemberOption | null>(() => readStoredDemoMember());
   const [profile, setProfile] = useState<MemberProfile | null>(null);
   const [settings, setSettings] = useState<NotificationSettings | null>(null);
   const [rooms, setRooms] = useState<RoomSummary[]>([]);
@@ -830,42 +1033,116 @@ function App() {
   const initials = useMemo(() => profile?.displayName.slice(0, 1) ?? "나", [profile]);
 
   useEffect(() => {
+    if (!selectedDemoMember) return;
+
     void loadInitialData();
-  }, []);
+  }, [selectedDemoMember?.id]);
 
   useEffect(() => {
-    if ((activeView !== "chat" && activeView !== "room") || !selectedRoom) return;
+    if (!selectedDemoMember) return;
+
+    const pollingTimerId = window.setInterval(() => {
+      void refreshSidebarState();
+    }, 5000);
+
+    return () => window.clearInterval(pollingTimerId);
+  }, [selectedDemoMember?.id]);
+
+  useEffect(() => {
+    if ((activeView !== "chat" && activeView !== "room") || !selectedRoom || !selectedDemoMember) return;
 
     void loadChatMessages(selectedRoom.id);
-  }, [activeView, selectedRoom?.id]);
+    const pollingTimerId = window.setInterval(() => {
+      void loadChatMessages(selectedRoom.id, { silent: true });
+    }, 3000);
+
+    return () => window.clearInterval(pollingTimerId);
+  }, [activeView, selectedRoom?.id, selectedDemoMember?.id]);
 
   useEffect(() => {
     if (activeView !== "memories" || !selectedRoom) return;
 
+    void readRoomFeatureNotifications(selectedRoom.id, "memories");
     void loadMemoryPosts(selectedRoom.id);
   }, [activeView, selectedRoom?.id]);
 
   useEffect(() => {
     if (activeView !== "missions" || !selectedRoom) return;
 
+    void readRoomFeatureNotifications(selectedRoom.id, "missions");
     void loadMissions(selectedRoom.id);
   }, [activeView, selectedRoom?.id]);
 
   useEffect(() => {
     if (activeView !== "letters" || !selectedRoom) return;
 
+    void readRoomFeatureNotifications(selectedRoom.id, "letters");
     void loadLetters(selectedRoom.id, letterBox, { focusId: letterFocusId });
   }, [activeView, selectedRoom?.id, letterBox, letterFocusId]);
 
+  function resetSessionState() {
+    setProfile(null);
+    setSettings(null);
+    setRooms([]);
+    setLatestNotifications([]);
+    setAllNotifications([]);
+    setPendingInvitations([]);
+    setCalendar(null);
+    setSelectedCalendarDate(null);
+    setCalendarRoomId(null);
+    setPendingInvitationCount(0);
+    setSelectedRoomId(null);
+    setExpandedRoomId(null);
+    setActiveView("home");
+    setChatMessages([]);
+    setChatDraft("");
+    setChatSearchKeyword("");
+    setChatSearchResults([]);
+    setMemoryPosts([]);
+    setSelectedMemoryPost(null);
+    setLetters([]);
+    setSelectedLetter(null);
+    setMissionList(null);
+    setLetterBox("RECEIVED");
+    setLetterFocusId(null);
+    setProfileForm({ displayName: "", profileImageUrl: "" });
+    setMessage(null);
+    setErrorMessage(null);
+    setRoomSettingsMode(null);
+    setRoomDetail(null);
+    setRoomFeedbackModal(null);
+    setProfileEditOpen(false);
+    setNotificationsModalOpen(false);
+  }
+
+  function selectDemoMember(member: DemoMemberOption) {
+    window.localStorage.setItem(selectedMemberStorageKey, String(member.id));
+    resetSessionState();
+    setSelectedDemoMember(member);
+  }
+
+  function logoutToMemberSelection() {
+    window.localStorage.removeItem(selectedMemberStorageKey);
+    setLogoutOpen(false);
+    resetSessionState();
+    setSelectedDemoMember(null);
+  }
+
   async function loadInitialData() {
     setErrorMessage(null);
+    const fallbackMemberId = selectedDemoMember?.id ?? defaultDemoMember.id;
+    const fallbackProfile = demoProfileForMember(fallbackMemberId);
+    const fallbackRooms = demoRoomsForMember(fallbackMemberId);
+    const fallbackInvitations = demoPendingInvitationsForMember(fallbackMemberId);
+    const fallbackNotifications = demoNotificationsForMember(fallbackMemberId);
+
     try {
       const [profileResponse, settingsResponse, roomsResponse] = await Promise.all([
         apiGet<MemberProfile>("/members/me"),
         apiGet<NotificationSettings>("/members/me/notification-settings"),
         apiGet<RoomsResponse>("/rooms"),
       ]);
-      const visibleRooms = roomsResponse.rooms.length > 0 ? roomsResponse.rooms : demoRooms;
+      const visibleRooms = roomsResponse.rooms.length > 0 ? roomsResponse.rooms : fallbackRooms;
       setProfile(profileResponse);
       setSettings(settingsResponse);
       setRooms(visibleRooms);
@@ -879,36 +1156,94 @@ function App() {
       });
       setSelectedRoomId((currentSelectedRoomId) => currentSelectedRoomId ?? visibleRooms[0]?.id ?? null);
     } catch (error) {
-      setProfile(demoProfile);
+      setProfile(fallbackProfile);
       setSettings(demoSettings);
-      setRooms(demoRooms);
-      setPendingInvitations(demoPendingInvitations);
-      setLatestNotifications(demoNotifications.filter((notification) => !notification.read).slice(0, 3));
-      setAllNotifications(demoNotifications);
+      setRooms(fallbackRooms);
+      setPendingInvitations(fallbackInvitations);
+      setLatestNotifications(fallbackNotifications.filter(isHomeNotification).slice(0, 3));
+      setAllNotifications(fallbackNotifications.filter(isHomeNotification));
       setCalendar(demoCalendar);
       setSelectedCalendarDate(demoCalendar.selectedDate ?? demoCalendar.days[0]?.date ?? null);
-      setPendingInvitationCount(1);
+      setPendingInvitationCount(fallbackInvitations.length);
       setProfileForm({
-        displayName: demoProfile.displayName,
-        profileImageUrl: demoProfile.profileImageUrl ?? "",
+        displayName: fallbackProfile.displayName,
+        profileImageUrl: fallbackProfile.profileImageUrl ?? "",
       });
-      setSelectedRoomId((currentSelectedRoomId) => currentSelectedRoomId ?? demoRooms[0].id);
+      setSelectedRoomId((currentSelectedRoomId) => currentSelectedRoomId ?? fallbackRooms[0]?.id ?? null);
     }
   }
 
   async function loadLatestNotifications() {
+    const fallbackNotifications = demoNotificationsForMember(selectedDemoMember?.id ?? defaultDemoMember.id);
     const latestResponse = await safeApiGet<NotificationsResponse>("/notifications/latest");
-    setLatestNotifications(latestResponse?.items.length ? latestResponse.items : demoNotifications.filter((notification) => !notification.read).slice(0, 3));
+    const latestItems = latestResponse?.items.filter(isHomeNotification);
+    const fallbackItems = fallbackNotifications.filter(isHomeNotification).slice(0, 3);
+
+    setLatestNotifications(latestItems ?? fallbackItems);
   }
 
   async function loadRooms() {
     const roomsResponse = await apiGet<RoomsResponse>("/rooms");
-    const visibleRooms = roomsResponse.rooms.length > 0 ? roomsResponse.rooms : demoRooms;
+    const visibleRooms = roomsResponse.rooms.length > 0 ? roomsResponse.rooms : demoRoomsForMember(selectedDemoMember?.id ?? defaultDemoMember.id);
     setRooms(visibleRooms);
     setPendingInvitationCount(roomsResponse.pendingInvitationCount);
     setSelectedRoomId((currentSelectedRoomId) => currentSelectedRoomId ?? visibleRooms[0]?.id ?? null);
 
     return visibleRooms;
+  }
+
+  async function refreshSidebarState() {
+    try {
+      await loadRooms();
+      await loadLatestNotifications();
+    } catch {
+      // 로컬 서버 재시작 중에는 기존 화면 상태를 유지한다.
+    }
+  }
+
+  function clearRoomFeatureBadge(roomId: number, feature: RoomFeatureKind) {
+    setRooms((currentRooms) =>
+      currentRooms.map((room) => {
+        if (room.id !== roomId) return room;
+
+        if (feature === "chat") return { ...room, unreadChatCount: 0 };
+        if (feature === "memories") return { ...room, unreadMemoryCount: 0 };
+        if (feature === "missions") return { ...room, pendingMissionCount: 0 };
+        if (feature === "letters") return { ...room, unreadLetterCount: 0 };
+
+        return room;
+      }),
+    );
+  }
+
+  function markRoomFeatureNotificationsAsRead(roomId: number, feature: RoomFeatureKind) {
+    const targetTypes = notificationTypesForRoomFeature(feature);
+    const markAsRead = (item: NotificationItem) =>
+      item.roomId === roomId && targetTypes.includes(item.type) ? { ...item, read: true } : item;
+
+    setLatestNotifications((current) => current.map(markAsRead));
+    setAllNotifications((current) => current.map(markAsRead));
+  }
+
+  function notificationTypesForRoomFeature(feature: RoomFeatureKind): NotificationType[] {
+    if (feature === "chat") return ["CHAT"];
+    if (feature === "memories") return ["MEMORY"];
+    if (feature === "missions") return ["MISSION_APPROVAL_REQUEST", "MISSION_PROGRESS"];
+    if (feature === "letters") return ["LETTER"];
+
+    return [];
+  }
+
+  async function readRoomFeatureNotifications(roomId: number, feature: RoomFeatureKind) {
+    clearRoomFeatureBadge(roomId, feature);
+    markRoomFeatureNotificationsAsRead(roomId, feature);
+
+    try {
+      await safeApiRequest<{ read: boolean }>(`/notifications/rooms/${roomId}/features/${feature}/read`, { method: "POST" });
+      await refreshSidebarState();
+    } catch {
+      // 로컬 서버 재시작 중에는 다음 사이드바 폴링 갱신에 맡긴다.
+    }
   }
 
   async function loadPendingInvitations() {
@@ -933,8 +1268,10 @@ function App() {
 
   async function openNotificationsModal() {
     setNotificationsModalOpen(true);
+    const fallbackNotifications = demoNotificationsForMember(selectedDemoMember?.id ?? defaultDemoMember.id);
     const response = await safeApiGet<NotificationsResponse>("/notifications?page=0&size=20");
-    setAllNotifications(response?.items.length ? response.items : demoNotifications);
+    const notificationItems = response?.items.filter(isHomeNotification);
+    setAllNotifications(notificationItems ?? fallbackNotifications.filter(isHomeNotification));
   }
 
   async function handleNotificationClick(notification: NotificationItem) {
@@ -1047,11 +1384,19 @@ function App() {
     setActiveView(view);
   }
 
-  async function loadChatMessages(roomId: number) {
-    setChatLoading(true);
+  async function loadChatMessages(roomId: number, options: { silent?: boolean } = {}) {
+    if (!options.silent) {
+      setChatLoading(true);
+    }
+
     const response = await safeApiGet<ChatMessagesResponse>(`/rooms/${roomId}/chat/messages`);
     setChatMessages(response?.messages ?? demoChatMessages(roomId));
-    setChatLoading(false);
+
+    if (!options.silent) {
+      await safeApiRequest<{ read: boolean; readCount: number }>(`/rooms/${roomId}/chat/read`, { method: "POST" });
+      await refreshSidebarState();
+      setChatLoading(false);
+    }
   }
 
   async function sendChatMessage() {
@@ -1069,12 +1414,13 @@ function App() {
     chatSendingRef.current = true;
     setChatSending(true);
     try {
-      const response = await apiRequest<SendChatMessageResponse>(`/rooms/${selectedRoom.id}/chat/messages`, {
+      await apiRequest<SendChatMessageResponse>(`/rooms/${selectedRoom.id}/chat/messages`, {
         method: "POST",
         body: { body },
       });
-      setChatMessages((current) => [...current, ...response.createdMessages]);
       setChatDraft("");
+      await loadChatMessages(selectedRoom.id, { silent: true });
+      await refreshSidebarState();
       await loadCalendarActivities(calendarRoomId);
     } catch (error) {
       setErrorMessage(toMessage(error));
@@ -1847,6 +2193,10 @@ function App() {
     }
   }
 
+  if (!selectedDemoMember) {
+    return <DemoMemberSelectionView members={demoMemberOptions} onSelect={selectDemoMember} />;
+  }
+
   return (
     <main className={`workspace ${sidebarCollapsed ? "sidebar-collapsed" : ""}`}>
       <Sidebar
@@ -2038,7 +2388,7 @@ function App() {
         />
       ) : null}
 
-      {logoutOpen ? <LogoutModal onClose={() => setLogoutOpen(false)} /> : null}
+      {logoutOpen ? <LogoutModal onClose={() => setLogoutOpen(false)} onConfirm={logoutToMemberSelection} /> : null}
 
       {roomFeedbackModal ? (
         <AlertModal title={roomFeedbackModal.title} message={roomFeedbackModal.message} onClose={() => setRoomFeedbackModal(null)} />
@@ -2088,6 +2438,43 @@ function App() {
           onClose={() => setNotificationsModalOpen(false)}
         />
       ) : null}
+    </main>
+  );
+}
+
+function DemoMemberSelectionView({
+  members,
+  onSelect,
+}: {
+  members: DemoMemberOption[];
+  onSelect: (member: DemoMemberOption) => void;
+}) {
+  return (
+    <main className="member-select-page">
+      <section className="member-select-panel" aria-labelledby="member-select-title">
+        <div className="member-select-heading">
+          <span className="eyebrow">체험 시작</span>
+          <h1 id="member-select-title">사용자를 선택하세요</h1>
+          <p>선택한 사람의 관점으로 기록방, 채팅, 편지, 미션 흐름을 확인한다.</p>
+        </div>
+
+        <div className="member-select-grid">
+          {members.map((member) => (
+            <button className="member-select-card" type="button" key={member.id} onClick={() => onSelect(member)}>
+              <span className="member-select-avatar" aria-hidden="true">
+                {member.displayName.slice(0, 1)}
+              </span>
+              <span className="member-select-info">
+                <strong>{member.displayName}</strong>
+                <span>아이디 {member.username}</span>
+                <small>{member.roleDescription}</small>
+                <em>{member.roomHint}</em>
+              </span>
+              <UserRound size={22} />
+            </button>
+          ))}
+        </div>
+      </section>
     </main>
   );
 }
@@ -2171,6 +2558,7 @@ function Sidebar({
                   <button className={activeView === "memories" && isSelected ? "active" : ""} type="button" tabIndex={isExpanded ? 0 : -1} onClick={() => onMoveRoomFeature(room.id, "memories")}>
                     <BookOpen size={16} />
                     <span className="nav-label">추억 게시판</span>
+                    {room.unreadMemoryCount > 0 ? <span className="count-badge">{room.unreadMemoryCount}</span> : null}
                   </button>
                   <button className={activeView === "missions" && isSelected ? "active" : ""} type="button" tabIndex={isExpanded ? 0 : -1} onClick={() => onMoveRoomFeature(room.id, "missions")}>
                     <CheckCircle2 size={16} />
@@ -2180,6 +2568,7 @@ function Sidebar({
                   <button className={activeView === "letters" && isSelected ? "active" : ""} type="button" tabIndex={isExpanded ? 0 : -1} onClick={() => onMoveRoomFeature(room.id, "letters")}>
                     <Mail size={16} />
                     <span className="nav-label">편지</span>
+                    {room.unreadLetterCount > 0 ? <span className="count-badge">{room.unreadLetterCount}</span> : null}
                   </button>
                 </div>
               </div>
@@ -4069,17 +4458,17 @@ function ProfileEditModal({
   );
 }
 
-function LogoutModal({ onClose }: { onClose: () => void }) {
+function LogoutModal({ onClose, onConfirm }: { onClose: () => void; onConfirm: () => void }) {
   return (
     <div className="modal-backdrop" role="presentation">
       <section className="modal" role="dialog" aria-modal="true" aria-labelledby="logout-title">
         <h2 id="logout-title">로그아웃할까요?</h2>
-        <p>현재 계정에서 로그아웃된다. Lv1에서는 세션 종료 대신 확인 흐름만 제공한다.</p>
+        <p>현재 체험 사용자를 종료하고 사용자 선택 화면으로 돌아간다.</p>
         <div className="modal-actions">
           <button className="outline-button" type="button" onClick={onClose}>
             취소
           </button>
-          <button className="primary-button" type="button" onClick={onClose}>
+          <button className="primary-button" type="button" onClick={onConfirm}>
             로그아웃
           </button>
         </div>
@@ -4649,7 +5038,7 @@ function letterBoxTitle(box: LetterBox): string {
 
 function demoLetterRecipients(roomId: number): LetterRecipient[] {
   if (roomId === 1) {
-    return [{ memberId: 2, displayName: "달콤이" }];
+    return [{ memberId: 2, displayName: "여자친구" }];
   }
 
   if (roomId === 2) {
@@ -4675,7 +5064,7 @@ function demoLetterRecipients(roomId: number): LetterRecipient[] {
 function demoLetters(roomId: number, box: LetterBox): LetterSummary[] {
   const room = demoRooms.find((candidate) => candidate.id === roomId) ?? demoRooms[0];
   const recipients = demoLetterRecipients(room.id);
-  const counterpart = recipients[0] ?? { memberId: 2, displayName: "달콤이" };
+  const counterpart = recipients[0] ?? { memberId: 2, displayName: "여자친구" };
   const baseId = 99000 + room.id * 100 + (box === "SENT" ? 50 : 0);
 
   if (box === "SENT") {
@@ -4845,7 +5234,7 @@ function demoMissionList(roomId: number): MissionListResponse {
           id: 9500 + room.id * 10 + index,
           missionId: 9000 + room.id * 100 + index,
           submitterMemberId: room.id === 1 ? 2 : room.id === 2 ? 3 : 4,
-          submitterName: room.id === 1 ? "달콤이" : room.id === 2 ? "아버지" : "지훈",
+          submitterName: room.id === 1 ? "여자친구" : room.id === 2 ? "아버지" : "지훈",
           body: "사진으로 인증한 기록입니다.",
           imageUrl: `https://picsum.photos/seed/demo-mission-${room.id}-${index}/900/640`,
           occurredDate: offsetDateKey(-index),
@@ -4877,7 +5266,7 @@ function demoMissionList(roomId: number): MissionListResponse {
           id: 9700 + room.id * 10 + index,
           missionId: 9000 + room.id * 100 + index,
           authorMemberId: index % 2 === 0 ? 1 : 2,
-          authorName: index % 2 === 0 ? "류성열" : "달콤이",
+          authorName: index % 2 === 0 ? "류성열" : "여자친구",
           body: index <= 1 ? "이 미션은 책에 담기 좋겠다." : "인증할 사진을 골라보자.",
           createdAt: `${offsetDateKey(-index)}T11:20:00+09:00`,
           mine: index % 2 === 0,
@@ -4897,7 +5286,7 @@ function demoMissionList(roomId: number): MissionListResponse {
 
 function demoMemoryPosts(roomId: number): MemoryPostSummary[] {
   const room = demoRooms.find((candidate) => candidate.id === roomId) ?? demoRooms[0];
-  const authorName = room.id === 1 ? "달콤이" : room.id === 2 ? "아버지" : "지훈";
+  const authorName = room.id === 1 ? "여자친구" : room.id === 2 ? "아버지" : "지훈";
 
   return [
     {
@@ -4942,7 +5331,7 @@ function demoMemoryDetail(roomId: number, memoryId: number): MemoryPostDetail {
         id: summary.id + 1000,
         memoryPostId: summary.id,
         authorMemberId: summary.mine ? 2 : 1,
-        authorName: summary.mine ? "달콤이" : "류성열",
+        authorName: summary.mine ? "여자친구" : "류성열",
         body: "이 추억은 나중에 다시 보면 좋겠다.",
         createdAt: `${summary.occurredDate}T21:10:00+09:00`,
         mine: !summary.mine,
@@ -4987,7 +5376,7 @@ function demoChatMessages(roomId: number): ChatMessage[] {
       id: 8001,
       roomId: room.id,
       senderMemberId: room.id === 1 ? 2 : 3,
-      senderName: room.id === 1 ? "달콤이" : room.id === 2 ? "아버지" : "지훈",
+      senderName: room.id === 1 ? "여자친구" : room.id === 2 ? "아버지" : "지훈",
       senderType: "MEMBER",
       body: `${room.name}에 오늘 기록 남겨둘게.`,
       sentAt: `${yesterday}T20:10:00+09:00`,
@@ -5009,7 +5398,7 @@ function demoChatMessages(roomId: number): ChatMessage[] {
       id: 8003,
       roomId: room.id,
       senderMemberId: room.id === 1 ? 2 : 3,
-      senderName: room.id === 1 ? "달콤이" : room.id === 2 ? "아버지" : "지훈",
+      senderName: room.id === 1 ? "여자친구" : room.id === 2 ? "아버지" : "지훈",
       senderType: "MEMBER",
       body: "이 대화는 날짜별 기록으로 남겨두면 다시 돌아보기 좋겠다.",
       sentAt: `${baseDate}T09:05:00+09:00`,
@@ -5062,6 +5451,10 @@ function notificationTargetView(notification: NotificationItem): AppView {
   if (notification.type === "LETTER" || notification.target.type === "LETTER") return "letters";
   if (notification.type === "MEMORY" || notification.target.type === "MEMORY") return "memories";
   return "missions";
+}
+
+function isHomeNotification(notification: NotificationItem): boolean {
+  return notification.type !== "CHAT" && notification.target.type !== "CHAT";
 }
 
 function notificationTypeLabel(type: NotificationType): string {
@@ -5234,7 +5627,7 @@ async function safeApiRequest<T>(path: string, options: { method: string; body?:
 async function apiFormDataRequest<T>(path: string, formData: FormData): Promise<T> {
   const response = await fetch(`${apiBaseUrl}${path}`, {
     method: "POST",
-    headers: memberHeader,
+    headers: buildMemberHeader(),
     body: formData,
   });
 
@@ -5250,7 +5643,7 @@ async function apiRequest<T>(path: string, options: { method: string; body?: unk
   const response = await fetch(`${apiBaseUrl}${path}`, {
     method: options.method,
     headers: {
-      ...memberHeader,
+      ...buildMemberHeader(),
       "Content-Type": "application/json",
     },
     body: options.body === undefined ? undefined : JSON.stringify(options.body),

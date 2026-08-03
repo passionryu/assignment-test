@@ -4,6 +4,7 @@ import com.recordroom.common.ApiException
 import com.recordroom.member.model.MemberEntity
 import com.recordroom.member.repository.MemberRepository
 import com.recordroom.member.service.MemberService
+import com.recordroom.notification.repository.NotificationRepository
 import com.recordroom.room.model.CreateRoomInvitationRequest
 import com.recordroom.room.model.CreateRoomInvitationResponse
 import com.recordroom.room.model.CreateRoomRequest
@@ -29,6 +30,7 @@ import java.time.OffsetDateTime
 class RoomService(
     private val memberService: MemberService,
     private val memberRepository: MemberRepository,
+    private val notificationRepository: NotificationRepository,
     private val roomRepository: RoomRepository,
 ) {
     private val log = LoggerFactory.getLogger(RoomService::class.java)
@@ -37,11 +39,39 @@ class RoomService(
         memberService.getProfile(memberId)
 
         val joinedRooms = roomRepository.findRoomsJoinedByMember(memberId)
+        val joinedRoomIds = joinedRooms.map { it.id }
+        val unreadChatCounts = notificationRepository.countUnreadNotificationsByRoomAndTypes(
+            memberId = memberId,
+            roomIds = joinedRoomIds,
+            types = setOf(NotificationRepository.CHAT_NOTIFICATION_TYPE),
+        )
+        val unreadMemoryCounts = notificationRepository.countUnreadNotificationsByRoomAndTypes(
+            memberId = memberId,
+            roomIds = joinedRoomIds,
+            types = setOf(NotificationRepository.MEMORY_NOTIFICATION_TYPE),
+        )
+        val unreadLetterCounts = notificationRepository.countUnreadNotificationsByRoomAndTypes(
+            memberId = memberId,
+            roomIds = joinedRoomIds,
+            types = setOf(NotificationRepository.LETTER_NOTIFICATION_TYPE),
+        )
+        val pendingMissionCounts = notificationRepository.countUnreadNotificationsByRoomAndTypes(
+            memberId = memberId,
+            roomIds = joinedRoomIds,
+            types = NotificationRepository.MISSION_NOTIFICATION_TYPES,
+        )
 
         val pendingInvitationCount = roomRepository.countPendingInvitationsForMember(memberId)
 
         return RoomsResponse(
-            rooms = joinedRooms,
+            rooms = joinedRooms.map { room ->
+                room.copy(
+                    unreadChatCount = unreadChatCounts[room.id] ?: 0,
+                    unreadMemoryCount = unreadMemoryCounts[room.id] ?: 0,
+                    unreadLetterCount = unreadLetterCounts[room.id] ?: 0,
+                    pendingMissionCount = pendingMissionCounts[room.id] ?: 0,
+                )
+            },
             pendingInvitationCount = pendingInvitationCount,
         )
     }

@@ -17,6 +17,8 @@ import com.recordroom.mission.model.MissionListResponse
 import com.recordroom.mission.model.MissionSubmissionResponse
 import com.recordroom.mission.model.MissionSummaryResponse
 import com.recordroom.mission.repository.MissionRepository
+import com.recordroom.notification.model.NotificationEntity
+import com.recordroom.notification.repository.NotificationRepository
 import com.recordroom.room.model.RoomEntity
 import com.recordroom.room.repository.RoomRepository
 import org.slf4j.LoggerFactory
@@ -37,6 +39,7 @@ class MissionService(
     private val roomRepository: RoomRepository,
     private val missionRepository: MissionRepository,
     private val missionImageStorage: MissionImageStorage,
+    private val notificationRepository: NotificationRepository,
 ) {
     private val log = LoggerFactory.getLogger(MissionService::class.java)
     private val seoulZone = ZoneId.of("Asia/Seoul")
@@ -129,7 +132,7 @@ class MissionService(
         missionId: Long,
         request: CreateMissionSubmissionRequest,
     ): MissionSummaryResponse {
-        memberService.getProfile(memberId)
+        val submitter = memberService.getProfile(memberId)
 
         val room = readRoomJoinedByMember(memberId, roomId, "POST /api/rooms/$roomId/missions/$missionId/submissions")
         val mission = readMissionInRoom(memberId, roomId, missionId, "POST /api/rooms/$roomId/missions/$missionId/submissions")
@@ -152,6 +155,14 @@ class MissionService(
                 occurredDate = request.occurredDate ?: now.toLocalDate(),
                 submittedAt = now,
             ),
+        )
+
+        createMissionSubmissionNotifications(
+            submitterMemberId = memberId,
+            submitterName = submitter.displayName,
+            room = room,
+            mission = mission,
+            occurredAt = now,
         )
 
         return mission.toSummaryResponse(memberId, room, roomRepository.countActiveRoomMembers(roomId))
@@ -298,6 +309,36 @@ class MissionService(
         }
 
         return submission
+    }
+
+    // 새 미션 인증은 제출자를 제외한 방 구성원이 확인해야 하므로 미션 알림을 남긴다.
+    private fun createMissionSubmissionNotifications(
+        submitterMemberId: Long,
+        submitterName: String,
+        room: RoomEntity,
+        mission: MissionEntity,
+        occurredAt: OffsetDateTime,
+    ) {
+        val notifications = roomRepository.findActiveRoomMembers(room.id)
+            .filter { roomMember -> roomMember.memberId != submitterMemberId }
+            .map { roomMember ->
+                NotificationEntity(
+                    receiverMemberId = roomMember.memberId,
+                    roomId = room.id,
+                    actorMemberId = submitterMemberId,
+                    type = NotificationRepository.MISSION_APPROVAL_REQUEST_NOTIFICATION_TYPE,
+                    title = "미션 인증 요청",
+                    message = "${submitterName}님이 '${mission.title}' 미션을 인증했습니다.",
+                    targetType = "MISSION",
+                    targetId = mission.id,
+                    occurredDate = occurredAt.toLocalDate(),
+                    createdAt = occurredAt,
+                )
+            }
+
+        if (notifications.isNotEmpty()) {
+            notificationRepository.saveAll(notifications)
+        }
     }
 
     private fun validateMissionCanReceiveSubmission(memberId: Long, roomId: Long, mission: MissionEntity, what: String) {

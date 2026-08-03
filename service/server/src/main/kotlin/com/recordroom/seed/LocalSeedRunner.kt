@@ -30,7 +30,7 @@ class LocalSeedRunner(
             seedNotificationSettings()
             seedContents()
             seedNotifications()
-            deleteLegacyChatAssistantFallbackMessages()
+            deleteLegacyAutomaticReplyMessages()
             syncIdentitySequences()
         }.onSuccess {
             log.info("[시드 데이터] 로컬 시드 생성 완료. who=system, what=LocalSeedRunner.run, requestData=profile:local, reason=completed")
@@ -51,7 +51,7 @@ class LocalSeedRunner(
             insert into members (id, display_name, username, email, phone_number, profile_image_url, password_hash, is_deleted)
             values
                 (1, '류성열', 'recordryu', 'ryu@example.com', '010-1234-5678', null, 'local-dummy-hash', false),
-                (2, '달콤이', 'dalkomi', 'dalkomi@example.com', '010-2222-3333', null, 'local-dummy-hash', false),
+                (2, '여자친구', 'girlfriend', 'girlfriend@example.com', '010-2222-3333', null, 'local-dummy-hash', false),
                 (3, '아버지', 'father', 'father@example.com', '010-3333-4444', null, 'local-dummy-hash', false),
                 (4, '지훈', 'jihun', 'jihun@example.com', '010-4444-5555', null, 'local-dummy-hash', false),
                 (5, '어머니', 'mother', 'mother@example.com', '010-5555-0005', null, 'local-dummy-hash', false),
@@ -93,7 +93,7 @@ class LocalSeedRunner(
                 (1, '우리 둘의 100일', '둘이 함께 쌓는 기록방', 'COUPLE', 1),
                 (2, '7월 가족', '가족의 이번 달 기록방', 'FAMILY', 1),
                 (3, '여름 프로젝트반', '프로젝트 구성원의 기록방', 'GROUP', 1),
-                (4, '달콤이의 여행 준비방', '여행 준비 과정을 같이 모으는 방', 'GROUP', 2),
+                (4, '여자친구의 여행 준비방', '여행 준비 과정을 같이 모으는 방', 'GROUP', 2),
                 (40, '가족 여행 사진방', '가족 여행 사진을 함께 모으는 방', 'FAMILY', 3),
                 (41, '4학년 1반', '반 기록을 함께 모으는 학급방', 'GROUP', 4)
             on conflict (id) do update set
@@ -215,7 +215,11 @@ class LocalSeedRunner(
                 memory_enabled,
                 mission_enabled
             )
-            values (1, true, true, true, true, true)
+            values
+                (1, true, true, true, true, true),
+                (2, true, true, true, true, true),
+                (3, true, true, true, true, true),
+                (4, true, true, true, true, true)
             on conflict (member_id) do update set
                 all_enabled = excluded.all_enabled,
                 chat_enabled = excluded.chat_enabled,
@@ -276,7 +280,13 @@ class LocalSeedRunner(
                 (229, 1, 2, '목요일 짧은 통화 기록 남겨둘게.', date_trunc('month', now() at time zone 'Asia/Seoul')::date + 19, now() - interval '25 hours'),
                 (230, 3, 4, '일요일 프로젝트 준비 상황 공유합니다.', date_trunc('month', now() at time zone 'Asia/Seoul')::date + 22, now() - interval '26 hours'),
                 (231, 2, 3, '목요일 가족 사진 후보를 다시 골랐어요.', date_trunc('month', now() at time zone 'Asia/Seoul')::date + 26, now() - interval '27 hours'),
-                (232, 3, 4, '월말 일요일 마무리 채팅입니다.', date_trunc('month', now() at time zone 'Asia/Seoul')::date + 29, now() - interval '28 hours')
+                (232, 3, 4, '월말 일요일 마무리 채팅입니다.', date_trunc('month', now() at time zone 'Asia/Seoul')::date + 29, now() - interval '28 hours'),
+                (233, 1, 1, '오늘 기록은 같이 보면 더 좋겠다.', ((now() at time zone 'Asia/Seoul')::date), now() - interval '18 minutes'),
+                (234, 1, 1, '나중에 책에 넣을 문장도 골라보자.', ((now() at time zone 'Asia/Seoul')::date), now() - interval '12 minutes'),
+                (235, 2, 1, '이번 가족 기록은 내가 먼저 정리해둘게요.', ((now() at time zone 'Asia/Seoul')::date), now() - interval '16 minutes'),
+                (236, 3, 1, '프로젝트반 사진은 발표 자료 후보로도 좋아요.', ((now() at time zone 'Asia/Seoul')::date), now() - interval '14 minutes'),
+                (237, 40, 1, '초대받은 사진방도 확인해볼게요.', ((now() at time zone 'Asia/Seoul')::date), now() - interval '10 minutes'),
+                (238, 41, 1, '반 기록방은 수락 후 같이 채워보겠습니다.', ((now() at time zone 'Asia/Seoul')::date), now() - interval '9 minutes')
             on conflict (id) do update set
                 room_id = excluded.room_id,
                 sender_member_id = excluded.sender_member_id,
@@ -693,7 +703,7 @@ class LocalSeedRunner(
                     2,
                     'MISSION_APPROVAL_REQUEST',
                     '미션 인증 요청',
-                    '달콤이가 미션 인증 동의를 기다립니다.',
+                    '여자친구가 미션 인증 동의를 기다립니다.',
                     'MISSION',
                     101,
                     ((now() at time zone 'Asia/Seoul')::date),
@@ -707,7 +717,7 @@ class LocalSeedRunner(
                     2,
                     'CHAT',
                     '새 채팅',
-                    '달콤이가 새 채팅을 보냈습니다.',
+                    '여자친구가 새 채팅을 보냈습니다.',
                     'CHAT',
                     201,
                     ((now() at time zone 'Asia/Seoul')::date),
@@ -763,7 +773,7 @@ class LocalSeedRunner(
                     2,
                     'CHAT',
                     '새 채팅',
-                    '달콤이가 오늘 점심 사진 이야기를 남겼습니다.',
+                    '여자친구가 오늘 점심 사진 이야기를 남겼습니다.',
                     'CHAT',
                     202,
                     ((now() at time zone 'Asia/Seoul')::date),
@@ -847,7 +857,7 @@ class LocalSeedRunner(
                     2,
                     'MEMORY',
                     '새 추억',
-                    '달콤이가 카페에서 찍은 사진을 올렸습니다.',
+                    '여자친구가 카페에서 찍은 사진을 올렸습니다.',
                     'MEMORY',
                     303,
                     ((now() at time zone 'Asia/Seoul')::date) - 2,
@@ -889,7 +899,7 @@ class LocalSeedRunner(
                     2,
                     'CHAT',
                     '새 채팅',
-                    '달콤이가 저녁 약속 채팅을 남겼습니다.',
+                    '여자친구가 저녁 약속 채팅을 남겼습니다.',
                     'CHAT',
                     204,
                     ((now() at time zone 'Asia/Seoul')::date) - 3,
@@ -931,7 +941,7 @@ class LocalSeedRunner(
                     2,
                     'MISSION_APPROVAL_REQUEST',
                     '미션 인증 요청',
-                    '달콤이가 산책 인증 동의를 기다립니다.',
+                    '여자친구가 산책 인증 동의를 기다립니다.',
                     'MISSION',
                     106,
                     ((now() at time zone 'Asia/Seoul')::date) - 3,
@@ -965,6 +975,90 @@ class LocalSeedRunner(
                     ((now() at time zone 'Asia/Seoul')::date) - 4,
                     null,
                     now() - interval '2 days 8 hours'
+                ),
+                (
+                    21,
+                    2,
+                    1,
+                    1,
+                    'CHAT',
+                    '새 채팅',
+                    '류성열이 오늘 기록을 같이 보자고 남겼습니다.',
+                    'CHAT',
+                    233,
+                    ((now() at time zone 'Asia/Seoul')::date),
+                    null,
+                    now() - interval '18 minutes'
+                ),
+                (
+                    22,
+                    2,
+                    1,
+                    1,
+                    'LETTER',
+                    '새 편지',
+                    '류성열이 편지를 보냈습니다.',
+                    'LETTER',
+                    440,
+                    ((now() at time zone 'Asia/Seoul')::date) - 1,
+                    null,
+                    now() - interval '1 day 1 hour'
+                ),
+                (
+                    23,
+                    3,
+                    2,
+                    1,
+                    'CHAT',
+                    '새 채팅',
+                    '류성열이 가족 기록을 먼저 정리하겠다고 남겼습니다.',
+                    'CHAT',
+                    235,
+                    ((now() at time zone 'Asia/Seoul')::date),
+                    null,
+                    now() - interval '16 minutes'
+                ),
+                (
+                    24,
+                    3,
+                    2,
+                    1,
+                    'MEMORY',
+                    '새 추억',
+                    '류성열이 가족 사진을 올렸습니다.',
+                    'MEMORY',
+                    301,
+                    ((now() at time zone 'Asia/Seoul')::date),
+                    null,
+                    now() - interval '1 hour'
+                ),
+                (
+                    25,
+                    4,
+                    3,
+                    1,
+                    'CHAT',
+                    '새 채팅',
+                    '류성열이 프로젝트반 사진 후보를 남겼습니다.',
+                    'CHAT',
+                    236,
+                    ((now() at time zone 'Asia/Seoul')::date),
+                    null,
+                    now() - interval '14 minutes'
+                ),
+                (
+                    26,
+                    4,
+                    3,
+                    1,
+                    'MISSION_APPROVAL_REQUEST',
+                    '미션 인증 요청',
+                    '류성열이 프로젝트 미션 인증 동의를 기다립니다.',
+                    'MISSION',
+                    105,
+                    ((now() at time zone 'Asia/Seoul')::date) - 1,
+                    null,
+                    now() - interval '1 day 2 hours'
                 )
             on conflict (id) do update set
                 receiver_member_id = excluded.receiver_member_id,
@@ -983,7 +1077,7 @@ class LocalSeedRunner(
     }
 
     // 이전 로컬 fallback 응답이 화면에 남아 최신 채팅 정책과 섞이지 않도록 제거한다.
-    private fun deleteLegacyChatAssistantFallbackMessages() {
+    private fun deleteLegacyAutomaticReplyMessages() {
         jdbcTemplate.update(
             """
             delete from chat_messages

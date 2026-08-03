@@ -17,12 +17,10 @@ java {
 }
 
 dependencies {
-    implementation(platform("org.springframework.ai:spring-ai-bom:1.0.9"))
     implementation("org.springframework.boot:spring-boot-starter-actuator")
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
     implementation("org.springframework.boot:spring-boot-starter-validation")
     implementation("org.springframework.boot:spring-boot-starter-web")
-    implementation("org.springframework.ai:spring-ai-starter-model-openai")
     implementation("com.querydsl:querydsl-jpa:5.1.0:jakarta")
     implementation("org.flywaydb:flyway-core")
     implementation("org.flywaydb:flyway-database-postgresql")

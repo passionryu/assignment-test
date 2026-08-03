@@ -21,6 +21,14 @@ Lv1 implementation skeleton is in progress.
 - Include seed data so reviewers can inspect the service immediately.
 - Document planning, implementation, review, and QA evidence in the repository.
 
+## Reviewer Demo Flow
+
+- The first screen asks the reviewer to choose one of four seeded demo users: `류성열`, `여자친구`, `아버지`, `지훈`.
+- The selected user is stored locally and sent to the API as `X-Member-Id`, so rooms, notifications, letters, missions, and chat are shown from that user's perspective.
+- Use another browser or an incognito window to choose a different demo user and test member-to-member chat locally.
+- Chat uses simple polling and does not create GPT or random automatic replies.
+- Logout clears the selected demo user and returns to the user selection screen.
+
 ## Directory Structure
 
 ```text
@@ -59,16 +67,17 @@ New AI QA runs use `docs/qa/issue-{issueNumber}/QA_레포트.html` as the primar
 
 ## Execution
 
-OpenAI API key is managed outside git. Copy `.env.example` to `.env` at the repository root and fill in your key:
+Optional local environment values are managed outside git. Copy `.env.example` to `.env` at the repository root only when you need to override the default local settings:
 
 ```bash
 cp .env.example .env
 ```
 
 ```text
-OPENAI_API_KEY=your_api_key_here
-OPENAI_CHAT_MODEL=gpt-4o-mini
-OPENAI_CHAT_TEMPERATURE=0.4
+POSTGRES_DB=assignment_test
+POSTGRES_USER=assignment_user
+POSTGRES_PASSWORD=assignment_password
+VITE_API_BASE_URL=http://localhost:8080/api
 ```
 
 The `.env` file is ignored by git and must not be committed.
@@ -85,10 +94,13 @@ Local URLs:
 - Server: http://localhost:8080
 - Health check: http://localhost:8080/api/health
 
-Default local API header:
+The browser client sets the local API header from the selected demo user. For direct curl tests, use one of the seeded member ids:
 
 ```text
-X-Member-Id: 1
+X-Member-Id: 1  # 류성열
+X-Member-Id: 2  # 여자친구
+X-Member-Id: 3  # 아버지
+X-Member-Id: 4  # 지훈
 ```
 
 The Docker setup starts PostgreSQL, runs server migrations, inserts local seed data, and serves the Vite client.

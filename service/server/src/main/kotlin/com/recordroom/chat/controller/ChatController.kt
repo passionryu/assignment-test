@@ -1,6 +1,7 @@
 package com.recordroom.chat.controller
 
 import com.recordroom.chat.model.ChatMessagesResponse
+import com.recordroom.chat.model.ChatReadResponse
 import com.recordroom.chat.model.ChatSearchResponse
 import com.recordroom.chat.model.SendChatMessageRequest
 import com.recordroom.chat.model.SendChatMessageResponse
@@ -45,6 +46,16 @@ class ChatController(
             memberId = currentMemberResolver.resolve(rawMemberId),
             roomId = roomId,
             request = request,
+        )
+
+    @PostMapping("/read")
+    fun readRoomChat(
+        @RequestHeader("X-Member-Id", required = false) rawMemberId: String?,
+        @PathVariable roomId: Long,
+    ): ChatReadResponse =
+        chatService.readRoomChat(
+            memberId = currentMemberResolver.resolve(rawMemberId),
+            roomId = roomId,
         )
 
     @GetMapping("/search")

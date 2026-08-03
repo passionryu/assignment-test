@@ -1,14 +1,16 @@
 package com.recordroom.chat.service
 
-import com.recordroom.chat.model.AI_ASSISTANT_MEMBER_ID
 import com.recordroom.chat.model.ChatMessageEntity
 import com.recordroom.chat.model.ChatMessagesResponse
+import com.recordroom.chat.model.ChatReadResponse
 import com.recordroom.chat.model.ChatSearchResponse
 import com.recordroom.chat.model.SendChatMessageRequest
 import com.recordroom.chat.model.SendChatMessageResponse
 import com.recordroom.chat.repository.ChatRepository
 import com.recordroom.common.ApiException
 import com.recordroom.member.service.MemberService
+import com.recordroom.notification.model.NotificationEntity
+import com.recordroom.notification.repository.NotificationRepository
 import com.recordroom.room.model.RoomEntity
 import com.recordroom.room.repository.RoomRepository
 import org.slf4j.LoggerFactory
@@ -23,10 +25,9 @@ import java.time.ZoneId
 @Transactional(readOnly = true)
 class ChatService(
     private val memberService: MemberService,
+    private val notificationRepository: NotificationRepository,
     private val roomRepository: RoomRepository,
     private val chatRepository: ChatRepository,
-    private val chatAssistantClient: ChatAssistantClient,
-    private val localChatReplyGenerator: LocalChatReplyGenerator,
 ) {
     private val log = LoggerFactory.getLogger(ChatService::class.java)
     private val seoulZone = ZoneId.of("Asia/Seoul")
@@ -47,7 +48,7 @@ class ChatService(
 
     @Transactional
     fun sendMessage(memberId: Long, roomId: Long, request: SendChatMessageRequest): SendChatMessageResponse {
-        val member = memberService.getProfile(memberId)
+        val sender = memberService.getProfile(memberId)
 
         val room = readRoomJoinedByMember(memberId, roomId, "POST /api/rooms/$roomId/chat/messages")
         val body = validateMessageBody(memberId, roomId, request.body)
@@ -62,46 +63,35 @@ class ChatService(
                 occurredDate = now.toLocalDate(),
             ),
         )
-
-        val gptReply = chatAssistantClient.generateReplyOrNull(
-            roomName = room.name,
-            senderName = member.displayName,
-            userMessage = body,
+        createChatNotifications(
+            senderMemberId = memberId,
+            senderName = sender.displayName,
+            room = room,
+            messageId = userMessage.id,
+            occurredAt = now,
         )
-        val replyMessages = if (gptReply != null) {
-            listOf(
-                chatRepository.saveMessage(
-                    ChatMessageEntity(
-                        roomId = room.id,
-                        senderMemberId = AI_ASSISTANT_MEMBER_ID,
-                        body = gptReply,
-                        sentAt = now.plusNanos(1_000_000),
-                        occurredDate = now.toLocalDate(),
-                    ),
-                ),
-            )
-        } else {
-            val replyCandidates = chatRepository.findReplyCandidates(room.id, memberId)
-            localChatReplyGenerator.generateMemberReplies(replyCandidates)
-                .mapIndexed { index, reply ->
-                    chatRepository.saveMessage(
-                        ChatMessageEntity(
-                            roomId = room.id,
-                            senderMemberId = reply.senderMemberId,
-                            body = reply.body,
-                            sentAt = now.plusNanos((index + 1) * 1_000_000L),
-                            occurredDate = now.toLocalDate(),
-                        ),
-                    )
-                }
-        }
-
-        val createdMessageIds = (listOf(userMessage) + replyMessages).map { it.id }.toSet()
 
         return SendChatMessageResponse(
             roomId = room.id,
             createdMessages = chatRepository.findMessages(room.id, memberId, now.toLocalDate())
-                .filter { it.id in createdMessageIds },
+                .filter { it.id == userMessage.id },
+        )
+    }
+
+    @Transactional
+    fun readRoomChat(memberId: Long, roomId: Long): ChatReadResponse {
+        memberService.getProfile(memberId)
+
+        readRoomJoinedByMember(memberId, roomId, "POST /api/rooms/$roomId/chat/read")
+        val readCount = notificationRepository.markUnreadRoomChatNotificationsAsRead(
+            memberId = memberId,
+            roomId = roomId,
+            readAt = OffsetDateTime.now(seoulZone),
+        )
+
+        return ChatReadResponse(
+            read = true,
+            readCount = readCount.toInt(),
         )
     }
 
@@ -165,6 +155,36 @@ class ChatService(
         }
 
         return keyword
+    }
+
+    // 채팅 발신자 외의 방 구성원에게만 사이드바 카운트용 채팅 알림을 남긴다.
+    private fun createChatNotifications(
+        senderMemberId: Long,
+        senderName: String,
+        room: RoomEntity,
+        messageId: Long,
+        occurredAt: OffsetDateTime,
+    ) {
+        val notifications = roomRepository.findActiveRoomMembers(room.id)
+            .filter { it.memberId != senderMemberId }
+            .map { roomMember ->
+                NotificationEntity(
+                    receiverMemberId = roomMember.memberId,
+                    roomId = room.id,
+                    actorMemberId = senderMemberId,
+                    type = NotificationRepository.CHAT_NOTIFICATION_TYPE,
+                    title = "새 채팅",
+                    message = "${senderName}님이 새 채팅을 보냈습니다.",
+                    targetType = "CHAT",
+                    targetId = messageId,
+                    occurredDate = occurredAt.toLocalDate(),
+                    createdAt = occurredAt,
+                )
+            }
+
+        if (notifications.isNotEmpty()) {
+            notificationRepository.saveAll(notifications)
+        }
     }
 
     private fun badRequest(memberId: Long, roomId: Long, requestData: String, message: String, code: String): Nothing {

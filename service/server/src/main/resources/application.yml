@@ -20,15 +20,6 @@ spring:
     multipart:
       max-file-size: 5MB
       max-request-size: 6MB
-  ai:
-    openai:
-      api-key: ${OPENAI_API_KEY:local-missing-openai-api-key}
-      chat:
-        options:
-          model: ${OPENAI_CHAT_MODEL:gpt-4o-mini}
-          temperature: ${OPENAI_CHAT_TEMPERATURE:0.4}
-    retry:
-      max-attempts: 1
 
 management:
   endpoints:
