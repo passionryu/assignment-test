@@ -1,14 +1,17 @@
 package com.recordroom.member.repository
 
+import com.querydsl.jpa.impl.JPAQueryFactory
 import com.recordroom.member.model.MemberEntity
 import com.recordroom.member.model.MemberProfileResponse
 import com.recordroom.member.model.NotificationSettingsEntity
 import com.recordroom.member.model.NotificationSettingsResponse
+import com.recordroom.member.model.QMemberEntity.memberEntity
 import org.springframework.stereotype.Repository
 import java.time.OffsetDateTime
 
 @Repository
 class MemberRepository(
+    private val queryFactory: JPAQueryFactory,
     private val memberJpaRepository: MemberJpaRepository,
     private val notificationSettingsJpaRepository: NotificationSettingsJpaRepository,
 ) {
@@ -23,6 +26,25 @@ class MemberRepository(
 
     fun findActiveMemberByPhoneNumber(phoneNumber: String): MemberEntity? =
         memberJpaRepository.findByPhoneNumberAndDeletedFalse(phoneNumber)
+
+    // 초대 검색은 이름 동명이인을 사용자가 직접 구분해야 하므로 여러 후보를 반환한다.
+    fun searchActiveMembersForInvitation(keyword: String, limit: Long = 8): List<MemberEntity> {
+        val normalizedKeyword = keyword.trim()
+        val normalizedEmail = normalizedKeyword.lowercase()
+
+        return queryFactory
+            .selectFrom(memberEntity)
+            .where(
+                memberEntity.deleted.isFalse,
+                memberEntity.displayName.containsIgnoreCase(normalizedKeyword)
+                    .or(memberEntity.username.containsIgnoreCase(normalizedKeyword))
+                    .or(memberEntity.email.eq(normalizedEmail))
+                    .or(memberEntity.phoneNumber.eq(normalizedKeyword)),
+            )
+            .orderBy(memberEntity.displayName.asc(), memberEntity.id.asc())
+            .limit(limit)
+            .fetch()
+    }
 
     fun updateProfile(memberId: Long, displayName: String, profileImageUrl: String?): MemberProfileResponse? {
         val member = memberJpaRepository.findByIdAndDeletedFalse(memberId) ?: return null

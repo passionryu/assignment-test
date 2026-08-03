@@ -2990,6 +2990,10 @@ dl {
   gap: 8px;
 }
 
+.invite-inline-form {
+  width: 100%;
+}
+
 .small-button {
   min-height: 36px;
   padding: 0 12px;
@@ -3003,7 +3007,7 @@ dl {
 
 .room-card {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto minmax(280px, auto);
+  grid-template-columns: minmax(0, 1fr) minmax(620px, auto);
   align-items: center;
   gap: 18px;
   padding: 22px;
@@ -3079,12 +3083,19 @@ dl {
 .room-card-actions {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 14px;
   justify-content: flex-end;
+  flex-wrap: nowrap;
+}
+
+.invite-search-area {
+  width: auto;
 }
 
 .invite-inline-form input {
-  width: 190px;
+  flex: 1;
+  width: min(360px, 28vw);
+  min-width: 230px;
   min-height: 44px;
   border: 1px solid #dfe7f2;
   border-radius: 8px;
@@ -3104,6 +3115,74 @@ dl {
   background: #f4f7fb;
   color: #98a2b3;
   cursor: not-allowed;
+}
+
+.invite-inline-form.is-disabled button {
+  cursor: not-allowed;
+  opacity: 0.58;
+}
+
+.invitee-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid #e4ebf5;
+  border-radius: 8px;
+  background: #fbfcff;
+  padding: 10px;
+}
+
+.invitee-avatar {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 8px;
+  background: #fff1f7;
+  color: #f04f95;
+  font-size: 18px;
+  font-weight: 900;
+}
+
+.invitee-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.invitee-info {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.invitee-info strong {
+  color: #253248;
+  font-size: 14px;
+  line-height: 1.25;
+}
+
+.invitee-info span,
+.invitee-info p {
+  margin: 0;
+  color: #667085;
+  font-size: 12px;
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+.invitee-selection-modal {
+  width: min(620px, 100%);
+}
+
+.invitee-selection-list {
+  display: grid;
+  gap: 10px;
+  max-height: min(420px, calc(100vh - 260px));
+  overflow-y: auto;
+  padding-right: 4px;
 }
 
 .skeleton-list {
@@ -3760,6 +3839,14 @@ dl {
   .room-meta,
   .room-card-actions {
     justify-content: flex-start;
+  }
+
+  .room-card-actions {
+    flex-wrap: wrap;
+  }
+
+  .invite-inline-form input {
+    width: min(360px, 60vw);
   }
 
   .row-button {

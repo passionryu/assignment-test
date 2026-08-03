@@ -15,6 +15,8 @@ import com.recordroom.room.model.RespondRoomInvitationResponse
 import com.recordroom.room.model.RoomDetailResponse
 import com.recordroom.room.model.RoomEntity
 import com.recordroom.room.model.RoomInvitationEntity
+import com.recordroom.room.model.RoomInviteeSearchResponse
+import com.recordroom.room.model.RoomInviteeSearchResultResponse
 import com.recordroom.room.model.RoomMemberEntity
 import com.recordroom.room.model.RoomsResponse
 import com.recordroom.room.model.UpdateRoomRequest
@@ -175,6 +177,27 @@ class RoomService(
         return DeleteRoomResponse(id = room.id, deleted = true)
     }
 
+    fun searchInvitationCandidates(memberId: Long, roomId: Long, rawKeyword: String?): RoomInviteeSearchResponse {
+        memberService.getProfile(memberId)
+
+        roomRepository.findActiveRoom(roomId) ?: roomNotFound(memberId, roomId, "RoomService.searchInvitationCandidates")
+
+        val inviterMembership = roomRepository.findActiveRoomMember(roomId, memberId)
+            ?: memberNotJoinedRoom(memberId, roomId, "RoomService.searchInvitationCandidates")
+
+        validateMemberCanInvite(memberId, roomId, inviterMembership.role, "RoomService.searchInvitationCandidates")
+
+        val keyword = validateInviteeSearchKeyword(memberId, roomId, rawKeyword)
+        val candidates = memberRepository.searchActiveMembersForInvitation(keyword)
+            .filterNot { it.id == memberId }
+            .map { it.toInviteeSearchResultResponse() }
+
+        return RoomInviteeSearchResponse(
+            keyword = keyword,
+            results = candidates,
+        )
+    }
+
     @Transactional
     fun createInvitation(
         memberId: Long,
@@ -188,23 +211,23 @@ class RoomService(
         val inviterMembership = roomRepository.findActiveRoomMember(roomId, memberId)
             ?: memberNotJoinedRoom(memberId, roomId, "RoomService.createInvitation")
 
-        validateMemberCanInvite(memberId, roomId, inviterMembership.role)
+        validateMemberCanInvite(memberId, roomId, inviterMembership.role, "RoomService.createInvitation")
 
-        val invitationContact = resolveInvitationContact(memberId, roomId, request)
-        val invitee = findInviteeMember(memberId, roomId, invitationContact)
+        val invitationTarget = resolveInvitationTarget(memberId, roomId, request)
+        val invitee = invitationTarget.member
 
         validateInviteeIsNotSelf(memberId, roomId, invitee.id)
         validateInviteeIsNotJoined(memberId, roomId, invitee.id)
 
         val now = OffsetDateTime.now()
-        validateDuplicatePendingInvitation(memberId, roomId, invitee, invitationContact, now)
+        validateDuplicatePendingInvitation(memberId, roomId, invitee, invitationTarget.contact, now)
 
         val invitation = roomRepository.saveRoomInvitation(
             RoomInvitationEntity(
                 roomId = roomId,
                 inviterMemberId = memberId,
-                inviteeEmail = invitationContact.email,
-                inviteePhoneNumber = invitationContact.phoneNumber,
+                inviteeEmail = invitationTarget.contact.email,
+                inviteePhoneNumber = invitationTarget.contact.phoneNumber,
                 inviteeMemberId = invitee.id,
                 status = "PENDING",
                 createdAt = now,
@@ -318,11 +341,12 @@ class RoomService(
         return type
     }
 
-    private fun validateMemberCanInvite(memberId: Long, roomId: Long, role: String) {
+    private fun validateMemberCanInvite(memberId: Long, roomId: Long, role: String, what: String) {
         if (role != "OWNER") {
             log.warn(
-                "[방 초대] 초대 권한 검증 실패. who=memberId:{}, what=RoomService.createInvitation, requestData=roomId:{}, reason=owner_required",
+                "[방 초대] 초대 권한 검증 실패. who=memberId:{}, what={}, requestData=roomId:{}, reason=owner_required",
                 memberId,
+                what,
                 roomId,
             )
             throw ApiException(HttpStatus.FORBIDDEN, "ROOM_OWNER_REQUIRED", "방장만 초대할 수 있습니다.")
@@ -362,6 +386,47 @@ class RoomService(
         return InvitationContact(email = email, phoneNumber = phoneNumber)
     }
 
+    private fun validateInviteeSearchKeyword(memberId: Long, roomId: Long, rawKeyword: String?): String {
+        val keyword = rawKeyword?.trim()?.takeIf { it.isNotEmpty() }
+            ?: badRequest(memberId, "GET /api/rooms/$roomId/invitation-candidates", "keyword:null", "검색어를 입력해 주세요.", "INVITEE_SEARCH_KEYWORD_REQUIRED")
+
+        if (keyword.length > MAX_INVITEE_SEARCH_KEYWORD_LENGTH) {
+            badRequest(
+                memberId = memberId,
+                what = "GET /api/rooms/$roomId/invitation-candidates",
+                requestData = "keyword:length:${keyword.length}",
+                message = "검색어는 50자 이하로 입력해 주세요.",
+                code = "INVITEE_SEARCH_KEYWORD_TOO_LONG",
+            )
+        }
+
+        return keyword
+    }
+
+    private fun resolveInvitationTarget(
+        memberId: Long,
+        roomId: Long,
+        request: CreateRoomInvitationRequest,
+    ): InvitationTarget {
+        request.memberId?.let { inviteeMemberId ->
+            val invitee = memberRepository.findActiveMember(inviteeMemberId)
+                ?: inviteeNotFoundByMemberId(memberId, roomId, inviteeMemberId)
+
+            return InvitationTarget(
+                member = invitee,
+                contact = InvitationContact(email = invitee.email, phoneNumber = invitee.phoneNumber),
+            )
+        }
+
+        val invitationContact = resolveInvitationContact(memberId, roomId, request)
+        val invitee = findInviteeMember(memberId, roomId, invitationContact)
+
+        return InvitationTarget(
+            member = invitee,
+            contact = invitationContact,
+        )
+    }
+
     private fun findInviteeMember(memberId: Long, roomId: Long, contact: InvitationContact): MemberEntity =
         when {
             contact.email != null -> memberRepository.findActiveMemberByEmail(contact.email)
@@ -377,6 +442,16 @@ class RoomService(
             )
             throw ApiException(HttpStatus.NOT_FOUND, "INVITEE_NOT_FOUND", "초대할 회원을 찾을 수 없습니다.")
         }
+
+    private fun inviteeNotFoundByMemberId(memberId: Long, roomId: Long, inviteeMemberId: Long): Nothing {
+        log.warn(
+            "[방 초대] 초대 대상 회원 조회 실패. who=memberId:{}, what=RoomService.createInvitation, requestData=roomId:{},inviteeMemberId:{}, reason=invitee_not_found",
+            memberId,
+            roomId,
+            inviteeMemberId,
+        )
+        throw ApiException(HttpStatus.NOT_FOUND, "INVITEE_NOT_FOUND", "초대할 회원을 찾을 수 없습니다.")
+    }
 
     private fun validateInviteeIsNotSelf(memberId: Long, roomId: Long, inviteeMemberId: Long) {
         if (memberId == inviteeMemberId) {
@@ -444,6 +519,16 @@ class RoomService(
             canManage = role == "OWNER",
         )
 
+    private fun MemberEntity.toInviteeSearchResultResponse(): RoomInviteeSearchResultResponse =
+        RoomInviteeSearchResultResponse(
+            id = id,
+            displayName = displayName,
+            username = username,
+            maskedEmail = maskEmail(email),
+            maskedPhoneNumber = maskPhone(phoneNumber),
+            profileImageUrl = profileImageUrl,
+        )
+
     private fun roomNotFound(memberId: Long, roomId: Long, what: String): Nothing {
         log.warn(
             "[방 조회] 방 조회 실패. who=memberId:{}, what={}, requestData=roomId:{}, reason=room_not_found",
@@ -507,9 +592,15 @@ class RoomService(
         val phoneNumber: String?,
     )
 
+    private data class InvitationTarget(
+        val member: MemberEntity,
+        val contact: InvitationContact,
+    )
+
     companion object {
         private const val MAX_ROOM_NAME_LENGTH = 80
         private const val MAX_ROOM_DESCRIPTION_LENGTH = 255
+        private const val MAX_INVITEE_SEARCH_KEYWORD_LENGTH = 50
         private const val INVITATION_EXPIRATION_DAYS = 7L
         private val SUPPORTED_ROOM_TYPES = setOf("COUPLE", "FAMILY", "GROUP")
         private val EMAIL_PATTERN = Regex("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$")

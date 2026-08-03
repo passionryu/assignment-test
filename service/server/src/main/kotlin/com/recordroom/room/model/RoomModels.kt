@@ -52,14 +52,29 @@ data class DeleteRoomResponse(
 )
 
 data class CreateRoomInvitationRequest(
-    val email: String?,
-    val phoneNumber: String?,
+    val memberId: Long? = null,
+    val email: String? = null,
+    val phoneNumber: String? = null,
 )
 
 data class CreateRoomInvitationResponse(
     val id: Long,
     val status: String,
     val expiresAt: String,
+)
+
+data class RoomInviteeSearchResponse(
+    val keyword: String,
+    val results: List<RoomInviteeSearchResultResponse>,
+)
+
+data class RoomInviteeSearchResultResponse(
+    val id: Long,
+    val displayName: String,
+    val username: String,
+    val maskedEmail: String,
+    val maskedPhoneNumber: String,
+    val profileImageUrl: String?,
 )
 
 data class PendingRoomInvitationsResponse(
