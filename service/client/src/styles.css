@@ -601,10 +601,9 @@ dl {
 }
 
 .settings-layout {
-  display: grid;
-  grid-template-columns: 360px minmax(0, 1fr);
-  gap: 22px;
-  align-items: start;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
 .profile-panel,
@@ -628,6 +627,30 @@ dl {
   min-height: 560px;
 }
 
+.settings-profile-panel {
+  min-height: auto;
+  display: grid;
+  grid-template-columns: minmax(170px, 0.7fr) minmax(320px, 1.25fr) minmax(340px, 1.05fr) minmax(180px, 0.65fr);
+  align-items: center;
+  gap: 22px;
+}
+
+.settings-profile-panel .panel-heading {
+  margin-bottom: 0;
+}
+
+.settings-profile-panel .profile-summary {
+  flex: 0 0 auto;
+}
+
+.settings-profile-panel .profile-meta {
+  margin-top: 0;
+}
+
+.settings-profile-panel .profile-meta div {
+  padding: 13px 15px;
+}
+
 .compact-panel {
   min-height: 270px;
   display: flex;
@@ -639,7 +662,8 @@ dl {
 }
 
 .settings-stack {
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 16px;
 }
 
@@ -3541,6 +3565,25 @@ dl {
   flex: 1;
 }
 
+.settings-profile-actions {
+  display: grid;
+  gap: 10px;
+  margin-top: 0;
+  padding-top: 0;
+}
+
+.settings-profile-actions .full-width {
+  margin-top: 0;
+}
+
+.settings-logout-button {
+  width: 100%;
+  min-height: 46px;
+  border-color: #f4c6d9;
+  background: #fff7fb;
+  color: #d9367d;
+}
+
 .profile-meta {
   display: grid;
   gap: 12px;
@@ -3683,7 +3726,157 @@ dl {
 }
 
 .notification-card {
-  min-height: 230px;
+  min-height: 560px;
+  height: 100%;
+}
+
+.settings-help-card,
+.settings-guide-card {
+  min-height: 0;
+}
+
+.settings-accordion-list {
+  display: grid;
+  gap: 12px;
+}
+
+.settings-accordion-item {
+  width: 100%;
+  min-height: 74px;
+  border: 1px solid #e4ebf5;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #253248;
+  padding: 18px 20px;
+  text-align: left;
+  cursor: pointer;
+  overflow: hidden;
+  transition:
+    border-color 0.18s ease,
+    box-shadow 0.18s ease,
+    background-color 0.18s ease;
+}
+
+.settings-accordion-item:hover,
+.settings-accordion-item:focus-visible {
+  border-color: #f04f95;
+  box-shadow: 0 0 0 4px rgba(240, 79, 149, 0.1);
+  outline: none;
+}
+
+.settings-accordion-item.open {
+  border-color: #f9b7d4;
+  background: #fff8fb;
+}
+
+.settings-accordion-question {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.settings-accordion-question strong {
+  display: block;
+  color: #253248;
+  font-size: 16px;
+  font-weight: 900;
+}
+
+.settings-accordion-question svg {
+  color: #f04f95;
+  flex: 0 0 auto;
+  transition: transform 0.18s ease;
+}
+
+.settings-accordion-item.open .settings-accordion-question svg {
+  transform: rotate(180deg);
+}
+
+.settings-accordion-answer {
+  display: block;
+  max-height: 0;
+  margin-top: 0;
+  color: #667085;
+  font-size: 15px;
+  font-weight: 750;
+  line-height: 1.65;
+  opacity: 0;
+  transform: translateY(-4px);
+  transition:
+    max-height 0.22s ease,
+    margin-top 0.22s ease,
+    opacity 0.18s ease,
+    transform 0.18s ease;
+}
+
+.settings-accordion-item.open .settings-accordion-answer {
+  max-height: 240px;
+  margin-top: 14px;
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.settings-info-list {
+  display: grid;
+  gap: 12px;
+}
+
+.settings-info-list.compact {
+  gap: 10px;
+}
+
+.settings-info-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  min-height: 82px;
+  border: 1px solid #e4ebf5;
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 16px 18px;
+}
+
+.settings-info-row strong,
+.settings-scope-item strong {
+  display: block;
+  color: #253248;
+  font-weight: 900;
+}
+
+.settings-info-row span,
+.settings-scope-item span {
+  display: block;
+  margin-top: 6px;
+  color: #667085;
+  font-size: 14px;
+  font-weight: 750;
+  line-height: 1.5;
+}
+
+.settings-info-row .help-tooltip {
+  right: calc(100% + 10px);
+  left: auto;
+}
+
+.settings-scope-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.settings-scope-item {
+  min-height: 120px;
+  border: 1px solid #e4ebf5;
+  border-radius: 8px;
+  background: #f9fbff;
+  padding: 18px;
+}
+
+.notification-list-settings {
+  display: grid;
+  gap: 12px;
 }
 
 .toggle-row {
@@ -3715,6 +3908,10 @@ dl {
   background: #f0fbf5;
 }
 
+.notification-setting-row {
+  min-height: 86px;
+}
+
 .notification-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -3730,11 +3927,34 @@ dl {
   border: 1px solid #e4ebf5;
   border-radius: 8px;
   background: #ffffff;
-  padding: 14px;
+  padding: 18px;
+  min-height: 86px;
 }
 
 .toggle-field.is-disabled {
   background: #f7f9fd;
+  color: #8a98aa;
+}
+
+.toggle-copy {
+  display: grid;
+  gap: 5px;
+}
+
+.toggle-copy strong {
+  color: #253248;
+  font-size: 15px;
+}
+
+.toggle-copy small {
+  color: #667085;
+  font-size: 13px;
+  font-weight: 750;
+  line-height: 1.45;
+}
+
+.toggle-field.is-disabled .toggle-copy strong,
+.toggle-field.is-disabled .toggle-copy small {
   color: #8a98aa;
 }
 
@@ -4046,7 +4266,8 @@ dl {
   .password-fields,
   .notification-grid,
   .metric-grid,
-  .room-hub-grid {
+  .room-hub-grid,
+  .settings-scope-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
@@ -4065,6 +4286,11 @@ dl {
 
   .invite-inline-form input {
     width: min(360px, 60vw);
+  }
+
+  .settings-profile-panel {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: stretch;
   }
 
   .row-button {
@@ -4102,6 +4328,8 @@ dl {
   .password-fields,
   .metric-grid,
   .room-hub-grid,
+  .settings-scope-grid,
+  .settings-profile-panel,
   .letter-form,
   .chat-input-row,
   .chat-search-form,

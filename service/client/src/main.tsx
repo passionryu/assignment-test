@@ -2438,11 +2438,8 @@ function App() {
         {activeView === "settings" ? (
           <SettingsView
             profile={profile}
-            settings={settings}
             initials={initials}
             onOpenProfileEdit={() => setProfileEditOpen(true)}
-            onToggleAllNotifications={toggleAllNotifications}
-            onToggleIndividualNotification={toggleIndividualNotification}
             onLogout={() => setLogoutOpen(true)}
           />
         ) : null}
@@ -4383,21 +4380,43 @@ function RoomFeatureView({ selectedRoom, kind }: { selectedRoom: RoomSummary | n
 
 function SettingsView({
   profile,
-  settings,
   initials,
   onOpenProfileEdit,
-  onToggleAllNotifications,
-  onToggleIndividualNotification,
   onLogout,
 }: {
   profile: MemberProfile | null;
-  settings: NotificationSettings | null;
   initials: string;
   onOpenProfileEdit: () => void;
-  onToggleAllNotifications: (checked: boolean) => void;
-  onToggleIndividualNotification: (key: keyof Omit<NotificationSettings, "allEnabled">, checked: boolean) => void;
   onLogout: () => void;
 }) {
+  const [openQaTitle, setOpenQaTitle] = useState<string | null>("해당 서비스는 회원가입이 없나요?");
+  const qaItems = [
+    {
+      title: "해당 서비스는 회원가입이 없나요?",
+      help: '네, 해당 서비스는 "과제 안내문"의 "실행 직후 로그인 없이도 서비스를 바로 확인할 수 있는 서비스"의 조건을 충족 시키기 위해, 사전에 미리 세팅 된 4개의 유저들을 선택하여 로그인할 수 있게 기획되었습니다.',
+    },
+    {
+      title: "방에서 유저의 권한에 따라 접근 가능한 기능이 다른가요?",
+      help: "네, 방장에게만 친구 초대, 방 정보 수정, 방 삭제 등의 기능이 지원되며, 멤버의 경우는 위 기능들이 지원되지 않습니다.",
+    },
+    {
+      title: "추억 게시판은 어떠한 기능인가요?",
+      help: "추억 게시판은 멤버들끼리 함께한 추억을 사진과 글을 통해 기록하며, 채팅형 댓글을 통해 멤버들과 추억을 기록할 수 있는 게시판입니다.",
+    },
+    {
+      title: "미션 인증은 어떠한 기능인가요?",
+      help: "미션 인증은 각 방의 Type 별로 사전 세팅된 20개의 기본 미션에 커스텀 미션(사용자가 추가 가능)이 추가된 기능입니다. 미션에 맞는 사진과 글을 업로드 하고 채팅형 댓글을 통해 멤버들과 미션을 인증할 수 있는 게시판입니다.",
+    },
+    {
+      title: "편지는 어떠한 기능인가요?",
+      help: "편지는 방 구성원 중 한명에게만 편지를 전달할 수 있는 기능입니다. 이는 방 내 다른 멤버들이 조회가 불가능합니다.",
+    },
+    {
+      title: "방의 타입은 무엇이 있나요?",
+      help: "방의 타입은 커플/가족/학급 및 동아리가 있습니다. 이는 다양한 연령대의 유저들의 일상을 기록하기 위함입니다.",
+    },
+  ];
+
   return (
     <>
       <header className="page-header">
@@ -4407,7 +4426,7 @@ function SettingsView({
       </header>
 
       <section className="settings-layout">
-        <article className="profile-panel">
+        <article className="profile-panel settings-profile-panel">
           <div className="panel-heading">
             <div>
               <span>프로필</span>
@@ -4437,87 +4456,43 @@ function SettingsView({
             </div>
           </dl>
 
-          <button className="primary-button full-width" type="button" onClick={onOpenProfileEdit}>
-            프로필 수정
-          </button>
+          <div className="settings-profile-actions">
+            <button className="primary-button full-width" type="button" onClick={onOpenProfileEdit}>
+              프로필 수정
+            </button>
+            <button className="outline-button settings-logout-button" type="button" onClick={onLogout}>
+              <LogOut size={17} />
+              로그아웃
+            </button>
+          </div>
         </article>
 
         <section className="settings-stack">
-          <article className="settings-card notification-card">
+          <article className="settings-card settings-help-card">
             <div className="panel-heading">
               <div>
-                <span>알림 설정</span>
-                <h2>받을 알림을 선택</h2>
+                <span>도움말</span>
+                <h2>Q&A</h2>
               </div>
-              <Bell size={24} />
+              <CircleHelp size={24} />
             </div>
 
-            <div className="toggle-row all-toggle">
-              <div>
-                <div className="heading-help-row compact-help-row">
-                  <strong>전체 알림</strong>
-                  <HelpButton title="전체 알림" message="ON이면 모든 개별 알림이 함께 켜지고, OFF일 때 채팅, 편지, 추억, 미션 알림을 개별로 조정합니다." />
-                </div>
-              </div>
-              <Toggle checked={settings?.allEnabled ?? true} onChange={onToggleAllNotifications} />
-            </div>
-
-            <div className="notification-grid" aria-label="개별 알림 설정">
-              <ToggleField
-                label="채팅"
-                checked={settings?.chatEnabled ?? true}
-                disabled={settings?.allEnabled ?? true}
-                onChange={(checked) => onToggleIndividualNotification("chatEnabled", checked)}
-              />
-              <ToggleField
-                label="편지"
-                checked={settings?.letterEnabled ?? true}
-                disabled={settings?.allEnabled ?? true}
-                onChange={(checked) => onToggleIndividualNotification("letterEnabled", checked)}
-              />
-              <ToggleField
-                label="추억"
-                checked={settings?.memoryEnabled ?? true}
-                disabled={settings?.allEnabled ?? true}
-                onChange={(checked) => onToggleIndividualNotification("memoryEnabled", checked)}
-              />
-              <ToggleField
-                label="미션"
-                checked={settings?.missionEnabled ?? true}
-                disabled={settings?.allEnabled ?? true}
-                onChange={(checked) => onToggleIndividualNotification("missionEnabled", checked)}
-              />
-            </div>
-          </article>
-
-          <article className="settings-row">
-            <div className="row-title">
-              <FileText size={22} />
-              <div>
-                <h2>이용약관 / 개인정보 처리방침</h2>
-              </div>
-            </div>
-            <button className="outline-button row-button" type="button">
-              보기
-            </button>
-          </article>
-
-          <article className="settings-card danger-card">
-            <div className="panel-heading danger-heading">
-              <div>
-                <span>위험 영역</span>
-                <h2>계정 영향이 큰 작업</h2>
-              </div>
-              <ShieldAlert size={24} />
-            </div>
-            <div className="danger-actions">
-              <button className="outline-button danger-text" type="button" onClick={onLogout}>
-                <LogOut size={17} />
-                로그아웃
-              </button>
-              <button className="danger-button" type="button" aria-disabled="true">
-                회원 탈퇴
-              </button>
+            <div className="settings-accordion-list" aria-label="도움말 목록">
+              {qaItems.map((item) => (
+                <button
+                  className={`settings-accordion-item ${openQaTitle === item.title ? "open" : ""}`}
+                  key={item.title}
+                  type="button"
+                  aria-expanded={openQaTitle === item.title}
+                  onClick={() => setOpenQaTitle((current) => (current === item.title ? null : item.title))}
+                >
+                  <span className="settings-accordion-question">
+                    <strong>{item.title}</strong>
+                    <ChevronDown size={18} />
+                  </span>
+                  <span className="settings-accordion-answer">{item.help}</span>
+                </button>
+              ))}
             </div>
           </article>
         </section>
@@ -5195,18 +5170,23 @@ function NotificationList({
 
 function ToggleField({
   label,
+  description,
   checked,
   disabled,
   onChange,
 }: {
   label: string;
+  description?: string;
   checked: boolean;
   disabled: boolean;
   onChange: (checked: boolean) => void;
 }) {
   return (
     <label className={`toggle-field ${disabled ? "is-disabled" : ""}`}>
-      <span>{label}</span>
+      <span className="toggle-copy">
+        <strong>{label}</strong>
+        {description ? <small>{description}</small> : null}
+      </span>
       <Toggle checked={checked} disabled={disabled} onChange={onChange} />
     </label>
   );
