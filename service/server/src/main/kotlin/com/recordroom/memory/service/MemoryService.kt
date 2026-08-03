@@ -13,6 +13,8 @@ import com.recordroom.memory.model.MemoryPostDetailResponse
 import com.recordroom.memory.model.MemoryPostsResponse
 import com.recordroom.memory.model.UpdateMemoryPostRequest
 import com.recordroom.memory.repository.MemoryRepository
+import com.recordroom.notification.model.NotificationEntity
+import com.recordroom.notification.repository.NotificationRepository
 import com.recordroom.room.model.RoomEntity
 import com.recordroom.room.repository.RoomRepository
 import org.slf4j.LoggerFactory
@@ -31,6 +33,7 @@ class MemoryService(
     private val roomRepository: RoomRepository,
     private val memoryRepository: MemoryRepository,
     private val memoryImageStorage: MemoryImageStorage,
+    private val notificationRepository: NotificationRepository,
 ) {
     private val log = LoggerFactory.getLogger(MemoryService::class.java)
     private val seoulZone = ZoneId.of("Asia/Seoul")
@@ -58,9 +61,9 @@ class MemoryService(
 
     @Transactional
     fun createPost(memberId: Long, roomId: Long, request: CreateMemoryPostRequest): MemoryPostDetailResponse {
-        memberService.getProfile(memberId)
+        val author = memberService.getProfile(memberId)
 
-        readRoomJoinedByMember(memberId, roomId, "POST /api/rooms/$roomId/memories")
+        val room = readRoomJoinedByMember(memberId, roomId, "POST /api/rooms/$roomId/memories")
         val title = validateTitle(memberId, roomId, "POST /api/rooms/$roomId/memories", request.title)
         val body = validateBody(memberId, roomId, "POST /api/rooms/$roomId/memories", request.body)
         val imageUrl = validateImageUrl(memberId, roomId, "POST /api/rooms/$roomId/memories", request.representativeImageUrl)
@@ -78,6 +81,14 @@ class MemoryService(
                 createdAt = now,
                 updatedAt = now,
             ),
+        )
+
+        createMemoryPostNotifications(
+            authorMemberId = memberId,
+            authorName = author.displayName,
+            room = room,
+            memoryPostId = savedPost.id,
+            occurredAt = now,
         )
 
         return readPostDetail(memberId, roomId, savedPost.id, "MemoryService.createPost")
@@ -200,6 +211,36 @@ class MemoryService(
 
     private fun readActivePost(memberId: Long, roomId: Long, memoryId: Long, what: String): MemoryPostEntity =
         memoryRepository.findActivePost(roomId, memoryId) ?: postNotFound(memberId, roomId, memoryId, what)
+
+    // 새 추억은 작성자를 제외한 방 구성원에게 확인 대상이므로 추억 알림을 남긴다.
+    private fun createMemoryPostNotifications(
+        authorMemberId: Long,
+        authorName: String,
+        room: RoomEntity,
+        memoryPostId: Long,
+        occurredAt: OffsetDateTime,
+    ) {
+        val notifications = roomRepository.findActiveRoomMembers(room.id)
+            .filter { roomMember -> roomMember.memberId != authorMemberId }
+            .map { roomMember ->
+                NotificationEntity(
+                    receiverMemberId = roomMember.memberId,
+                    roomId = room.id,
+                    actorMemberId = authorMemberId,
+                    type = NotificationRepository.MEMORY_NOTIFICATION_TYPE,
+                    title = "새 추억",
+                    message = "${authorName}님이 새 추억을 올렸습니다.",
+                    targetType = "MEMORY",
+                    targetId = memoryPostId,
+                    occurredDate = occurredAt.toLocalDate(),
+                    createdAt = occurredAt,
+                )
+            }
+
+        if (notifications.isNotEmpty()) {
+            notificationRepository.saveAll(notifications)
+        }
+    }
 
     private fun validateMemberOwnsMemoryPost(memberId: Long, roomId: Long, post: MemoryPostEntity, what: String) {
         if (post.authorMemberId == memberId) return

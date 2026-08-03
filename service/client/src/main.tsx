@@ -62,6 +62,8 @@ type RoomSummary = {
   role: "OWNER" | "MEMBER";
   memberCount: number;
   unreadChatCount: number;
+  unreadMemoryCount: number;
+  unreadLetterCount: number;
   pendingMissionCount: number;
 };
 
@@ -510,6 +512,8 @@ const demoRooms: RoomSummary[] = [
     role: "OWNER",
     memberCount: 2,
     unreadChatCount: 1,
+    unreadMemoryCount: 1,
+    unreadLetterCount: 1,
     pendingMissionCount: 2,
   },
   {
@@ -520,6 +524,8 @@ const demoRooms: RoomSummary[] = [
     role: "MEMBER",
     memberCount: 5,
     unreadChatCount: 0,
+    unreadMemoryCount: 1,
+    unreadLetterCount: 0,
     pendingMissionCount: 1,
   },
   {
@@ -530,6 +536,8 @@ const demoRooms: RoomSummary[] = [
     role: "MEMBER",
     memberCount: 12,
     unreadChatCount: 3,
+    unreadMemoryCount: 0,
+    unreadLetterCount: 1,
     pendingMissionCount: 0,
   },
 ];
@@ -537,7 +545,7 @@ const demoRooms: RoomSummary[] = [
 function demoRoomsForMember(memberId: number): RoomSummary[] {
   if (memberId === 2) {
     return [
-      { ...demoRooms[0], role: "MEMBER", unreadChatCount: 0, pendingMissionCount: 1 },
+      { ...demoRooms[0], role: "MEMBER", unreadChatCount: 0, unreadMemoryCount: 1, unreadLetterCount: 0, pendingMissionCount: 1 },
       {
         id: 4,
         name: "여자친구의 여행 준비방",
@@ -546,6 +554,8 @@ function demoRoomsForMember(memberId: number): RoomSummary[] {
         role: "OWNER",
         memberCount: 1,
         unreadChatCount: 0,
+        unreadMemoryCount: 0,
+        unreadLetterCount: 0,
         pendingMissionCount: 0,
       },
     ];
@@ -562,6 +572,8 @@ function demoRoomsForMember(memberId: number): RoomSummary[] {
         role: "OWNER",
         memberCount: 1,
         unreadChatCount: 0,
+        unreadMemoryCount: 0,
+        unreadLetterCount: 0,
         pendingMissionCount: 0,
       },
     ];
@@ -578,6 +590,8 @@ function demoRoomsForMember(memberId: number): RoomSummary[] {
         role: "OWNER",
         memberCount: 1,
         unreadChatCount: 0,
+        unreadMemoryCount: 0,
+        unreadLetterCount: 0,
         pendingMissionCount: 0,
       },
     ];
@@ -1048,18 +1062,21 @@ function App() {
   useEffect(() => {
     if (activeView !== "memories" || !selectedRoom) return;
 
+    void readRoomFeatureNotifications(selectedRoom.id, "memories");
     void loadMemoryPosts(selectedRoom.id);
   }, [activeView, selectedRoom?.id]);
 
   useEffect(() => {
     if (activeView !== "missions" || !selectedRoom) return;
 
+    void readRoomFeatureNotifications(selectedRoom.id, "missions");
     void loadMissions(selectedRoom.id);
   }, [activeView, selectedRoom?.id]);
 
   useEffect(() => {
     if (activeView !== "letters" || !selectedRoom) return;
 
+    void readRoomFeatureNotifications(selectedRoom.id, "letters");
     void loadLetters(selectedRoom.id, letterBox, { focusId: letterFocusId });
   }, [activeView, selectedRoom?.id, letterBox, letterFocusId]);
 
@@ -1181,6 +1198,32 @@ function App() {
       await loadLatestNotifications();
     } catch {
       // 로컬 서버 재시작 중에는 기존 화면 상태를 유지한다.
+    }
+  }
+
+  function clearRoomFeatureBadge(roomId: number, feature: RoomFeatureKind) {
+    setRooms((currentRooms) =>
+      currentRooms.map((room) => {
+        if (room.id !== roomId) return room;
+
+        if (feature === "chat") return { ...room, unreadChatCount: 0 };
+        if (feature === "memories") return { ...room, unreadMemoryCount: 0 };
+        if (feature === "missions") return { ...room, pendingMissionCount: 0 };
+        if (feature === "letters") return { ...room, unreadLetterCount: 0 };
+
+        return room;
+      }),
+    );
+  }
+
+  async function readRoomFeatureNotifications(roomId: number, feature: RoomFeatureKind) {
+    clearRoomFeatureBadge(roomId, feature);
+
+    try {
+      await safeApiRequest<{ read: boolean }>(`/notifications/rooms/${roomId}/features/${feature}/read`, { method: "POST" });
+      await refreshSidebarState();
+    } catch {
+      // 로컬 서버 재시작 중에는 다음 사이드바 폴링 갱신에 맡긴다.
     }
   }
 
@@ -2496,6 +2539,7 @@ function Sidebar({
                   <button className={activeView === "memories" && isSelected ? "active" : ""} type="button" tabIndex={isExpanded ? 0 : -1} onClick={() => onMoveRoomFeature(room.id, "memories")}>
                     <BookOpen size={16} />
                     <span className="nav-label">추억 게시판</span>
+                    {room.unreadMemoryCount > 0 ? <span className="count-badge">{room.unreadMemoryCount}</span> : null}
                   </button>
                   <button className={activeView === "missions" && isSelected ? "active" : ""} type="button" tabIndex={isExpanded ? 0 : -1} onClick={() => onMoveRoomFeature(room.id, "missions")}>
                     <CheckCircle2 size={16} />
@@ -2505,6 +2549,7 @@ function Sidebar({
                   <button className={activeView === "letters" && isSelected ? "active" : ""} type="button" tabIndex={isExpanded ? 0 : -1} onClick={() => onMoveRoomFeature(room.id, "letters")}>
                     <Mail size={16} />
                     <span className="nav-label">편지</span>
+                    {room.unreadLetterCount > 0 ? <span className="count-badge">{room.unreadLetterCount}</span> : null}
                   </button>
                 </div>
               </div>

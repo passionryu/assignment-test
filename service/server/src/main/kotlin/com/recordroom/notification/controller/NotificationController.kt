@@ -45,4 +45,16 @@ class NotificationController(
             memberId = currentMemberResolver.resolve(rawMemberId),
             notificationId = notificationId,
         )
+
+    @PostMapping("/rooms/{roomId}/features/{feature}/read")
+    fun readRoomFeatureNotifications(
+        @RequestHeader("X-Member-Id", required = false) rawMemberId: String?,
+        @PathVariable roomId: Long,
+        @PathVariable feature: String,
+    ): NotificationReadResponse =
+        notificationService.readRoomFeatureNotifications(
+            memberId = currentMemberResolver.resolve(rawMemberId),
+            roomId = roomId,
+            feature = feature,
+        )
 }

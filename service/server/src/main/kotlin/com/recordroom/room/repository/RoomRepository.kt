@@ -60,6 +60,8 @@ class RoomRepository(
                     role = row.get(joinedMember.role) ?: "",
                     memberCount = row.get(memberCount)?.toInt() ?: 0,
                     unreadChatCount = 0,
+                    unreadMemoryCount = 0,
+                    unreadLetterCount = 0,
                     pendingMissionCount = 0,
                 )
             }

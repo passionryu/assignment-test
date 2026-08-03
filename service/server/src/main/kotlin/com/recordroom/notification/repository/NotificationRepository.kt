@@ -121,18 +121,37 @@ class NotificationRepository(
             .toMap()
     }
 
-    // 채팅방 진입 시 해당 방의 읽지 않은 채팅 알림만 일괄 읽음 처리한다.
-    fun markUnreadRoomChatNotificationsAsRead(memberId: Long, roomId: Long, readAt: OffsetDateTime): Long =
-        queryFactory
+    // 기능 화면 진입 시 해당 방의 읽지 않은 기능 알림을 일괄 읽음 처리한다.
+    fun markUnreadRoomNotificationsByTypesAsRead(
+        memberId: Long,
+        roomId: Long,
+        types: Set<String>,
+        readAt: OffsetDateTime,
+    ): Long {
+        if (types.isEmpty()) {
+            return 0
+        }
+
+        return queryFactory
             .update(notificationEntity)
             .set(notificationEntity.readAt, readAt)
             .where(
                 notificationEntity.receiverMemberId.eq(memberId),
                 notificationEntity.roomId.eq(roomId),
-                notificationEntity.type.eq(CHAT_NOTIFICATION_TYPE),
+                notificationEntity.type.`in`(types),
                 notificationEntity.readAt.isNull,
             )
             .execute()
+    }
+
+    // 채팅방 진입 시 해당 방의 읽지 않은 채팅 알림만 일괄 읽음 처리한다.
+    fun markUnreadRoomChatNotificationsAsRead(memberId: Long, roomId: Long, readAt: OffsetDateTime): Long =
+        markUnreadRoomNotificationsByTypesAsRead(
+            memberId = memberId,
+            roomId = roomId,
+            types = setOf(CHAT_NOTIFICATION_TYPE),
+            readAt = readAt,
+        )
 
     // 읽음 처리는 소유자 검증을 위해 notification id와 receiver member id를 함께 확인한다.
     fun findOwnedNotification(notificationId: Long, memberId: Long): NotificationEntity? =
@@ -163,5 +182,13 @@ class NotificationRepository(
 
     companion object {
         const val CHAT_NOTIFICATION_TYPE = "CHAT"
+        const val MEMORY_NOTIFICATION_TYPE = "MEMORY"
+        const val LETTER_NOTIFICATION_TYPE = "LETTER"
+        const val MISSION_APPROVAL_REQUEST_NOTIFICATION_TYPE = "MISSION_APPROVAL_REQUEST"
+        const val MISSION_PROGRESS_NOTIFICATION_TYPE = "MISSION_PROGRESS"
+        val MISSION_NOTIFICATION_TYPES = setOf(
+            MISSION_APPROVAL_REQUEST_NOTIFICATION_TYPE,
+            MISSION_PROGRESS_NOTIFICATION_TYPE,
+        )
     }
 }

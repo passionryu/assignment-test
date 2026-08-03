@@ -45,10 +45,20 @@ class RoomService(
             roomIds = joinedRoomIds,
             types = setOf(NotificationRepository.CHAT_NOTIFICATION_TYPE),
         )
+        val unreadMemoryCounts = notificationRepository.countUnreadNotificationsByRoomAndTypes(
+            memberId = memberId,
+            roomIds = joinedRoomIds,
+            types = setOf(NotificationRepository.MEMORY_NOTIFICATION_TYPE),
+        )
+        val unreadLetterCounts = notificationRepository.countUnreadNotificationsByRoomAndTypes(
+            memberId = memberId,
+            roomIds = joinedRoomIds,
+            types = setOf(NotificationRepository.LETTER_NOTIFICATION_TYPE),
+        )
         val pendingMissionCounts = notificationRepository.countUnreadNotificationsByRoomAndTypes(
             memberId = memberId,
             roomIds = joinedRoomIds,
-            types = setOf(MISSION_APPROVAL_REQUEST_TYPE, MISSION_PROGRESS_TYPE),
+            types = NotificationRepository.MISSION_NOTIFICATION_TYPES,
         )
 
         val pendingInvitationCount = roomRepository.countPendingInvitationsForMember(memberId)
@@ -57,6 +67,8 @@ class RoomService(
             rooms = joinedRooms.map { room ->
                 room.copy(
                     unreadChatCount = unreadChatCounts[room.id] ?: 0,
+                    unreadMemoryCount = unreadMemoryCounts[room.id] ?: 0,
+                    unreadLetterCount = unreadLetterCounts[room.id] ?: 0,
                     pendingMissionCount = pendingMissionCounts[room.id] ?: 0,
                 )
             },
@@ -499,8 +511,6 @@ class RoomService(
         private const val MAX_ROOM_NAME_LENGTH = 80
         private const val MAX_ROOM_DESCRIPTION_LENGTH = 255
         private const val INVITATION_EXPIRATION_DAYS = 7L
-        private const val MISSION_APPROVAL_REQUEST_TYPE = "MISSION_APPROVAL_REQUEST"
-        private const val MISSION_PROGRESS_TYPE = "MISSION_PROGRESS"
         private val SUPPORTED_ROOM_TYPES = setOf("COUPLE", "FAMILY", "GROUP")
         private val EMAIL_PATTERN = Regex("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$")
     }

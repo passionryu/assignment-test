@@ -13,6 +13,8 @@ data class RoomSummaryResponse(
     val role: String,
     val memberCount: Int,
     val unreadChatCount: Int,
+    val unreadMemoryCount: Int,
+    val unreadLetterCount: Int,
     val pendingMissionCount: Int,
 )
 
