@@ -986,6 +986,7 @@ function App() {
   const [pendingInvitationCount, setPendingInvitationCount] = useState(0);
   const [selectedRoomId, setSelectedRoomId] = useState<number | null>(null);
   const [expandedRoomId, setExpandedRoomId] = useState<number | null>(null);
+  const [roomListExpanded, setRoomListExpanded] = useState(true);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [activeView, setActiveView] = useState<AppView>("home");
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
@@ -1377,9 +1378,21 @@ function App() {
     setActiveView(view);
   }
 
+  function openRoomListView() {
+    setMessage(null);
+    setErrorMessage(null);
+    setRoomListExpanded(true);
+    setActiveView("rooms");
+  }
+
+  function toggleRoomList() {
+    setRoomListExpanded((current) => !current);
+  }
+
   function selectRoom(roomId: number, nextView: AppView = activeView === "rooms" || activeView === "settings" ? "home" : activeView) {
     setSelectedRoomId(roomId);
     setExpandedRoomId((currentExpandedRoomId) => (currentExpandedRoomId === roomId ? null : roomId));
+    setRoomListExpanded(true);
     setActiveView(nextView);
   }
 
@@ -1388,12 +1401,14 @@ function App() {
     setErrorMessage(null);
     setSelectedRoomId(roomId);
     setExpandedRoomId(roomId);
+    setRoomListExpanded(true);
     setActiveView("room");
   }
 
   function moveToRoomFeature(roomId: number, view: RoomFeatureKind) {
     setSelectedRoomId(roomId);
     setExpandedRoomId(roomId);
+    setRoomListExpanded(true);
     setActiveView(view);
   }
 
@@ -2232,6 +2247,7 @@ function App() {
       const nextCalendarRoomId = calendarRoomId === roomDetail.id ? null : calendarRoomId;
       setSelectedRoomId(nextRoomId);
       setExpandedRoomId(nextRoomId);
+      setRoomListExpanded(true);
       setCalendarRoomId(nextCalendarRoomId);
       setActiveView(nextRoomId ? "rooms" : "home");
       await loadCalendarActivities(nextCalendarRoomId);
@@ -2257,9 +2273,12 @@ function App() {
         rooms={rooms}
         selectedRoomId={selectedRoom?.id ?? null}
         expandedRoomId={expandedRoomId}
+        roomListExpanded={roomListExpanded}
         collapsed={sidebarCollapsed}
         pendingInvitationCount={pendingInvitationCount}
         onMove={moveToView}
+        onOpenRoomList={openRoomListView}
+        onToggleRoomList={toggleRoomList}
         onSelectRoom={selectRoom}
         onMoveRoomFeature={moveToRoomFeature}
         onToggleSidebar={() => setSidebarCollapsed((current) => !current)}
@@ -2545,9 +2564,12 @@ function Sidebar({
   rooms,
   selectedRoomId,
   expandedRoomId,
+  roomListExpanded,
   collapsed,
   pendingInvitationCount,
   onMove,
+  onOpenRoomList,
+  onToggleRoomList,
   onSelectRoom,
   onMoveRoomFeature,
   onToggleSidebar,
@@ -2556,9 +2578,12 @@ function Sidebar({
   rooms: RoomSummary[];
   selectedRoomId: number | null;
   expandedRoomId: number | null;
+  roomListExpanded: boolean;
   collapsed: boolean;
   pendingInvitationCount: number;
   onMove: (view: AppView) => void;
+  onOpenRoomList: () => void;
+  onToggleRoomList: () => void;
   onSelectRoom: (roomId: number, nextView?: AppView) => void;
   onMoveRoomFeature: (roomId: number, view: RoomFeatureKind) => void;
   onToggleSidebar: () => void;
@@ -2586,55 +2611,87 @@ function Sidebar({
             <Home size={18} />
             <span className="nav-label">홈</span>
           </button>
-          <button className={`nav-item ${activeView === "rooms" ? "active" : ""}`} type="button" aria-label="방 리스트" onClick={() => onMove("rooms")}>
-            <List size={18} />
-            <span className="nav-label">방 리스트</span>
-            {pendingInvitationCount > 0 ? <span className="count-badge">{pendingInvitationCount}</span> : null}
-          </button>
+          <div className={`nav-item-combo ${activeView === "rooms" ? "active" : ""} ${roomListExpanded ? "is-expanded" : ""}`}>
+            <button className="nav-item room-list-nav" type="button" aria-label="방 리스트" onClick={onOpenRoomList}>
+              <List size={18} />
+              <span className="nav-label">방 리스트</span>
+              {pendingInvitationCount > 0 ? (
+                <span className="count-badge" aria-label={`대기 중인 초대 ${pendingInvitationCount}개`}>
+                  {pendingInvitationCount}
+                </span>
+              ) : null}
+            </button>
+            <button className="nav-icon-toggle" type="button" aria-label={roomListExpanded ? "방 목록 접기" : "방 목록 펼치기"} aria-expanded={roomListExpanded} onClick={onToggleRoomList}>
+              <ChevronDown size={16} />
+            </button>
+          </div>
 
-          {rooms.map((room) => {
-            const isSelected = room.id === selectedRoom?.id;
-            const isExpanded = room.id === expandedRoomId && !collapsed;
+          <div className={`room-list-tree ${roomListExpanded ? "is-open" : ""}`} aria-hidden={!roomListExpanded}>
+            {rooms.map((room) => {
+              const isSelected = room.id === selectedRoom?.id;
+              const isExpanded = roomListExpanded && room.id === expandedRoomId && !collapsed;
 
-            return (
-              <div className={`room-entry ${isSelected ? "selected-room" : ""}`} key={room.id}>
-                <button
-                  className={`nav-item room-list-item ${isSelected ? "room-selected" : "muted"} ${isExpanded ? "is-expanded" : ""}`}
-                  type="button"
-                  aria-label={`${room.name} ${isExpanded ? "메뉴 접기" : "메뉴 펼치기"}`}
-                  aria-expanded={isExpanded}
-                  onClick={() => onSelectRoom(room.id, "room")}
-                >
-                  <UsersRound size={18} />
-                  <span className="nav-label">{room.name}</span>
-                  <ChevronDown size={16} />
-                </button>
+              return (
+                <div className={`room-entry ${isSelected ? "selected-room" : ""}`} key={room.id}>
+                  <button
+                    className={`nav-item room-list-item ${isSelected ? "room-selected" : "muted"} ${isExpanded ? "is-expanded" : ""}`}
+                    type="button"
+                    title={room.name}
+                    tabIndex={roomListExpanded ? 0 : -1}
+                    aria-label={`${room.name} ${isExpanded ? "메뉴 접기" : "메뉴 펼치기"}`}
+                    aria-expanded={isExpanded}
+                    onClick={() => onSelectRoom(room.id, "room")}
+                  >
+                    <UsersRound className="room-icon-expanded" size={18} />
+                    <span className="room-initial-badge" aria-hidden="true">
+                      {roomInitial(room.name)}
+                    </span>
+                    <span className="nav-label">{room.name}</span>
+                    <ChevronDown size={16} />
+                  </button>
 
-                <div className={`room-submenu ${isExpanded ? "is-open" : ""}`} aria-hidden={!isExpanded}>
-                  <button className={activeView === "chat" && isSelected ? "active" : ""} type="button" tabIndex={isExpanded ? 0 : -1} onClick={() => onMoveRoomFeature(room.id, "chat")}>
-                    <MessageCircle size={16} />
-                    <span className="nav-label">채팅</span>
-                    {room.unreadChatCount > 0 ? <span className="count-badge">{room.unreadChatCount}</span> : null}
-                  </button>
-                  <button className={activeView === "memories" && isSelected ? "active" : ""} type="button" tabIndex={isExpanded ? 0 : -1} onClick={() => onMoveRoomFeature(room.id, "memories")}>
-                    <BookOpen size={16} />
-                    <span className="nav-label">추억 게시판</span>
-                    {room.unreadMemoryCount > 0 ? <span className="count-badge">{room.unreadMemoryCount}</span> : null}
-                  </button>
-                  <button className={activeView === "missions" && isSelected ? "active" : ""} type="button" tabIndex={isExpanded ? 0 : -1} onClick={() => onMoveRoomFeature(room.id, "missions")}>
-                    <CheckCircle2 size={16} />
-                    <span className="nav-label">미션 인증</span>
-                    {room.pendingMissionCount > 0 ? <span className="count-badge">{room.pendingMissionCount}</span> : null}
-                  </button>
-                  <button className={activeView === "letters" && isSelected ? "active" : ""} type="button" tabIndex={isExpanded ? 0 : -1} onClick={() => onMoveRoomFeature(room.id, "letters")}>
-                    <Mail size={16} />
-                    <span className="nav-label">편지</span>
-                    {room.unreadLetterCount > 0 ? <span className="count-badge">{room.unreadLetterCount}</span> : null}
-                  </button>
+                  <div className={`room-submenu ${isExpanded ? "is-open" : ""}`} aria-hidden={!isExpanded}>
+                    <button className={activeView === "chat" && isSelected ? "active" : ""} type="button" tabIndex={isExpanded ? 0 : -1} onClick={() => onMoveRoomFeature(room.id, "chat")}>
+                      <MessageCircle size={16} />
+                      <span className="nav-label">채팅</span>
+                      {room.unreadChatCount > 0 ? (
+                        <span className="count-badge" aria-label={`읽지 않은 채팅 ${room.unreadChatCount}개`}>
+                          {room.unreadChatCount}
+                        </span>
+                      ) : null}
+                    </button>
+                    <button className={activeView === "memories" && isSelected ? "active" : ""} type="button" tabIndex={isExpanded ? 0 : -1} onClick={() => onMoveRoomFeature(room.id, "memories")}>
+                      <BookOpen size={16} />
+                      <span className="nav-label">추억 게시판</span>
+                      {room.unreadMemoryCount > 0 ? (
+                        <span className="count-badge" aria-label={`읽지 않은 추억 ${room.unreadMemoryCount}개`}>
+                          {room.unreadMemoryCount}
+                        </span>
+                      ) : null}
+                    </button>
+                    <button className={activeView === "missions" && isSelected ? "active" : ""} type="button" tabIndex={isExpanded ? 0 : -1} onClick={() => onMoveRoomFeature(room.id, "missions")}>
+                      <CheckCircle2 size={16} />
+                      <span className="nav-label">미션 인증</span>
+                      {room.pendingMissionCount > 0 ? (
+                        <span className="count-badge" aria-label={`확인할 미션 ${room.pendingMissionCount}개`}>
+                          {room.pendingMissionCount}
+                        </span>
+                      ) : null}
+                    </button>
+                    <button className={activeView === "letters" && isSelected ? "active" : ""} type="button" tabIndex={isExpanded ? 0 : -1} onClick={() => onMoveRoomFeature(room.id, "letters")}>
+                      <Mail size={16} />
+                      <span className="nav-label">편지</span>
+                      {room.unreadLetterCount > 0 ? (
+                        <span className="count-badge" aria-label={`읽지 않은 편지 ${room.unreadLetterCount}개`}>
+                          {room.unreadLetterCount}
+                        </span>
+                      ) : null}
+                    </button>
+                  </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </nav>
       </div>
 
@@ -2644,6 +2701,10 @@ function Sidebar({
       </button>
     </aside>
   );
+}
+
+function roomInitial(name: string) {
+  return Array.from(name.trim())[0] ?? "?";
 }
 
 function HomeView({
