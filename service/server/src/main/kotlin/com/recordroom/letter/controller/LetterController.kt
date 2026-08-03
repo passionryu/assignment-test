@@ -6,7 +6,6 @@ import com.recordroom.letter.model.SendLetterRequest
 import com.recordroom.letter.model.SendLetterResponse
 import com.recordroom.letter.service.LetterService
 import com.recordroom.member.service.CurrentMemberResolver
-import io.swagger.v3.oas.annotations.Operation
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
@@ -22,7 +21,6 @@ class LetterController(
     private val currentMemberResolver: CurrentMemberResolver,
     private val letterService: LetterService,
 ) {
-    @Operation(summary = "편지 목록 조회", description = "선택 방의 받은 편지함 또는 보낸 편지함을 최신순으로 페이지 조회한다.")
     @GetMapping
     fun getLetters(
         @RequestHeader("X-Member-Id", required = false) rawMemberId: String?,
@@ -39,7 +37,6 @@ class LetterController(
             rawSize = size,
         )
 
-    @Operation(summary = "편지 작성", description = "같은 방 구성원에게 편지를 보내고 서버 전송 시점 기준 날짜와 수신자 알림을 생성한다.")
     @PostMapping
     fun sendLetter(
         @RequestHeader("X-Member-Id", required = false) rawMemberId: String?,
@@ -52,7 +49,6 @@ class LetterController(
             request = request,
         )
 
-    @Operation(summary = "편지 상세 조회", description = "선택 편지 상세를 조회한다. 받은 편지는 상세 조회 시 읽음 처리한다.")
     @GetMapping("/{letterId}")
     fun getLetterDetail(
         @RequestHeader("X-Member-Id", required = false) rawMemberId: String?,

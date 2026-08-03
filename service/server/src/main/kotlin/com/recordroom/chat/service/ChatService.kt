@@ -1,6 +1,5 @@
 package com.recordroom.chat.service
 
-import com.recordroom.chat.model.AI_ASSISTANT_MEMBER_ID
 import com.recordroom.chat.model.ChatMessageEntity
 import com.recordroom.chat.model.ChatMessagesResponse
 import com.recordroom.chat.model.ChatSearchResponse
@@ -25,8 +24,6 @@ class ChatService(
     private val memberService: MemberService,
     private val roomRepository: RoomRepository,
     private val chatRepository: ChatRepository,
-    private val chatAssistantClient: ChatAssistantClient,
-    private val localChatReplyGenerator: LocalChatReplyGenerator,
 ) {
     private val log = LoggerFactory.getLogger(ChatService::class.java)
     private val seoulZone = ZoneId.of("Asia/Seoul")
@@ -47,7 +44,7 @@ class ChatService(
 
     @Transactional
     fun sendMessage(memberId: Long, roomId: Long, request: SendChatMessageRequest): SendChatMessageResponse {
-        val member = memberService.getProfile(memberId)
+        memberService.getProfile(memberId)
 
         val room = readRoomJoinedByMember(memberId, roomId, "POST /api/rooms/$roomId/chat/messages")
         val body = validateMessageBody(memberId, roomId, request.body)
@@ -63,45 +60,10 @@ class ChatService(
             ),
         )
 
-        val gptReply = chatAssistantClient.generateReplyOrNull(
-            roomName = room.name,
-            senderName = member.displayName,
-            userMessage = body,
-        )
-        val replyMessages = if (gptReply != null) {
-            listOf(
-                chatRepository.saveMessage(
-                    ChatMessageEntity(
-                        roomId = room.id,
-                        senderMemberId = AI_ASSISTANT_MEMBER_ID,
-                        body = gptReply,
-                        sentAt = now.plusNanos(1_000_000),
-                        occurredDate = now.toLocalDate(),
-                    ),
-                ),
-            )
-        } else {
-            val replyCandidates = chatRepository.findReplyCandidates(room.id, memberId)
-            localChatReplyGenerator.generateMemberReplies(replyCandidates)
-                .mapIndexed { index, reply ->
-                    chatRepository.saveMessage(
-                        ChatMessageEntity(
-                            roomId = room.id,
-                            senderMemberId = reply.senderMemberId,
-                            body = reply.body,
-                            sentAt = now.plusNanos((index + 1) * 1_000_000L),
-                            occurredDate = now.toLocalDate(),
-                        ),
-                    )
-                }
-        }
-
-        val createdMessageIds = (listOf(userMessage) + replyMessages).map { it.id }.toSet()
-
         return SendChatMessageResponse(
             roomId = room.id,
             createdMessages = chatRepository.findMessages(room.id, memberId, now.toLocalDate())
-                .filter { it.id in createdMessageIds },
+                .filter { it.id == userMessage.id },
         )
     }
 

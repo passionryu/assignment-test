@@ -43,6 +43,140 @@ dl {
   margin: 0;
 }
 
+.member-select-page {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 40px;
+  background:
+    radial-gradient(circle at top right, rgba(255, 232, 242, 0.95), transparent 32%),
+    #f6f8fc;
+}
+
+.member-select-panel {
+  width: min(1040px, 100%);
+  display: grid;
+  gap: 28px;
+  padding: 42px;
+  border: 1px solid #dce5f3;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 18px 52px rgba(38, 56, 80, 0.12);
+}
+
+.member-select-heading {
+  display: grid;
+  gap: 10px;
+}
+
+.member-select-heading h1 {
+  font-size: 38px;
+  line-height: 1.15;
+  color: #253248;
+}
+
+.member-select-heading p {
+  font-size: 17px;
+  color: #657389;
+  font-weight: 700;
+}
+
+.member-select-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.member-select-card {
+  min-height: 170px;
+  display: grid;
+  grid-template-columns: 82px minmax(0, 1fr) 28px;
+  align-items: center;
+  gap: 18px;
+  width: 100%;
+  padding: 24px;
+  border: 1px solid #dce5f3;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #253248;
+  text-align: left;
+  transition:
+    border-color 0.16s ease,
+    box-shadow 0.16s ease,
+    transform 0.16s ease;
+}
+
+.member-select-card:hover {
+  border-color: #ed4b97;
+  box-shadow: 0 14px 34px rgba(237, 75, 151, 0.15);
+  transform: translateY(-2px);
+}
+
+.member-select-avatar {
+  width: 82px;
+  height: 82px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  background: #ed4b97;
+  color: #ffffff;
+  font-size: 34px;
+  font-weight: 900;
+}
+
+.member-select-info {
+  min-width: 0;
+  display: grid;
+  gap: 7px;
+}
+
+.member-select-info strong {
+  font-size: 24px;
+  color: #253248;
+}
+
+.member-select-info span,
+.member-select-info small {
+  font-size: 14px;
+  color: #657389;
+  font-weight: 800;
+}
+
+.member-select-info em {
+  color: #8c98aa;
+  font-size: 13px;
+  font-style: normal;
+  font-weight: 700;
+}
+
+@media (max-width: 760px) {
+  .member-select-page {
+    padding: 20px;
+  }
+
+  .member-select-panel {
+    padding: 24px;
+  }
+
+  .member-select-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .member-select-card {
+    grid-template-columns: 64px minmax(0, 1fr);
+  }
+
+  .member-select-card svg {
+    display: none;
+  }
+
+  .member-select-avatar {
+    width: 64px;
+    height: 64px;
+    font-size: 28px;
+  }
+}
+
 .workspace {
   min-height: 100vh;
   display: grid;

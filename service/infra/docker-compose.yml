@@ -26,9 +26,6 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://app-db:5432/${POSTGRES_DB:-assignment_test}
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-assignment_user}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-assignment_password}
-      OPENAI_API_KEY: ${OPENAI_API_KEY:-local-missing-openai-api-key}
-      OPENAI_CHAT_MODEL: ${OPENAI_CHAT_MODEL:-gpt-4o-mini}
-      OPENAI_CHAT_TEMPERATURE: ${OPENAI_CHAT_TEMPERATURE:-0.4}
       SEED_ENABLED: "true"
     ports:
       - "8080:8080"
