@@ -274,8 +274,7 @@ dl {
 }
 
 .sidebar.is-collapsed .sidebar-brand-text,
-.sidebar.is-collapsed .nav-label,
-.sidebar.is-collapsed .count-badge {
+.sidebar.is-collapsed .nav-label {
   display: none;
 }
 
@@ -294,6 +293,7 @@ dl {
 
 .nav-item,
 .room-submenu button {
+  position: relative;
   min-height: 44px;
   display: flex;
   align-items: center;
@@ -321,6 +321,8 @@ dl {
 
 .nav-item:hover,
 .nav-item.active,
+.nav-item-combo:hover,
+.nav-item-combo.active,
 .room-submenu button:hover,
 .room-submenu button.active {
   background: rgba(255, 255, 255, 0.08);
@@ -336,9 +338,82 @@ dl {
   color: #b9c6d7;
 }
 
+.nav-item-combo {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 34px;
+  align-items: center;
+  border-radius: 8px;
+  transition:
+    background-color 0.16s ease,
+    color 0.16s ease;
+}
+
+.nav-item-combo .nav-item,
+.nav-item-combo .nav-item:hover {
+  background: transparent;
+}
+
+.room-list-nav {
+  border-radius: 8px 0 0 8px;
+}
+
+.nav-icon-toggle {
+  height: 44px;
+  display: inline-grid;
+  place-items: center;
+  border: 0;
+  border-radius: 0 8px 8px 0;
+  background: transparent;
+  color: #94a6bd;
+  transition:
+    color 0.16s ease,
+    transform 0.16s ease;
+}
+
+.nav-icon-toggle svg {
+  transition: transform 0.2s ease;
+}
+
+.nav-item-combo.is-expanded .nav-icon-toggle svg {
+  transform: rotate(180deg);
+}
+
+.nav-icon-toggle:hover {
+  color: #ffffff;
+}
+
+.sidebar.is-collapsed .nav-item-combo {
+  display: block;
+  position: relative;
+}
+
+.sidebar.is-collapsed .nav-icon-toggle {
+  display: none;
+}
+
+.room-list-tree {
+  display: grid;
+  gap: 6px;
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  transform: translateY(-6px);
+  transition:
+    max-height 0.24s ease,
+    opacity 0.2s ease,
+    transform 0.24s ease;
+}
+
+.room-list-tree.is-open {
+  max-height: 760px;
+  opacity: 1;
+  transform: translateY(0);
+}
+
 .room-entry {
   display: grid;
   gap: 4px;
+  padding-left: 14px;
 }
 
 .selected-room {
@@ -347,6 +422,8 @@ dl {
 
 .room-list-item {
   justify-content: flex-start;
+  min-height: 42px;
+  padding: 0 12px;
 }
 
 .room-list-item span {
@@ -365,8 +442,47 @@ dl {
   transform: rotate(180deg);
 }
 
+.room-icon-expanded {
+  display: inline-flex;
+}
+
+.room-initial-badge {
+  display: none;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  flex: 0 0 auto;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  color: #dfe8f6;
+  font-size: 14px;
+  font-weight: 900;
+}
+
 .sidebar.is-collapsed .room-list-item svg:last-child {
   display: none;
+}
+
+.sidebar.is-collapsed .room-list-tree {
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.sidebar.is-collapsed .room-entry {
+  padding-left: 0;
+}
+
+.sidebar.is-collapsed .room-icon-expanded {
+  display: none;
+}
+
+.sidebar.is-collapsed .room-initial-badge {
+  display: grid;
+}
+
+.sidebar.is-collapsed .room-list-item {
+  min-height: 52px;
+  padding: 0;
 }
 
 .room-list-item.room-selected {
@@ -384,7 +500,7 @@ dl {
   max-height: 0;
   opacity: 0;
   overflow: hidden;
-  padding: 0 0 0 16px;
+  padding: 0 0 0 22px;
   transform: translateY(-6px);
   transition:
     max-height 0.24s ease,
@@ -397,7 +513,7 @@ dl {
 .room-submenu.is-open {
   max-height: 180px;
   opacity: 1;
-  padding: 4px 0 4px 16px;
+  padding: 4px 0 4px 22px;
   transform: translateY(0);
   pointer-events: auto;
 }
@@ -429,6 +545,16 @@ dl {
   color: #ffffff;
   font-size: 12px;
   font-weight: 900;
+}
+
+.sidebar.is-collapsed .count-badge {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  min-width: 18px;
+  height: 18px;
+  margin-left: 0;
+  font-size: 10px;
 }
 
 .settings-active .count-badge,
@@ -3989,7 +4115,9 @@ dl {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .room-list-tree,
   .room-submenu {
+    transition: none;
     animation: none;
   }
 }
