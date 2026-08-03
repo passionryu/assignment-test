@@ -7,6 +7,7 @@ import com.recordroom.room.model.CreateRoomRequest
 import com.recordroom.room.model.CreateRoomResponse
 import com.recordroom.room.model.DeleteRoomResponse
 import com.recordroom.room.model.RoomDetailResponse
+import com.recordroom.room.model.RoomInviteeSearchResponse
 import com.recordroom.room.model.RoomsResponse
 import com.recordroom.room.model.UpdateRoomRequest
 import com.recordroom.room.service.RoomService
@@ -15,6 +16,7 @@ import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PatchMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
+import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestHeader
 import org.springframework.web.bind.annotation.RequestMapping
@@ -60,6 +62,14 @@ class RoomController(
         @PathVariable roomId: Long,
     ): DeleteRoomResponse =
         roomService.deleteRoom(currentMemberResolver.resolve(rawMemberId), roomId)
+
+    @GetMapping("/{roomId}/invitation-candidates")
+    fun searchInvitationCandidates(
+        @RequestHeader("X-Member-Id", required = false) rawMemberId: String?,
+        @PathVariable roomId: Long,
+        @RequestParam keyword: String?,
+    ): RoomInviteeSearchResponse =
+        roomService.searchInvitationCandidates(currentMemberResolver.resolve(rawMemberId), roomId, keyword)
 
     @PostMapping("/{roomId}/invitations")
     fun createInvitation(

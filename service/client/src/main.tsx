@@ -124,6 +124,20 @@ type RespondRoomInvitationResponse = {
   status: "ACCEPTED" | "DECLINED";
 };
 
+type InviteeSearchResult = {
+  id: number;
+  displayName: string;
+  username: string;
+  maskedEmail: string;
+  maskedPhoneNumber: string;
+  profileImageUrl: string | null;
+};
+
+type InviteeSearchResponse = {
+  keyword: string;
+  results: InviteeSearchResult[];
+};
+
 type NotificationType = "CHAT" | "LETTER" | "MEMORY" | "MISSION_APPROVAL_REQUEST" | "MISSION_PROGRESS";
 
 type NotificationTarget = {
@@ -1020,6 +1034,9 @@ function App() {
   const [profileForm, setProfileForm] = useState<ProfileForm>({ displayName: "", profileImageUrl: "" });
   const [createRoomForm, setCreateRoomForm] = useState<CreateRoomForm>({ name: "", type: "COUPLE", description: "" });
   const [inviteContacts, setInviteContacts] = useState<Record<number, string>>({});
+  const [inviteSearchResults, setInviteSearchResults] = useState<Record<number, InviteeSearchResult[]>>({});
+  const [inviteSearchingRoomId, setInviteSearchingRoomId] = useState<number | null>(null);
+  const [invitingMemberId, setInvitingMemberId] = useState<number | null>(null);
   const [roomSettingsMode, setRoomSettingsMode] = useState<RoomSettingsMode>(null);
   const [roomDetail, setRoomDetail] = useState<RoomDetail | null>(null);
   const [roomEditForm, setRoomEditForm] = useState({ name: "", description: "" });
@@ -2053,27 +2070,54 @@ function App() {
     }
   }
 
-  async function sendRoomInvitation(roomId: number) {
+  async function searchRoomInvitees(roomId: number) {
     const contact = inviteContacts[roomId]?.trim() ?? "";
     setMessage(null);
     setErrorMessage(null);
     setRoomFeedbackModal(null);
 
     if (!contact) {
-      setRoomFeedbackModal({ title: "초대 실패", message: "초대할 이메일 또는 전화번호를 입력해 주세요." });
+      setRoomFeedbackModal({ title: "검색 실패", message: "검색어를 입력해 주세요." });
       return;
     }
+
+    setInviteSearchingRoomId(roomId);
+    try {
+      const response = await apiGet<InviteeSearchResponse>(
+        `/rooms/${roomId}/invitation-candidates?keyword=${encodeURIComponent(contact)}`,
+      );
+      setInviteSearchResults((current) => ({ ...current, [roomId]: response.results }));
+
+      if (response.results.length === 0) {
+        setRoomFeedbackModal({ title: "검색 결과 없음", message: "초대할 회원을 찾을 수 없습니다." });
+      }
+    } catch (error) {
+      setInviteSearchResults((current) => ({ ...current, [roomId]: [] }));
+      setRoomFeedbackModal({ title: "검색 실패", message: toMessage(error) });
+    } finally {
+      setInviteSearchingRoomId(null);
+    }
+  }
+
+  async function sendRoomInvitation(roomId: number, inviteeMemberId: number) {
+    setMessage(null);
+    setErrorMessage(null);
+    setRoomFeedbackModal(null);
+    setInvitingMemberId(inviteeMemberId);
 
     try {
       await apiRequest<{ id: number; status: string; expiresAt: string }>(`/rooms/${roomId}/invitations`, {
         method: "POST",
-        body: contact.includes("@") ? { email: contact, phoneNumber: null } : { email: null, phoneNumber: contact },
+        body: { memberId: inviteeMemberId },
       });
       setInviteContacts((current) => ({ ...current, [roomId]: "" }));
+      setInviteSearchResults((current) => ({ ...current, [roomId]: [] }));
       await loadRooms();
       setRoomFeedbackModal({ title: "초대 완료", message: "초대를 보냈습니다." });
     } catch (error) {
       setRoomFeedbackModal({ title: "초대 실패", message: toMessage(error) });
+    } finally {
+      setInvitingMemberId(null);
     }
   }
 
@@ -2248,9 +2292,13 @@ function App() {
             pendingInvitations={pendingInvitations}
             createRoomForm={createRoomForm}
             inviteContacts={inviteContacts}
+            inviteSearchResults={inviteSearchResults}
+            inviteSearchingRoomId={inviteSearchingRoomId}
+            invitingMemberId={invitingMemberId}
             onCreateRoomFormChange={setCreateRoomForm}
             onCreateRoom={createRoom}
             onInviteContactChange={(roomId, value) => setInviteContacts((current) => ({ ...current, [roomId]: value }))}
+            onSearchInvitees={searchRoomInvitees}
             onSendInvitation={sendRoomInvitation}
             onRespondInvitation={respondInvitation}
             onSelectRoom={openRoomHome}
@@ -3025,9 +3073,13 @@ function RoomsView({
   pendingInvitations,
   createRoomForm,
   inviteContacts,
+  inviteSearchResults,
+  inviteSearchingRoomId,
+  invitingMemberId,
   onCreateRoomFormChange,
   onCreateRoom,
   onInviteContactChange,
+  onSearchInvitees,
   onSendInvitation,
   onRespondInvitation,
   onSelectRoom,
@@ -3038,10 +3090,14 @@ function RoomsView({
   pendingInvitations: PendingRoomInvitation[];
   createRoomForm: CreateRoomForm;
   inviteContacts: Record<number, string>;
+  inviteSearchResults: Record<number, InviteeSearchResult[]>;
+  inviteSearchingRoomId: number | null;
+  invitingMemberId: number | null;
   onCreateRoomFormChange: (form: CreateRoomForm) => void;
   onCreateRoom: () => void;
   onInviteContactChange: (roomId: number, value: string) => void;
-  onSendInvitation: (roomId: number) => void;
+  onSearchInvitees: (roomId: number) => void;
+  onSendInvitation: (roomId: number, inviteeMemberId: number) => void;
   onRespondInvitation: (invitationId: number, action: "accept" | "decline") => void;
   onSelectRoom: (roomId: number) => void;
 }) {
@@ -3122,13 +3178,14 @@ function RoomsView({
           <span>참여 방</span>
           <strong>{rooms.length}개</strong>
           <p>현재 멤버가 참여 중인 기록방 목록이다.</p>
-          <p>방장인 방에서는 이메일 또는 전화번호로 바로 초대할 수 있다.</p>
+          <p>방장인 방에서는 사용자를 검색한 뒤 초대 대상을 선택한다.</p>
         </article>
       </section>
 
       <section className="joined-room-list">
         {rooms.map((room) => {
           const canInvite = room.role === "OWNER";
+          const inviteeResults = inviteSearchResults[room.id] ?? [];
 
           return (
             <article
@@ -3164,17 +3221,60 @@ function RoomsView({
                 </div>
               </dl>
               <div className="room-card-actions">
-                <div className={`invite-inline-form ${canInvite ? "" : "is-disabled"}`}>
-                  <input
-                    value={canInvite ? inviteContacts[room.id] ?? "" : ""}
-                    onChange={(event) => onInviteContactChange(room.id, event.target.value)}
-                    placeholder={canInvite ? "이메일 또는 전화번호" : "방장만 초대할 수 있습니다"}
-                    aria-label={`${room.name} 초대 연락처`}
-                    disabled={!canInvite}
-                  />
-                  <button className="primary-button" type="button" onClick={() => onSendInvitation(room.id)} disabled={!canInvite}>
-                    초대
-                  </button>
+                <div className="invite-search-area" onClick={(event) => event.stopPropagation()}>
+                  <div className={`invite-inline-form ${canInvite ? "" : "is-disabled"}`}>
+                    <input
+                      value={canInvite ? inviteContacts[room.id] ?? "" : ""}
+                      onChange={(event) => onInviteContactChange(room.id, event.target.value)}
+                      onKeyDown={(event) => {
+                        if (!canInvite || event.key !== "Enter") return;
+                        event.preventDefault();
+                        onSearchInvitees(room.id);
+                      }}
+                      placeholder="이름, 아이디, 이메일 또는 전화번호로 검색"
+                      aria-label={`${room.name} 초대 대상 검색`}
+                      disabled={!canInvite}
+                    />
+                    <button
+                      className="primary-button"
+                      type="button"
+                      onClick={() => onSearchInvitees(room.id)}
+                      disabled={!canInvite || inviteSearchingRoomId === room.id}
+                    >
+                      {inviteSearchingRoomId === room.id ? "검색 중" : "검색"}
+                    </button>
+                  </div>
+
+                  {inviteeResults.length > 0 ? (
+                    <div className="invite-search-results" aria-label={`${room.name} 초대 검색 결과`}>
+                      {inviteeResults.map((invitee) => (
+                        <div className="invitee-card" key={invitee.id}>
+                          <div className="invitee-avatar" aria-hidden="true">
+                            {invitee.profileImageUrl ? (
+                              <img src={resolveImageSource(invitee.profileImageUrl)} alt="" />
+                            ) : (
+                              invitee.displayName.slice(0, 1)
+                            )}
+                          </div>
+                          <div className="invitee-info">
+                            <strong>{invitee.displayName}</strong>
+                            <span>아이디 {invitee.username}</span>
+                            <p>
+                              {invitee.maskedEmail} · {invitee.maskedPhoneNumber}
+                            </p>
+                          </div>
+                          <button
+                            className="primary-button small-button"
+                            type="button"
+                            onClick={() => onSendInvitation(room.id, invitee.id)}
+                            disabled={invitingMemberId === invitee.id}
+                          >
+                            {invitingMemberId === invitee.id ? "초대 중" : "초대"}
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : null}
                 </div>
               </div>
             </article>
