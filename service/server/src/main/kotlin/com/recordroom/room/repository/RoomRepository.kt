@@ -59,8 +59,8 @@ class RoomRepository(
                     type = row.get(roomEntity.type) ?: "",
                     role = row.get(joinedMember.role) ?: "",
                     memberCount = row.get(memberCount)?.toInt() ?: 0,
-                    unreadChatCount = seedUnreadChatCount(roomId),
-                    pendingMissionCount = seedPendingMissionCount(roomId),
+                    unreadChatCount = 0,
+                    pendingMissionCount = 0,
                 )
             }
     }
@@ -95,6 +95,9 @@ class RoomRepository(
 
     fun findActiveRoomMember(roomId: Long, memberId: Long): RoomMemberEntity? =
         roomMemberJpaRepository.findByRoomIdAndMemberIdAndLeftAtIsNull(roomId, memberId)
+
+    fun findActiveRoomMembers(roomId: Long): List<RoomMemberEntity> =
+        roomMemberJpaRepository.findByRoomIdAndLeftAtIsNull(roomId)
 
     fun existsActiveRoomMember(roomId: Long, memberId: Long): Boolean =
         roomMemberJpaRepository.existsByRoomIdAndMemberIdAndLeftAtIsNull(roomId, memberId)
@@ -193,15 +196,4 @@ class RoomRepository(
             }
     }
 
-    private fun seedUnreadChatCount(roomId: Long): Int =
-        when (roomId) {
-            1L -> 1
-            else -> 0
-        }
-
-    private fun seedPendingMissionCount(roomId: Long): Int =
-        when (roomId) {
-            1L -> 2
-            else -> 0
-        }
 }

@@ -33,6 +33,7 @@ class NotificationService(
                 memberId = memberId,
                 offset = page.toLong() * size.toLong(),
                 limit = size.toLong(),
+                excludedTypes = setOf(NotificationRepository.CHAT_NOTIFICATION_TYPE),
             ),
         )
     }

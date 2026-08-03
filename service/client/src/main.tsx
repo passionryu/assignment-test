@@ -1025,6 +1025,16 @@ function App() {
   }, [selectedDemoMember?.id]);
 
   useEffect(() => {
+    if (!selectedDemoMember) return;
+
+    const pollingTimerId = window.setInterval(() => {
+      void refreshSidebarState();
+    }, 5000);
+
+    return () => window.clearInterval(pollingTimerId);
+  }, [selectedDemoMember?.id]);
+
+  useEffect(() => {
     if ((activeView !== "chat" && activeView !== "room") || !selectedRoom || !selectedDemoMember) return;
 
     void loadChatMessages(selectedRoom.id);
@@ -1133,8 +1143,8 @@ function App() {
       setSettings(demoSettings);
       setRooms(fallbackRooms);
       setPendingInvitations(fallbackInvitations);
-      setLatestNotifications(fallbackNotifications.filter((notification) => !notification.read).slice(0, 3));
-      setAllNotifications(fallbackNotifications);
+      setLatestNotifications(fallbackNotifications.filter((notification) => !notification.read && isHomeNotification(notification)).slice(0, 3));
+      setAllNotifications(fallbackNotifications.filter(isHomeNotification));
       setCalendar(demoCalendar);
       setSelectedCalendarDate(demoCalendar.selectedDate ?? demoCalendar.days[0]?.date ?? null);
       setPendingInvitationCount(fallbackInvitations.length);
@@ -1149,7 +1159,10 @@ function App() {
   async function loadLatestNotifications() {
     const fallbackNotifications = demoNotificationsForMember(selectedDemoMember?.id ?? defaultDemoMember.id);
     const latestResponse = await safeApiGet<NotificationsResponse>("/notifications/latest");
-    setLatestNotifications(latestResponse?.items.length ? latestResponse.items : fallbackNotifications.filter((notification) => !notification.read).slice(0, 3));
+    const latestItems = latestResponse?.items.filter(isHomeNotification) ?? [];
+    const fallbackItems = fallbackNotifications.filter((notification) => !notification.read && isHomeNotification(notification)).slice(0, 3);
+
+    setLatestNotifications(latestItems.length ? latestItems : fallbackItems);
   }
 
   async function loadRooms() {
@@ -1160,6 +1173,15 @@ function App() {
     setSelectedRoomId((currentSelectedRoomId) => currentSelectedRoomId ?? visibleRooms[0]?.id ?? null);
 
     return visibleRooms;
+  }
+
+  async function refreshSidebarState() {
+    try {
+      await loadRooms();
+      await loadLatestNotifications();
+    } catch {
+      // 로컬 서버 재시작 중에는 기존 화면 상태를 유지한다.
+    }
   }
 
   async function loadPendingInvitations() {
@@ -1186,7 +1208,8 @@ function App() {
     setNotificationsModalOpen(true);
     const fallbackNotifications = demoNotificationsForMember(selectedDemoMember?.id ?? defaultDemoMember.id);
     const response = await safeApiGet<NotificationsResponse>("/notifications?page=0&size=20");
-    setAllNotifications(response?.items.length ? response.items : fallbackNotifications);
+    const notificationItems = response?.items.filter(isHomeNotification) ?? [];
+    setAllNotifications(notificationItems.length ? notificationItems : fallbackNotifications.filter(isHomeNotification));
   }
 
   async function handleNotificationClick(notification: NotificationItem) {
@@ -1308,6 +1331,8 @@ function App() {
     setChatMessages(response?.messages ?? demoChatMessages(roomId));
 
     if (!options.silent) {
+      await safeApiRequest<{ read: boolean; readCount: number }>(`/rooms/${roomId}/chat/read`, { method: "POST" });
+      await refreshSidebarState();
       setChatLoading(false);
     }
   }
@@ -1333,6 +1358,7 @@ function App() {
       });
       setChatDraft("");
       await loadChatMessages(selectedRoom.id, { silent: true });
+      await refreshSidebarState();
       await loadCalendarActivities(calendarRoomId);
     } catch (error) {
       setErrorMessage(toMessage(error));
@@ -5361,6 +5387,10 @@ function notificationTargetView(notification: NotificationItem): AppView {
   if (notification.type === "LETTER" || notification.target.type === "LETTER") return "letters";
   if (notification.type === "MEMORY" || notification.target.type === "MEMORY") return "memories";
   return "missions";
+}
+
+function isHomeNotification(notification: NotificationItem): boolean {
+  return notification.type !== "CHAT" && notification.target.type !== "CHAT";
 }
 
 function notificationTypeLabel(type: NotificationType): string {

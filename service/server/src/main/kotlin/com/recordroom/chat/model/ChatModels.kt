@@ -31,6 +31,11 @@ data class SendChatMessageResponse(
     val createdMessages: List<ChatMessageResponse>,
 )
 
+data class ChatReadResponse(
+    val read: Boolean,
+    val readCount: Int,
+)
+
 data class ChatSearchResponse(
     val roomId: Long,
     val keyword: String,

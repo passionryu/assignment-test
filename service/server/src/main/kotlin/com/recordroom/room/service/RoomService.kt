@@ -4,6 +4,7 @@ import com.recordroom.common.ApiException
 import com.recordroom.member.model.MemberEntity
 import com.recordroom.member.repository.MemberRepository
 import com.recordroom.member.service.MemberService
+import com.recordroom.notification.repository.NotificationRepository
 import com.recordroom.room.model.CreateRoomInvitationRequest
 import com.recordroom.room.model.CreateRoomInvitationResponse
 import com.recordroom.room.model.CreateRoomRequest
@@ -29,6 +30,7 @@ import java.time.OffsetDateTime
 class RoomService(
     private val memberService: MemberService,
     private val memberRepository: MemberRepository,
+    private val notificationRepository: NotificationRepository,
     private val roomRepository: RoomRepository,
 ) {
     private val log = LoggerFactory.getLogger(RoomService::class.java)
@@ -37,11 +39,27 @@ class RoomService(
         memberService.getProfile(memberId)
 
         val joinedRooms = roomRepository.findRoomsJoinedByMember(memberId)
+        val joinedRoomIds = joinedRooms.map { it.id }
+        val unreadChatCounts = notificationRepository.countUnreadNotificationsByRoomAndTypes(
+            memberId = memberId,
+            roomIds = joinedRoomIds,
+            types = setOf(NotificationRepository.CHAT_NOTIFICATION_TYPE),
+        )
+        val pendingMissionCounts = notificationRepository.countUnreadNotificationsByRoomAndTypes(
+            memberId = memberId,
+            roomIds = joinedRoomIds,
+            types = setOf(MISSION_APPROVAL_REQUEST_TYPE, MISSION_PROGRESS_TYPE),
+        )
 
         val pendingInvitationCount = roomRepository.countPendingInvitationsForMember(memberId)
 
         return RoomsResponse(
-            rooms = joinedRooms,
+            rooms = joinedRooms.map { room ->
+                room.copy(
+                    unreadChatCount = unreadChatCounts[room.id] ?: 0,
+                    pendingMissionCount = pendingMissionCounts[room.id] ?: 0,
+                )
+            },
             pendingInvitationCount = pendingInvitationCount,
         )
     }
@@ -481,6 +499,8 @@ class RoomService(
         private const val MAX_ROOM_NAME_LENGTH = 80
         private const val MAX_ROOM_DESCRIPTION_LENGTH = 255
         private const val INVITATION_EXPIRATION_DAYS = 7L
+        private const val MISSION_APPROVAL_REQUEST_TYPE = "MISSION_APPROVAL_REQUEST"
+        private const val MISSION_PROGRESS_TYPE = "MISSION_PROGRESS"
         private val SUPPORTED_ROOM_TYPES = setOf("COUPLE", "FAMILY", "GROUP")
         private val EMAIL_PATTERN = Regex("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$")
     }
