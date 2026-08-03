@@ -2517,7 +2517,6 @@ function DemoMemberSelectionView({
         <div className="member-select-heading">
           <span className="eyebrow">체험 시작</span>
           <h1 id="member-select-title">사용자를 선택하세요</h1>
-          <p>선택한 사람의 관점으로 기록방, 채팅, 편지, 미션 흐름을 확인한다.</p>
         </div>
 
         <div className="member-select-grid">
@@ -2820,7 +2819,6 @@ function RecordCalendar({
         <div className="calendar-month">
           <div className="calendar-month-header">
             <strong>{formatMonthLabel(month)}</strong>
-            <span>활동 있는 날짜를 선택해 기록 흐름을 확인한다.</span>
           </div>
           <div className="calendar-weekdays" aria-hidden="true">
             {["일", "월", "화", "수", "목", "금", "토"].map((weekday) => (
@@ -2916,23 +2914,20 @@ function isInteractiveTarget(target: EventTarget | null) {
 }
 
 function HelpButton({ title, message }: { title: string; message: string }) {
-  const [open, setOpen] = useState(false);
-
   return (
-    <>
-      <button
+    <span className="help-tooltip-wrap">
+      <span
         className="help-icon-button"
-        type="button"
+        tabIndex={0}
         aria-label={`${title} 도움말`}
-        onClick={(event) => {
-          event.stopPropagation();
-          setOpen(true);
-        }}
       >
         <CircleHelp size={16} />
-      </button>
-      {open ? <AlertModal title={title} message={message} onClose={() => setOpen(false)} /> : null}
-    </>
+      </span>
+      <span className="help-tooltip" role="tooltip">
+        <strong>{title}</strong>
+        <span>{message}</span>
+      </span>
+    </span>
   );
 }
 
@@ -2963,7 +2958,6 @@ function RoomHomeView({
         <header className="page-header">
           <div>
             <h1>방 홈</h1>
-            <p>참여 중인 방을 선택하면 방 기준 기록 흐름을 확인할 수 있다.</p>
           </div>
         </header>
         <section className="placeholder-page">
@@ -3053,7 +3047,6 @@ function RoomHomeView({
                 <span className="room-feature-icon"><BookImage size={32} /></span>
                 <span>
                   <strong>추억 게시판</strong>
-                  <small>사진과 글로 남긴 추억 보기</small>
                 </span>
                 <span aria-hidden="true">›</span>
               </button>
@@ -3061,7 +3054,6 @@ function RoomHomeView({
                 <span className="room-feature-icon"><BadgeCheck size={32} /></span>
                 <span>
                   <strong>미션 인증</strong>
-                  <small>인증 요청과 동의 현황 확인</small>
                 </span>
                 <span aria-hidden="true">›</span>
               </button>
@@ -3069,7 +3061,6 @@ function RoomHomeView({
                 <span className="room-feature-icon"><MailPlus size={32} /></span>
                 <span>
                   <strong>편지</strong>
-                  <small>편지를 작성하거나 받은 편지 보기</small>
                 </span>
                 <span aria-hidden="true">›</span>
               </button>
@@ -3329,7 +3320,6 @@ function ChatView({
       <header className="page-header">
         <div>
           <h1>채팅</h1>
-          <p>{selectedRoom ? `${selectedRoom.name}의 날짜별 대화 기록을 확인하고 새 메시지를 남긴다.` : "선택된 방이 없습니다."}</p>
         </div>
       </header>
 
@@ -3365,8 +3355,10 @@ function ChatView({
 
         <aside className="chat-search-panel">
           <div className="room-section-heading">
-            <h2>대화 검색</h2>
-            <p>검색 결과를 누르면 해당 메시지 위치로 이동한다.</p>
+            <div className="heading-help-row">
+              <h2>대화 검색</h2>
+              <HelpButton title="대화 검색" message="검색 결과를 선택하면 해당 메시지 위치로 이동합니다." />
+            </div>
           </div>
           <div className="chat-search-form">
             <input
@@ -3383,7 +3375,6 @@ function ChatView({
             </button>
           </div>
           <div className="chat-search-results">
-            {searchResults.length === 0 ? <p>검색 결과가 여기에 표시됩니다.</p> : null}
             {searchResults.map((result) => (
               <button type="button" key={result.messageId} onClick={() => onMoveToMessage(result.messageId)}>
                 <strong>{result.senderName}</strong>
@@ -3462,7 +3453,6 @@ function MemoryBoardView({
       <header className="page-header">
         <div>
           <h1>추억 게시판</h1>
-          <p>{selectedRoom ? `${selectedRoom.name}에 사진과 글로 남긴 추억을 모아본다.` : "선택된 방이 없습니다."}</p>
         </div>
       </header>
 
@@ -3470,8 +3460,10 @@ function MemoryBoardView({
         <div className="memory-main-column">
           <article className="memory-compose-card">
             <div className="room-section-heading">
-              <h2>추억 남기기</h2>
-              <p>노트북의 사진을 선택하고 글을 입력해 Lv1 콘텐츠 서비스를 검증한다.</p>
+              <div className="heading-help-row">
+                <h2>추억 남기기</h2>
+                <HelpButton title="추억 남기기" message="노트북의 사진을 선택하고 글을 입력해 방의 추억을 남깁니다." />
+              </div>
             </div>
             <div className="memory-form">
               <label>
@@ -3522,7 +3514,6 @@ function MemoryBoardView({
                   <MemoryImage imageUrl={form.representativeImageUrl} title={form.representativeImageName || "선택한 이미지"} />
                   <div>
                     <strong>{form.representativeImageName || "선택한 이미지"}</strong>
-                    <span>등록할 추억의 대표 사진으로 사용한다.</span>
                   </div>
                   <button className="icon-button" type="button" onClick={onImageClear} aria-label="선택 이미지 제거">
                     <X size={18} />
@@ -3723,7 +3714,6 @@ function LetterBoardView({
       <header className="page-header">
         <div>
           <h1>편지</h1>
-          <p>{selectedRoom ? `${selectedRoom.name} 구성원에게 편지를 보내고 받은 마음을 확인한다.` : "선택된 방이 없습니다."}</p>
         </div>
       </header>
 
@@ -3845,7 +3835,6 @@ function LetterComposeModal({
     <div className="modal-backdrop" role="presentation">
       <section className="modal letter-compose-modal" role="dialog" aria-modal="true" aria-labelledby="letter-compose-title">
         <h2 id="letter-compose-title">편지 보내기</h2>
-        <p>{selectedRoom ? `${selectedRoom.name} 구성원에게 지금 마음을 남긴다.` : "선택된 방이 없습니다."}</p>
         <div className="letter-form letter-modal-form">
           <label>
             수신자
@@ -3979,7 +3968,6 @@ function MissionBoardView({
       <header className="page-header">
         <div>
           <h1>미션 인증</h1>
-          <p>{selectedRoom ? `${selectedRoom.name}의 미션을 사진으로 인증하고 구성원 동의를 받는다.` : "선택된 방이 없습니다."}</p>
         </div>
       </header>
 
@@ -4003,8 +3991,10 @@ function MissionBoardView({
             <article className="mission-list-panel">
               <div className="memory-list-heading">
                 <div>
-                  <h2>미션 목록</h2>
-                  <p>{loading ? "미션을 불러오는 중입니다." : "기본 미션과 직접 추가한 미션을 함께 확인한다."}</p>
+                  <div className="heading-help-row">
+                    <h2>미션 목록</h2>
+                    <HelpButton title="미션 목록" message="방 타입에 맞는 기본 미션과 구성원이 직접 추가한 미션을 함께 확인합니다." />
+                  </div>
                 </div>
                 <button className="primary-button mission-list-create-button" type="button" onClick={onOpenCreateModal} disabled={!selectedRoom}>
                   + 커스텀 미션 추가
@@ -4111,8 +4101,10 @@ function MissionBoardView({
                 {!selectedMission.latestSubmission ? (
                   <section className="mission-submit-card">
                     <div className="room-section-heading">
-                      <h2>사진으로 인증하기</h2>
-                      <p>인증 사진은 필수이며, 제출 후 동의 대기 상태가 된다.</p>
+                      <div className="heading-help-row">
+                        <h2>사진으로 인증하기</h2>
+                        <HelpButton title="사진 인증" message="인증 사진은 필수이며, 제출 후 구성원 동의를 기다립니다." />
+                      </div>
                     </div>
                     <div
                       className={`memory-upload-dropzone ${submissionForm.imageUrl ? "has-image" : ""}`}
@@ -4248,7 +4240,6 @@ function MissionCreateModal({
         <div className="modal-title-row">
           <div>
             <h2 id="mission-create-title">커스텀 미션 추가</h2>
-            <p>방 구성원이 직접 사진으로 인증할 미션을 추가한다.</p>
           </div>
           <button className="icon-button" type="button" onClick={onClose} aria-label="닫기">
             <X size={18} />
@@ -4306,7 +4297,6 @@ function RoomFeatureView({ selectedRoom, kind }: { selectedRoom: RoomSummary | n
       <header className="page-header">
         <div>
           <h1>{copy.title}</h1>
-          <p>{selectedRoom ? `${selectedRoom.name} 기준 ${copy.description}` : "선택된 방이 없습니다."}</p>
         </div>
       </header>
 
@@ -4319,7 +4309,6 @@ function RoomFeatureView({ selectedRoom, kind }: { selectedRoom: RoomSummary | n
             </div>
             {copy.icon}
           </div>
-          <p>{copy.body}</p>
           <div className="skeleton-list">
             <span />
             <span />
@@ -4353,7 +4342,6 @@ function SettingsView({
       <header className="page-header">
         <div>
           <h1>설정</h1>
-          <p>내 계정 정보를 먼저 확인한 뒤 필요한 설정을 조정한다.</p>
         </div>
       </header>
 
@@ -4405,8 +4393,10 @@ function SettingsView({
 
             <div className="toggle-row all-toggle">
               <div>
-                <strong>전체 알림</strong>
-                <span>ON이면 모든 개별 알림이 함께 켜진다.</span>
+                <div className="heading-help-row compact-help-row">
+                  <strong>전체 알림</strong>
+                  <HelpButton title="전체 알림" message="ON이면 모든 개별 알림이 함께 켜지고, OFF일 때 채팅, 편지, 추억, 미션 알림을 개별로 조정합니다." />
+                </div>
               </div>
               <Toggle checked={settings?.allEnabled ?? true} onChange={onToggleAllNotifications} />
             </div>
@@ -4444,7 +4434,6 @@ function SettingsView({
               <FileText size={22} />
               <div>
                 <h2>이용약관 / 개인정보 처리방침</h2>
-                <p>Lv1에서는 문서 연결 전 안내 상태로 표시한다.</p>
               </div>
             </div>
             <button className="outline-button row-button" type="button">
@@ -4460,7 +4449,6 @@ function SettingsView({
               </div>
               <ShieldAlert size={24} />
             </div>
-            <p>회원 탈퇴는 실제 API 없이 자리만 표시하며, 별도 이슈에서 비밀번호 재확인과 최종 확인 흐름을 구현한다.</p>
             <div className="danger-actions">
               <button className="outline-button danger-text" type="button" onClick={onLogout}>
                 <LogOut size={17} />
@@ -4536,8 +4524,10 @@ function ProfileEditModal({
       <section className="modal profile-edit-modal" role="dialog" aria-modal="true" aria-labelledby="profile-edit-title">
         <div className="modal-title-row">
           <div>
-            <h2 id="profile-edit-title">프로필 수정</h2>
-            <p>이름과 프로필 이미지만 수정한다. 아이디, 이메일, 전화번호는 초대와 식별에 사용하므로 수정하지 않는다.</p>
+            <div className="heading-help-row">
+              <h2 id="profile-edit-title">프로필 수정</h2>
+              <HelpButton title="프로필 수정" message="이름과 프로필 이미지만 수정할 수 있습니다. 아이디, 이메일, 전화번호는 초대와 식별에 사용하므로 수정하지 않습니다." />
+            </div>
           </div>
           <button className="icon-button" type="button" onClick={onClose} aria-label="닫기">
             <X size={18} />
@@ -4747,7 +4737,6 @@ function MemoryEditModal({
         <div className="modal-title-row">
           <div>
             <h2 id="memory-edit-title">추억 수정</h2>
-            <p>작성한 추억의 제목, 날짜, 사진, 내용을 수정한다.</p>
           </div>
           <button className="icon-button" type="button" onClick={onClose} aria-label="닫기">
             <X size={18} />
@@ -4849,7 +4838,6 @@ function MemoryDeleteModal({
         <div className="modal-title-row">
           <div>
             <h2 id="memory-delete-title">추억을 삭제할까요?</h2>
-            <p>삭제한 추억은 목록과 캘린더 기록 흐름에서 보이지 않는다.</p>
           </div>
           <button className="icon-button" type="button" onClick={onClose} aria-label="닫기">
             <X size={18} />
@@ -4918,7 +4906,6 @@ function RoomSettingsModal({
           <div className="modal-title-row">
             <div>
               <h2 id="room-info-title">방 정보 조회</h2>
-              <p>현재 방의 기본 정보와 내 권한을 확인한다.</p>
             </div>
             <button className="icon-button" type="button" aria-label="닫기" onClick={onClose}>
               <X size={18} />
@@ -4966,7 +4953,6 @@ function RoomSettingsModal({
           <div className="modal-title-row">
             <div>
               <h2 id="room-edit-title">방 정보 수정</h2>
-              <p>방장만 방 이름과 설명을 수정할 수 있다.</p>
             </div>
             <button className="icon-button" type="button" aria-label="닫기" onClick={onClose}>
               <X size={18} />
@@ -5012,7 +4998,6 @@ function RoomSettingsModal({
           <div className="modal-title-row">
             <div>
               <h2 id="room-delete-title">방 삭제</h2>
-              <p>삭제한 방은 목록과 캘린더에서 더 이상 보이지 않는다.</p>
             </div>
             <button className="icon-button" type="button" aria-label="닫기" onClick={onClose}>
               <X size={18} />
@@ -5041,7 +5026,6 @@ function RoomSettingsModal({
         <div className="modal-title-row">
           <div>
             <h2 id="room-settings-title">방 설정</h2>
-            <p>{room.name}의 정보 확인, 수정, 삭제를 선택한다.</p>
           </div>
           <button className="icon-button" type="button" aria-label="닫기" onClick={onClose}>
             <X size={18} />
@@ -5052,21 +5036,18 @@ function RoomSettingsModal({
             <BookOpen size={22} />
             <span>
               <strong>방 정보 조회</strong>
-              <small>방 이름, 설명, 타입, 멤버 수 확인</small>
             </span>
           </button>
           <button type="button" onClick={() => onModeChange("edit")} disabled={!canManage}>
             <FileText size={22} />
             <span>
               <strong>방 정보 수정</strong>
-              <small>방장만 제목과 방 설명 수정 가능</small>
             </span>
           </button>
           <button className="danger-action" type="button" onClick={() => onModeChange("delete")} disabled={!canManage}>
             <ShieldAlert size={22} />
             <span>
               <strong>방 삭제</strong>
-              <small>방장만 방 삭제 가능</small>
             </span>
           </button>
         </div>
@@ -5090,7 +5071,6 @@ function NotificationsModal({
         <div className="modal-title-row">
           <div>
             <h2 id="notifications-title">전체 알림</h2>
-            <p>방별 채팅, 편지, 추억, 미션 알림을 최신순으로 확인한다.</p>
           </div>
           <button className="icon-button" type="button" aria-label="닫기" onClick={onClose}>
             <X size={18} />
