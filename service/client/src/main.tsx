@@ -4407,7 +4407,7 @@ function SettingsView({
       </header>
 
       <section className="settings-layout">
-        <article className="profile-panel">
+        <article className="profile-panel settings-profile-panel">
           <div className="panel-heading">
             <div>
               <span>프로필</span>
@@ -4437,9 +4437,15 @@ function SettingsView({
             </div>
           </dl>
 
-          <button className="primary-button full-width" type="button" onClick={onOpenProfileEdit}>
-            프로필 수정
-          </button>
+          <div className="settings-profile-actions">
+            <button className="primary-button full-width" type="button" onClick={onOpenProfileEdit}>
+              프로필 수정
+            </button>
+            <button className="outline-button settings-logout-button" type="button" onClick={onLogout}>
+              <LogOut size={17} />
+              로그아웃
+            </button>
+          </div>
         </article>
 
         <section className="settings-stack">
@@ -4452,72 +4458,46 @@ function SettingsView({
               <Bell size={24} />
             </div>
 
-            <div className="toggle-row all-toggle">
-              <div>
-                <div className="heading-help-row compact-help-row">
-                  <strong>전체 알림</strong>
-                  <HelpButton title="전체 알림" message="ON이면 모든 개별 알림이 함께 켜지고, OFF일 때 채팅, 편지, 추억, 미션 알림을 개별로 조정합니다." />
+            <div className="notification-list-settings" aria-label="알림 설정">
+              <div className="toggle-row all-toggle notification-setting-row">
+                <div>
+                  <div className="heading-help-row compact-help-row">
+                    <strong>전체 알림</strong>
+                    <HelpButton title="전체 알림" message="ON이면 모든 개별 알림이 함께 켜지고, OFF일 때 채팅, 편지, 추억, 미션 알림을 개별로 조정합니다." />
+                  </div>
+                  <span>전체 알림을 한 번에 켜거나 끈다.</span>
                 </div>
+                <Toggle checked={settings?.allEnabled ?? true} onChange={onToggleAllNotifications} />
               </div>
-              <Toggle checked={settings?.allEnabled ?? true} onChange={onToggleAllNotifications} />
-            </div>
 
-            <div className="notification-grid" aria-label="개별 알림 설정">
               <ToggleField
-                label="채팅"
+                label="채팅 알림"
+                description="방 채팅의 새 메시지 표시를 받는다."
                 checked={settings?.chatEnabled ?? true}
                 disabled={settings?.allEnabled ?? true}
                 onChange={(checked) => onToggleIndividualNotification("chatEnabled", checked)}
               />
               <ToggleField
-                label="편지"
+                label="편지 알림"
+                description="나에게 도착한 새 편지를 확인한다."
                 checked={settings?.letterEnabled ?? true}
                 disabled={settings?.allEnabled ?? true}
                 onChange={(checked) => onToggleIndividualNotification("letterEnabled", checked)}
               />
               <ToggleField
-                label="추억"
+                label="추억 알림"
+                description="방 구성원이 새 추억을 올렸을 때 받는다."
                 checked={settings?.memoryEnabled ?? true}
                 disabled={settings?.allEnabled ?? true}
                 onChange={(checked) => onToggleIndividualNotification("memoryEnabled", checked)}
               />
               <ToggleField
-                label="미션"
+                label="미션 알림"
+                description="인증 요청과 동의가 필요한 미션을 확인한다."
                 checked={settings?.missionEnabled ?? true}
                 disabled={settings?.allEnabled ?? true}
                 onChange={(checked) => onToggleIndividualNotification("missionEnabled", checked)}
               />
-            </div>
-          </article>
-
-          <article className="settings-row">
-            <div className="row-title">
-              <FileText size={22} />
-              <div>
-                <h2>이용약관 / 개인정보 처리방침</h2>
-              </div>
-            </div>
-            <button className="outline-button row-button" type="button">
-              보기
-            </button>
-          </article>
-
-          <article className="settings-card danger-card">
-            <div className="panel-heading danger-heading">
-              <div>
-                <span>위험 영역</span>
-                <h2>계정 영향이 큰 작업</h2>
-              </div>
-              <ShieldAlert size={24} />
-            </div>
-            <div className="danger-actions">
-              <button className="outline-button danger-text" type="button" onClick={onLogout}>
-                <LogOut size={17} />
-                로그아웃
-              </button>
-              <button className="danger-button" type="button" aria-disabled="true">
-                회원 탈퇴
-              </button>
             </div>
           </article>
         </section>
@@ -5195,18 +5175,23 @@ function NotificationList({
 
 function ToggleField({
   label,
+  description,
   checked,
   disabled,
   onChange,
 }: {
   label: string;
+  description?: string;
   checked: boolean;
   disabled: boolean;
   onChange: (checked: boolean) => void;
 }) {
   return (
     <label className={`toggle-field ${disabled ? "is-disabled" : ""}`}>
-      <span>{label}</span>
+      <span className="toggle-copy">
+        <strong>{label}</strong>
+        {description ? <small>{description}</small> : null}
+      </span>
       <Toggle checked={checked} disabled={disabled} onChange={onChange} />
     </label>
   );

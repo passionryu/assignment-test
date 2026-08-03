@@ -628,6 +628,15 @@ dl {
   min-height: 560px;
 }
 
+.settings-profile-panel {
+  display: flex;
+  flex-direction: column;
+}
+
+.settings-profile-panel .profile-summary {
+  flex: 0 0 auto;
+}
+
 .compact-panel {
   min-height: 270px;
   display: flex;
@@ -3541,6 +3550,25 @@ dl {
   flex: 1;
 }
 
+.settings-profile-actions {
+  display: grid;
+  gap: 10px;
+  margin-top: auto;
+  padding-top: 24px;
+}
+
+.settings-profile-actions .full-width {
+  margin-top: 0;
+}
+
+.settings-logout-button {
+  width: 100%;
+  min-height: 46px;
+  border-color: #f4c6d9;
+  background: #fff7fb;
+  color: #d9367d;
+}
+
 .profile-meta {
   display: grid;
   gap: 12px;
@@ -3683,7 +3711,12 @@ dl {
 }
 
 .notification-card {
-  min-height: 230px;
+  min-height: 560px;
+}
+
+.notification-list-settings {
+  display: grid;
+  gap: 12px;
 }
 
 .toggle-row {
@@ -3715,6 +3748,10 @@ dl {
   background: #f0fbf5;
 }
 
+.notification-setting-row {
+  min-height: 86px;
+}
+
 .notification-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -3730,11 +3767,34 @@ dl {
   border: 1px solid #e4ebf5;
   border-radius: 8px;
   background: #ffffff;
-  padding: 14px;
+  padding: 18px;
+  min-height: 86px;
 }
 
 .toggle-field.is-disabled {
   background: #f7f9fd;
+  color: #8a98aa;
+}
+
+.toggle-copy {
+  display: grid;
+  gap: 5px;
+}
+
+.toggle-copy strong {
+  color: #253248;
+  font-size: 15px;
+}
+
+.toggle-copy small {
+  color: #667085;
+  font-size: 13px;
+  font-weight: 750;
+  line-height: 1.45;
+}
+
+.toggle-field.is-disabled .toggle-copy strong,
+.toggle-field.is-disabled .toggle-copy small {
   color: #8a98aa;
 }
 
