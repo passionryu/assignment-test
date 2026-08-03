@@ -2438,11 +2438,8 @@ function App() {
         {activeView === "settings" ? (
           <SettingsView
             profile={profile}
-            settings={settings}
             initials={initials}
             onOpenProfileEdit={() => setProfileEditOpen(true)}
-            onToggleAllNotifications={toggleAllNotifications}
-            onToggleIndividualNotification={toggleIndividualNotification}
             onLogout={() => setLogoutOpen(true)}
           />
         ) : null}
@@ -4383,21 +4380,48 @@ function RoomFeatureView({ selectedRoom, kind }: { selectedRoom: RoomSummary | n
 
 function SettingsView({
   profile,
-  settings,
   initials,
   onOpenProfileEdit,
-  onToggleAllNotifications,
-  onToggleIndividualNotification,
   onLogout,
 }: {
   profile: MemberProfile | null;
-  settings: NotificationSettings | null;
   initials: string;
   onOpenProfileEdit: () => void;
-  onToggleAllNotifications: (checked: boolean) => void;
-  onToggleIndividualNotification: (key: keyof Omit<NotificationSettings, "allEnabled">, checked: boolean) => void;
   onLogout: () => void;
 }) {
+  const qaItems = [
+    {
+      title: "체험 사용자는 어떻게 바꾸나요?",
+      summary: "로그아웃 후 사용자 선택",
+      help: "로그아웃을 누르면 계정이 삭제되는 것이 아니라, 준비된 체험 사용자 선택 화면으로 돌아갑니다.",
+    },
+    {
+      title: "프로필에서 수정 가능한 정보는 무엇인가요?",
+      summary: "이름과 프로필 이미지",
+      help: "아이디, 이메일, 전화번호는 초대와 사용자 식별에 쓰이므로 Lv1 MVP에서는 수정하지 않습니다.",
+    },
+    {
+      title: "새 알림은 어디서 확인하나요?",
+      summary: "홈 최신 알림과 좌측 배지",
+      help: "편지, 추억, 미션 알림은 홈 최신 알림에 남고, 채팅과 기능별 미확인 상태는 좌측 사이드바 배지로 확인합니다.",
+    },
+  ];
+
+  const scopeItems = [
+    {
+      title: "Lv1 지원",
+      value: "기록방, 채팅, 추억 게시판, 미션 인증, 편지",
+    },
+    {
+      title: "Lv1 제외",
+      value: "회원 탈퇴, 실제 약관 문서, 결제/인쇄 연동",
+    },
+    {
+      title: "다음 단계",
+      value: "Book Print API와 주문 흐름은 Lv2에서 확장",
+    },
+  ];
+
   return (
     <>
       <header className="page-header">
@@ -4449,55 +4473,69 @@ function SettingsView({
         </article>
 
         <section className="settings-stack">
-          <article className="settings-card notification-card">
+          <article className="settings-card settings-help-card">
             <div className="panel-heading">
               <div>
-                <span>알림 설정</span>
-                <h2>받을 알림을 선택</h2>
+                <span>도움말</span>
+                <h2>Q&A</h2>
               </div>
-              <Bell size={24} />
+              <CircleHelp size={24} />
             </div>
 
-            <div className="notification-list-settings" aria-label="알림 설정">
-              <div className="toggle-row all-toggle notification-setting-row">
-                <div>
-                  <div className="heading-help-row compact-help-row">
-                    <strong>전체 알림</strong>
-                    <HelpButton title="전체 알림" message="ON이면 모든 개별 알림이 함께 켜지고, OFF일 때 채팅, 편지, 추억, 미션 알림을 개별로 조정합니다." />
+            <div className="settings-info-list" aria-label="도움말 목록">
+              {qaItems.map((item) => (
+                <div className="settings-info-row" key={item.title}>
+                  <div>
+                    <strong>{item.title}</strong>
+                    <span>{item.summary}</span>
                   </div>
-                  <span>전체 알림을 한 번에 켜거나 끈다.</span>
+                  <HelpButton title={item.title} message={item.help} />
                 </div>
-                <Toggle checked={settings?.allEnabled ?? true} onChange={onToggleAllNotifications} />
-              </div>
+              ))}
+            </div>
+          </article>
 
-              <ToggleField
-                label="채팅 알림"
-                description="방 채팅의 새 메시지 표시를 받는다."
-                checked={settings?.chatEnabled ?? true}
-                disabled={settings?.allEnabled ?? true}
-                onChange={(checked) => onToggleIndividualNotification("chatEnabled", checked)}
-              />
-              <ToggleField
-                label="편지 알림"
-                description="나에게 도착한 새 편지를 확인한다."
-                checked={settings?.letterEnabled ?? true}
-                disabled={settings?.allEnabled ?? true}
-                onChange={(checked) => onToggleIndividualNotification("letterEnabled", checked)}
-              />
-              <ToggleField
-                label="추억 알림"
-                description="방 구성원이 새 추억을 올렸을 때 받는다."
-                checked={settings?.memoryEnabled ?? true}
-                disabled={settings?.allEnabled ?? true}
-                onChange={(checked) => onToggleIndividualNotification("memoryEnabled", checked)}
-              />
-              <ToggleField
-                label="미션 알림"
-                description="인증 요청과 동의가 필요한 미션을 확인한다."
-                checked={settings?.missionEnabled ?? true}
-                disabled={settings?.allEnabled ?? true}
-                onChange={(checked) => onToggleIndividualNotification("missionEnabled", checked)}
-              />
+          <article className="settings-card settings-guide-card">
+            <div className="panel-heading">
+              <div>
+                <span>서비스 안내</span>
+                <h2>Lv1 MVP 범위</h2>
+              </div>
+              <BookOpen size={24} />
+            </div>
+
+            <div className="settings-scope-grid" aria-label="서비스 범위">
+              {scopeItems.map((item) => (
+                <div className="settings-scope-item" key={item.title}>
+                  <strong>{item.title}</strong>
+                  <span>{item.value}</span>
+                </div>
+              ))}
+            </div>
+          </article>
+
+          <article className="settings-card settings-guide-card">
+            <div className="panel-heading">
+              <div>
+                <span>앱 정보</span>
+                <h2>데모 사용 안내</h2>
+              </div>
+              <FileText size={24} />
+            </div>
+
+            <div className="settings-info-list compact">
+              <div className="settings-info-row">
+                <div>
+                  <strong>데모 데이터</strong>
+                  <span>여러 체험 사용자와 기록방 시드로 기능을 확인합니다.</span>
+                </div>
+              </div>
+              <div className="settings-info-row">
+                <div>
+                  <strong>약관/개인정보 문서</strong>
+                  <span>Lv1 MVP에서는 별도 운영 문서 연결 없이 데모 범위로 제한합니다.</span>
+                </div>
+              </div>
             </div>
           </article>
         </section>
