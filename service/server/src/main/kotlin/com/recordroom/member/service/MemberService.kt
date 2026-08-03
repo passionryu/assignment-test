@@ -34,8 +34,8 @@ class MemberService(
             ?.trim()
             ?.takeIf { it.isNotEmpty() }
 
-        if ((profileImageUrl?.length ?: 0) > MAX_PROFILE_IMAGE_URL_LENGTH) {
-            throw ApiException(HttpStatus.BAD_REQUEST, "PROFILE_IMAGE_URL_TOO_LONG", "프로필 이미지 URL은 500자 이하로 입력해 주세요.")
+        if ((profileImageUrl?.length ?: 0) > MAX_PROFILE_IMAGE_DATA_LENGTH) {
+            throw ApiException(HttpStatus.BAD_REQUEST, "PROFILE_IMAGE_TOO_LARGE", "프로필 이미지는 5MB 이하 파일로 선택해 주세요.")
         }
 
         return memberRepository.updateProfile(memberId, displayName, profileImageUrl) ?: memberNotFound()
@@ -117,7 +117,7 @@ class MemberService(
 
     companion object {
         private const val MAX_DISPLAY_NAME_LENGTH = 50
-        private const val MAX_PROFILE_IMAGE_URL_LENGTH = 500
+        private const val MAX_PROFILE_IMAGE_DATA_LENGTH = 7 * 1024 * 1024
         private const val MIN_PASSWORD_LENGTH = 8
     }
 }
