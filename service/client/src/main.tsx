@@ -10,6 +10,8 @@ import {
   ArrowDown,
   ArrowUp,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   Clock,
   CircleHelp,
   FileText,
@@ -6642,6 +6644,149 @@ function BookSummaryMetrics({ summary }: { summary: BookContentSummary }) {
   );
 }
 
+type BookTemplatePreviewSlide = {
+  id: string;
+  kind: "cover" | "toc" | "memory" | "mission" | "letter" | "chat";
+  kicker: string;
+  title: string;
+  subtitle: string | null;
+  description: string;
+  pageRangeLabel: string;
+  thumbnailLabel: string;
+  contentType: BookContentType | null;
+  occurredDate: string | null;
+  authorName: string | null;
+  imageCount: number;
+  commentCount: number;
+  content: BookContentCandidate | null;
+  summaryItems: Array<{ label: string; value: string }>;
+};
+
+function buildBookTemplatePreviewSlides(preview: BookPreviewResponse): BookTemplatePreviewSlide[] {
+  let nextPage = 3;
+  const contentSlides = preview.contents.map((content, index) => {
+    const startPage = nextPage;
+    const endPage = nextPage + Math.max(content.pageCount, 1) - 1;
+    nextPage = endPage + 1;
+
+    return {
+      id: `${content.type}-${content.sourceId}-${index}`,
+      kind: bookTemplateSlideKind(content.type),
+      kicker: bookContentTypeLabel(content.type),
+      title: content.title,
+      subtitle: content.sourceLabel,
+      description: content.description,
+      pageRangeLabel: formatBookPageRange(startPage, endPage),
+      thumbnailLabel: formatBookThumbnailRange(startPage, endPage),
+      contentType: content.type,
+      occurredDate: content.occurredDate,
+      authorName: content.authorName,
+      imageCount: content.imageCount,
+      commentCount: content.commentCount,
+      content,
+      summaryItems: [
+        { label: "예상 지면", value: `${content.pageCount}p` },
+        { label: "사진", value: `${content.imageCount}장` },
+        { label: "댓글", value: `${content.commentCount}개` },
+      ],
+    } satisfies BookTemplatePreviewSlide;
+  });
+
+  return [
+    {
+      id: "cover",
+      kind: "cover",
+      kicker: preview.product.displayName,
+      title: preview.title,
+      subtitle: preview.roomName,
+      description: `${formatDateLabel(preview.period.startDate)}부터 ${formatDateLabel(preview.period.endDate)}까지의 기록을 한 권의 책으로 구성합니다.`,
+      pageRangeLabel: "표지",
+      thumbnailLabel: "커버",
+      contentType: null,
+      occurredDate: null,
+      authorName: null,
+      imageCount: 0,
+      commentCount: 0,
+      content: null,
+      summaryItems: [
+        { label: "상품", value: preview.product.displayName },
+        { label: "방", value: preview.roomName },
+        { label: "예상", value: `${preview.pageRange.estimatedPageCount}p` },
+      ],
+    },
+    {
+      id: "toc",
+      kind: "toc",
+      kicker: "책 구성 요약",
+      title: "담은 기록",
+      subtitle: `${preview.contents.length}개`,
+      description: "선택한 기록이 아래 구성 순서대로 템플릿 페이지에 배치됩니다.",
+      pageRangeLabel: "목차",
+      thumbnailLabel: "목차",
+      contentType: null,
+      occurredDate: null,
+      authorName: null,
+      imageCount: 0,
+      commentCount: 0,
+      content: null,
+      summaryItems: [
+        { label: "추억", value: `${preview.summary.memoryCount}개` },
+        { label: "미션", value: `${preview.summary.missionCount}개` },
+        { label: "편지", value: `${preview.summary.letterCount}개` },
+        { label: "채팅", value: `${preview.summary.chatCount}일` },
+      ],
+    },
+    ...contentSlides,
+  ];
+}
+
+function bookTemplateSlideKind(type: BookContentType): BookTemplatePreviewSlide["kind"] {
+  if (type === "MEMORY") return "memory";
+  if (type === "MISSION") return "mission";
+  if (type === "LETTER") return "letter";
+  return "chat";
+}
+
+function formatBookPageRange(startPage: number, endPage: number): string {
+  return startPage === endPage ? `${startPage}p 예상` : `${startPage}-${endPage}p 예상`;
+}
+
+function formatBookThumbnailRange(startPage: number, endPage: number): string {
+  return startPage === endPage ? `${startPage}` : `${startPage}-${endPage}`;
+}
+
+function BookTemplateVisual({ slide, compact = false }: { slide: BookTemplatePreviewSlide; compact?: boolean }) {
+  if (slide.kind === "cover") {
+    return (
+      <div className={`book-template-visual cover ${compact ? "compact" : ""}`} aria-hidden="true">
+        <BookOpen size={compact ? 18 : 42} />
+        <span>{compact ? "" : "TEMPLATE"}</span>
+      </div>
+    );
+  }
+
+  if (slide.kind === "toc") {
+    return (
+      <div className={`book-template-visual toc ${compact ? "compact" : ""}`} aria-hidden="true">
+        <List size={compact ? 18 : 38} />
+        <span>{compact ? "" : "INDEX"}</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className={`book-template-visual ${slide.kind} ${compact ? "compact" : ""}`} aria-hidden="true">
+      {slide.contentType ? <ActivityIcon type={bookContentTypeActivityKind(slide.contentType)} /> : null}
+      {!compact ? (
+        <>
+          <span>{slide.imageCount > 0 ? `사진 ${slide.imageCount}장` : bookContentTypeLabel(slide.contentType ?? "MEMORY")}</span>
+          <small>{slide.commentCount > 0 ? `댓글 ${slide.commentCount}개` : "템플릿 배치"}</small>
+        </>
+      ) : null}
+    </div>
+  );
+}
+
 function BookPreviewPanel({
   preview,
   onOpenOrderConfirm,
@@ -6649,26 +6794,95 @@ function BookPreviewPanel({
   preview: BookPreviewResponse;
   onOpenOrderConfirm: () => void;
 }) {
+  const slides = useMemo(() => buildBookTemplatePreviewSlides(preview), [preview]);
+  const [activeSlideIndex, setActiveSlideIndex] = useState(0);
+  const activeSlide = slides[activeSlideIndex] ?? slides[0];
+  const canMovePrevious = activeSlideIndex > 0;
+  const canMoveNext = activeSlideIndex < slides.length - 1;
+  const moveSlide = (direction: "PREVIOUS" | "NEXT") => {
+    setActiveSlideIndex((current) => {
+      const next = direction === "PREVIOUS" ? current - 1 : current + 1;
+
+      return clampNumber(next, 0, slides.length - 1);
+    });
+  };
+
   return (
     <section className="book-section book-preview-section" aria-labelledby="book-preview-title">
       <div className="book-section-heading">
         <div>
           <span>5. 미리보기</span>
-          <h2 id="book-preview-title">대표 페이지와 예상 견적</h2>
+          <h2 id="book-preview-title">템플릿 책 미리보기와 예상 견적</h2>
+          <p>기록 선택에서 넘긴 데이터를 템플릿 페이지에 배치한 미리보기입니다. 실제 인쇄용 PDF와 여백/재단은 다를 수 있습니다.</p>
         </div>
         <BookImage size={24} />
       </div>
 
       <div className="book-preview-layout">
-        <div className="book-preview-grid">
-          {preview.pages.map((page) => (
-            <article className="book-preview-page" key={`${page.pageNumber}-${page.title}`}>
-              <span>{page.pageNumber}p · {page.label}</span>
-              <h3>{page.title}</h3>
-              <p>{page.description}</p>
-              {page.occurredDate ? <small>{formatDateLabel(page.occurredDate)}</small> : null}
+        <div className="book-preview-viewer">
+          <div className="book-preview-viewer-top">
+            <div>
+              <strong>{activeSlide.title}</strong>
+              <span>{activeSlide.kicker}</span>
+            </div>
+            <em>{activeSlide.pageRangeLabel}</em>
+          </div>
+
+          <div className="book-preview-stage">
+            <button className="book-preview-nav previous" type="button" onClick={() => moveSlide("PREVIOUS")} disabled={!canMovePrevious} aria-label="이전 미리보기 페이지">
+              <ChevronLeft size={28} />
+            </button>
+
+            <article className={`book-template-page ${activeSlide.kind}`}>
+              <div className="book-template-page-inner">
+                <span className="book-template-kicker">{activeSlide.kicker}</span>
+                <h3>{activeSlide.title}</h3>
+                {activeSlide.subtitle ? <strong>{activeSlide.subtitle}</strong> : null}
+                <p>{activeSlide.description}</p>
+                {activeSlide.content ? (
+                  <div className="book-template-content">
+                    <BookTemplateVisual slide={activeSlide} />
+                    <div>
+                      {activeSlide.occurredDate ? <small>{formatDateLabel(activeSlide.occurredDate)}</small> : null}
+                      {activeSlide.authorName ? <small>{activeSlide.authorName}</small> : null}
+                      {activeSlide.contentType ? <small>{bookContentTypeLabel(activeSlide.contentType)}</small> : null}
+                    </div>
+                  </div>
+                ) : null}
+                {activeSlide.summaryItems.length > 0 ? (
+                  <div className="book-template-summary-grid">
+                    {activeSlide.summaryItems.map((item) => (
+                      <div key={item.label}>
+                        <span>{item.label}</span>
+                        <strong>{item.value}</strong>
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
             </article>
-          ))}
+
+            <button className="book-preview-nav next" type="button" onClick={() => moveSlide("NEXT")} disabled={!canMoveNext} aria-label="다음 미리보기 페이지">
+              <ChevronRight size={28} />
+            </button>
+          </div>
+
+          <div className="book-preview-thumbnails" aria-label="템플릿 미리보기 페이지 목록">
+            {slides.map((slide, index) => (
+              <button
+                className={index === activeSlideIndex ? "active" : ""}
+                type="button"
+                key={slide.id}
+                onClick={() => setActiveSlideIndex(index)}
+                aria-current={index === activeSlideIndex ? "true" : undefined}
+              >
+                <span className={`book-preview-thumb ${slide.kind}`}>
+                  <BookTemplateVisual slide={slide} compact />
+                </span>
+                <small>{slide.thumbnailLabel}</small>
+              </button>
+            ))}
+          </div>
         </div>
 
         <aside className="book-estimate-panel">
