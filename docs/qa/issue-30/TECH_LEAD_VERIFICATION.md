@@ -8,6 +8,8 @@
 
 - `service/client/src/main.tsx`
 - `service/client/src/styles.css`
+- `service/server/src/main/kotlin/com/recordroom/book/controller/BookArchiveController.kt`
+- `service/server/src/main/kotlin/com/recordroom/book/service/BookArchiveService.kt`
 
 ## 구현 확인
 
@@ -25,8 +27,10 @@
 - Human QA 피드백에 따라 책 구성 순서 전체 목록을 우측 카드에서 제거하고, 스크롤 가능한 modal로 전환했다.
 - Human QA 피드백에 따라 책 만들기 페이지 내부 `이전` 버튼을 제거했다.
 - Human QA 피드백에 따라 `전체 순서 보기` 버튼을 분홍색 CTA로 변경했다.
-- Human QA 피드백에 따라 기록 후보 불러오기에는 최소 2초 보장 로딩 상태와 방/기간 안내 문구를 추가했다.
+- Human QA 피드백에 따라 기록 후보 불러오기에는 콘텐츠 타입 선택 필수 조건과 `contentTypes` API 파라미터를 추가했다.
+- Human QA 피드백에 따라 기록 후보 불러오기에는 최소 3초 보장 로딩 modal과 방/날짜/콘텐츠 안내 문구를 추가했다.
 - Human QA 피드백에 따라 미리보기 계산 완료 안내를 상단 notice가 아닌 modal로 전환했다.
+- Human QA 피드백에 따라 콘텐츠 순 타입 조정 컨트롤을 absolute overlay로 표시해 기록 목록이 아래로 밀리지 않게 했다.
 
 ## 검증 명령
 
@@ -40,12 +44,18 @@ git diff --check
 ```
 
 ```bash
+cd service/server
+./gradlew test
+```
+
+```bash
 curl -I http://127.0.0.1:5173
 ```
 
 ## 검증 결과
 
 - `npm run build` 통과.
+- `./gradlew test` 통과.
 - `git diff --check` 통과.
 - Vite dev server를 `http://127.0.0.1:5173`로 기동했고 `curl -I` 기준 `200 OK` 응답을 확인했다.
 - 브라우저에서 `방 선택 -> 상품 선택 -> 기간 선택 -> 기록 선택` 진입을 확인했다.
@@ -66,6 +76,7 @@ curl -I http://127.0.0.1:5173
 - `전체 순서 보기` 클릭 시 `책 구성 순서` modal이 열리고, 41개 전체 순서 목록이 modal 내부 스크롤로 표시되는 것을 확인했다.
 - 책 만들기 기록 선택 단계에서 `이전` 버튼이 0개인 것을 확인했다.
 - 최신 추가 피드백 반영 후 `npm run build`, `git diff --check`, `curl -I http://127.0.0.1:5173`를 재수행했다.
+- 콘텐츠 타입 선택 및 3초 로딩 modal 추가 후 `npm run build`, `./gradlew test`, `git diff --check`, `curl -I http://127.0.0.1:5173`를 재수행했다.
 - 최신 추가 피드백에 대한 in-app browser 직접 클릭 검증은 browser URL 정책이 `localhost:5173` 이동을 차단해 수행하지 못했다. 앱 서버는 정상 응답 상태이며, 사용자가 화면에서 Human QA로 확인해야 한다.
 
 ## 상태
