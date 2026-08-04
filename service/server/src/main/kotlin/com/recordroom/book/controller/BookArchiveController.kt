@@ -4,6 +4,8 @@ import com.recordroom.book.model.BookContentCandidatesResponse
 import com.recordroom.book.model.BookCreateRoomsResponse
 import com.recordroom.book.model.BookPreviewResponse
 import com.recordroom.book.model.BookProductsResponse
+import com.recordroom.book.model.CancelPrintOrderRequest
+import com.recordroom.book.model.PrintOrderActionResponse
 import com.recordroom.book.model.CreatePrintOrderRequest
 import com.recordroom.book.model.CreatePrintOrderResponse
 import com.recordroom.book.model.CreateBookPreviewRequest
@@ -100,5 +102,17 @@ class BookArchiveController(
         bookOrderService.getMyOrderDetail(
             memberId = currentMemberResolver.resolve(rawMemberId),
             orderId = orderId,
+        )
+
+    @PostMapping("/orders/{orderId}/cancel")
+    fun cancelMyOrder(
+        @RequestHeader("X-Member-Id", required = false) rawMemberId: String?,
+        @PathVariable orderId: Long,
+        @RequestBody request: CancelPrintOrderRequest,
+    ): PrintOrderActionResponse =
+        bookOrderService.cancelMyOrder(
+            memberId = currentMemberResolver.resolve(rawMemberId),
+            orderId = orderId,
+            request = request,
         )
 }
