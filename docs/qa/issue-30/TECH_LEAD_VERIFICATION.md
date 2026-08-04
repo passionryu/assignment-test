@@ -31,6 +31,10 @@
 - Human QA 피드백에 따라 기록 후보 불러오기에는 최소 3초 보장 로딩 modal과 방/날짜/콘텐츠 안내 문구를 추가했다.
 - Human QA 피드백에 따라 미리보기 계산 완료 안내를 상단 notice가 아닌 modal로 전환했다.
 - Human QA 피드백에 따라 콘텐츠 순 타입 조정 컨트롤을 absolute overlay로 표시해 기록 목록이 아래로 밀리지 않게 했다.
+- Human QA 피드백에 따라 방 선택 단계의 `.book-room-grid`를 1열 목록으로 고정하고 방 정보를 가로형 요약 카드로 정리했다.
+- Human QA 피드백에 따라 `BookPeriodRangeCalendar`를 추가해 캘린더의 두 날짜 클릭으로 책 생성 기간을 설정할 수 있게 했다.
+- Human QA 피드백에 따라 책 기간 캘린더는 선택 방 기준 활동만 표시하도록 `buildBookPeriodCalendar`에서 캘린더 데이터를 방 기준으로 필터링한다.
+- Human QA 피드백에 따라 콘텐츠 타입 선택 UI를 4열 카드형으로 확대하고, `기록 불러오기` CTA를 기간 선택 카드 하단으로 이동했다.
 
 ## 검증 명령
 
@@ -77,6 +81,7 @@ curl -I http://127.0.0.1:5173
 - 책 만들기 기록 선택 단계에서 `이전` 버튼이 0개인 것을 확인했다.
 - 최신 추가 피드백 반영 후 `npm run build`, `git diff --check`, `curl -I http://127.0.0.1:5173`를 재수행했다.
 - 콘텐츠 타입 선택 및 3초 로딩 modal 추가 후 `npm run build`, `./gradlew test`, `git diff --check`, `curl -I http://127.0.0.1:5173`를 재수행했다.
+- 캘린더 기간 선택, 콘텐츠 타입 카드 확대, 하단 CTA 이동, 방 선택 1열 목록화 반영 후 `npm run build`, `./gradlew test`, `git diff --check`를 재수행했다.
 - 최신 추가 피드백에 대한 in-app browser 직접 클릭 검증은 browser URL 정책이 `localhost:5173` 이동을 차단해 수행하지 못했다. 앱 서버는 정상 응답 상태이며, 사용자가 화면에서 Human QA로 확인해야 한다.
 
 ## 상태
