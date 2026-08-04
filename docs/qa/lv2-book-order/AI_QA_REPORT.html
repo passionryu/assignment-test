@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Lv2 책 생성/주문 AI QA Report</title>
+  <style>
+    body {
+      margin: 0;
+      background: #f6f8fc;
+      color: #253248;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.6;
+    }
+    main {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 40px 24px 64px;
+    }
+    h1, h2, h3, p {
+      margin: 0;
+    }
+    header {
+      margin-bottom: 24px;
+    }
+    header h1 {
+      font-size: 34px;
+      line-height: 1.2;
+    }
+    header p {
+      margin-top: 8px;
+      color: #667085;
+      font-weight: 700;
+    }
+    section {
+      margin-top: 18px;
+      border: 1px solid #dfe7f2;
+      border-radius: 8px;
+      background: #fff;
+      padding: 24px;
+      box-shadow: 0 18px 48px rgba(49, 70, 107, 0.1);
+    }
+    h2 {
+      font-size: 22px;
+      margin-bottom: 14px;
+    }
+    h3 {
+      font-size: 17px;
+      margin: 18px 0 8px;
+    }
+    .status {
+      display: inline-flex;
+      align-items: center;
+      min-height: 28px;
+      border-radius: 999px;
+      padding: 0 12px;
+      background: #eef8ee;
+      color: #287a34;
+      font-size: 13px;
+      font-weight: 900;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+      font-size: 14px;
+    }
+    th, td {
+      border-bottom: 1px solid #edf2f8;
+      padding: 10px 8px;
+      text-align: left;
+      vertical-align: top;
+    }
+    th {
+      color: #667085;
+      font-weight: 900;
+    }
+    code {
+      border-radius: 6px;
+      background: #eef3fb;
+      padding: 2px 6px;
+      color: #253248;
+    }
+    ul {
+      margin: 8px 0 0;
+      padding-left: 20px;
+    }
+    li {
+      margin: 4px 0;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+    figure {
+      margin: 0;
+      border: 1px solid #dfe7f2;
+      border-radius: 8px;
+      overflow: hidden;
+      background: #fbfcff;
+    }
+    figure img {
+      display: block;
+      width: 100%;
+      height: auto;
+    }
+    figcaption {
+      padding: 10px 12px;
+      color: #667085;
+      font-size: 13px;
+      font-weight: 800;
+    }
+    @media (max-width: 760px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+      main {
+        padding: 28px 14px 48px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <span class="status">PASSED</span>
+      <h1>Lv2 책 생성/주문 AI QA Report</h1>
+      <p>생성일: 2026-08-04 KST · 대상: #20~#27 책 제작/주문 기능 전체 흐름</p>
+    </header>
+
+    <section>
+      <h2>검증 요약</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>영역</th>
+            <th>결과</th>
+            <th>확인 내용</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>빌드</td>
+            <td>PASSED</td>
+            <td><code>npm run build</code>, <code>./gradlew test</code> 통과</td>
+          </tr>
+          <tr>
+            <td>사용자 책 생성</td>
+            <td>PASSED</td>
+            <td>방 선택, 상품 선택, 기간 기반 콘텐츠 불러오기, 미리보기/견적 표시 확인</td>
+          </tr>
+          <tr>
+            <td>주문 생성/조회</td>
+            <td>PASSED</td>
+            <td>미리보기 snapshot 기반 주문 생성, 진행 주문/내역/상세 조회 확인</td>
+          </tr>
+          <tr>
+            <td>취소 정책</td>
+            <td>PASSED</td>
+            <td><code>PAID</code> 취소 성공, 확정 주문 취소는 <code>400 ORDER_CANCEL_NOT_ALLOWED</code></td>
+          </tr>
+          <tr>
+            <td>운영자 MVP</td>
+            <td>PASSED</td>
+            <td>운영자 캐릭터 진입, 전체 주문 조회, 상태 전이, 취소, 일반 사용자 403 확인</td>
+          </tr>
+          <tr>
+            <td>권한</td>
+            <td>PASSED</td>
+            <td>타 사용자 주문 상세는 <code>404 PRINT_ORDER_NOT_FOUND</code>, 운영자 API는 <code>403 OPERATOR_ONLY</code></td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section>
+      <h2>API Curl Evidence</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>검증</th>
+            <th>결과</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Preview 생성</td>
+            <td><code>previewId=6</code></td>
+          </tr>
+          <tr>
+            <td>주문 생성</td>
+            <td><code>createdStatus=PAID</code></td>
+          </tr>
+          <tr>
+            <td>사용자 취소</td>
+            <td><code>cancelledStatus=CANCELLED_REFUND</code></td>
+          </tr>
+          <tr>
+            <td>운영자 다음 상태 변경</td>
+            <td><code>operatorNextStatus=PDF_READY</code></td>
+          </tr>
+          <tr>
+            <td>비운영자 운영자 API 접근</td>
+            <td><code>403</code></td>
+          </tr>
+          <tr>
+            <td>타 사용자 주문 상세 접근</td>
+            <td><code>404</code></td>
+          </tr>
+          <tr>
+            <td>확정 주문 취소 시도</td>
+            <td><code>400</code></td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section>
+      <h2>Screen Evidence</h2>
+      <div class="grid">
+        <figure>
+          <img src="evidence/01-user-book-create.png" alt="사용자 책 만들기 화면">
+          <figcaption>01. 사용자 책 만들기 진입 화면</figcaption>
+        </figure>
+        <figure>
+          <img src="evidence/02-user-content-loaded-page-limit.png" alt="콘텐츠 자동 불러오기 화면">
+          <figcaption>02. 기간 기반 콘텐츠 자동 불러오기와 페이지 범위</figcaption>
+        </figure>
+        <figure>
+          <img src="evidence/03-user-preview-estimate.png" alt="미리보기 및 견적 화면">
+          <figcaption>03. 대표 페이지 미리보기, 예상 견적, 주문 요청 버튼</figcaption>
+        </figure>
+        <figure>
+          <img src="evidence/04-user-order-status.png" alt="사용자 주문 상태 화면">
+          <figcaption>04. 사용자 진행 주문 상태 조회</figcaption>
+        </figure>
+        <figure>
+          <img src="evidence/05-operator-order-console.png" alt="운영자 주문 콘솔 화면">
+          <figcaption>05. 운영자 캐릭터 전용 주문 확인 MVP</figcaption>
+        </figure>
+        <figure>
+          <img src="evidence/06-operator-order-detail-actions.png" alt="운영자 주문 상세 액션 화면">
+          <figcaption>06. 운영자 주문 상세, 다음 상태 변경, 취소 액션</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <section>
+      <h2>Human QA Focus</h2>
+      <ul>
+        <li>책 만들기에서 상품별 페이지 제한 초과 시 다음 단계가 막히는지 직접 확인한다.</li>
+        <li>주문 생성 모달의 상품, 방, 기간, 콘텐츠 수, 총액이 미리보기와 일치하는지 확인한다.</li>
+        <li>일반 사용자 주문 상태와 주문 내역의 분리 기준이 자연스러운지 확인한다.</li>
+        <li>운영자 캐릭터가 일반 사용자 사이드바 없이 별도 화면으로 진입하는지 확인한다.</li>
+        <li>운영자 상태 변경 후 사용자 주문 상태/내역 화면에 반영되는지 확인한다.</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>Known Scope</h2>
+      <ul>
+        <li>창작 방식은 Template 고정이다.</li>
+        <li>PDF 직접 업로드, 실제 결제, 배송, 환불 정산, 예치금 모델은 이번 구현 범위에서 제외했다.</li>
+        <li>상품 안내 상세 페이지는 기획중 placeholder로 유지했다.</li>
+      </ul>
+    </section>
+  </main>
+</body>
+</html>
