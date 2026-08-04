@@ -20,10 +20,12 @@ import {
   Mail,
   MailPlus,
   MessageCircle,
+  Minus,
   PanelLeftClose,
   PanelLeftOpen,
   Phone,
   Pencil,
+  Plus,
   Settings,
   ShieldAlert,
   Trash2,
@@ -5860,10 +5862,7 @@ function BookCreateView({
                 책 제목
                 <input value={title} maxLength={120} onChange={(event) => onTitleChange(event.target.value)} placeholder={selectedRoom ? `${selectedRoom.name} 기록집` : "방을 먼저 선택하세요"} />
               </label>
-              <label className="book-input-field">
-                수량
-                <input type="number" min={1} max={20} value={quantity} onChange={(event) => onQuantityChange(clampNumber(Number(event.target.value), 1, 20))} />
-              </label>
+              <BookQuantityStepper quantity={quantity} onQuantityChange={onQuantityChange} />
 
               <BookSummaryMetrics summary={draftSummary} />
 
@@ -5908,6 +5907,42 @@ function BookCreateView({
         ) : null}
       </section>
     </>
+  );
+}
+
+function BookQuantityStepper({
+  quantity,
+  onQuantityChange,
+}: {
+  quantity: number;
+  onQuantityChange: (quantity: number) => void;
+}) {
+  const updateQuantity = (nextQuantity: number) => {
+    const normalizedQuantity = Number.isFinite(nextQuantity) ? Math.trunc(nextQuantity) : 1;
+    onQuantityChange(clampNumber(normalizedQuantity, 1, 20));
+  };
+
+  return (
+    <div className="book-input-field book-quantity-field">
+      <span>수량</span>
+      <div className="book-quantity-stepper">
+        <button type="button" onClick={() => updateQuantity(quantity - 1)} disabled={quantity <= 1} aria-label="수량 줄이기">
+          <Minus size={18} />
+        </button>
+        <input
+          type="number"
+          inputMode="numeric"
+          min={1}
+          max={20}
+          value={quantity}
+          onChange={(event) => updateQuantity(Number(event.target.value))}
+          aria-label="수량"
+        />
+        <button type="button" onClick={() => updateQuantity(quantity + 1)} disabled={quantity >= 20} aria-label="수량 늘리기">
+          <Plus size={18} />
+        </button>
+      </div>
+    </div>
   );
 }
 

@@ -4159,6 +4159,74 @@ dl {
   box-shadow: 0 0 0 3px rgba(12, 159, 168, 0.13);
 }
 
+.book-quantity-field > span {
+  color: #667085;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.book-quantity-stepper {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) 44px;
+  min-height: 46px;
+  overflow: hidden;
+  border: 1px solid #dfe7f2;
+  border-radius: 8px;
+  background: #fbfcff;
+}
+
+.book-quantity-stepper:focus-within {
+  border-color: #0c9fa8;
+  box-shadow: 0 0 0 3px rgba(12, 159, 168, 0.13);
+}
+
+.book-quantity-stepper button {
+  display: inline-grid;
+  place-items: center;
+  border: 0;
+  background: #ffffff;
+  color: #0c9fa8;
+}
+
+.book-quantity-stepper button:first-child {
+  border-right: 1px solid #dfe7f2;
+}
+
+.book-quantity-stepper button:last-child {
+  border-left: 1px solid #dfe7f2;
+}
+
+.book-quantity-stepper button:disabled {
+  background: #f4f7fb;
+  color: #b6c0cf;
+  cursor: not-allowed;
+}
+
+.book-quantity-stepper input {
+  min-height: 44px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  padding: 0 8px;
+  text-align: center;
+  font-size: 18px;
+  font-weight: 950;
+}
+
+.book-quantity-stepper input:focus {
+  box-shadow: none;
+}
+
+.book-quantity-stepper input::-webkit-outer-spin-button,
+.book-quantity-stepper input::-webkit-inner-spin-button {
+  margin: 0;
+  appearance: none;
+}
+
+.book-quantity-stepper input[type="number"] {
+  appearance: textfield;
+}
+
 .book-content-layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 360px;
