@@ -3995,12 +3995,18 @@ dl {
 
 .book-wizard-content-step > .book-section,
 .book-wizard-content-step > .book-summary-panel {
-  min-height: min(78vh, 900px);
+  height: min(78vh, 900px);
+  min-height: 620px;
 }
 
 .book-wizard-content-step > .book-section {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
+  overflow: hidden;
+}
+
+.book-wizard-content-step > .book-summary-panel {
+  overflow: auto;
 }
 
 .book-section,
@@ -5839,6 +5845,7 @@ dl {
 
   .book-wizard-content-step > .book-section,
   .book-wizard-content-step > .book-summary-panel {
+    height: auto;
     min-height: auto;
   }
 
