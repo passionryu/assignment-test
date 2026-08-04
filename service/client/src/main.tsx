@@ -560,6 +560,7 @@ type BookPreviewResponse = {
 };
 
 const defaultBookContentTypeOrder: BookContentType[] = ["MEMORY", "MISSION", "LETTER", "CHAT"];
+const bookCandidateContentTypeOptions: BookContentType[] = ["MEMORY", "MISSION", "LETTER", "CHAT"];
 const bookContentStatusFilters: BookContentFilter[] = ["ALL", "SELECTED", "UNSELECTED"];
 const bookContentTypeFilters: BookContentFilter[] = ["MEMORY", "MISSION", "LETTER", "CHAT"];
 
@@ -1269,6 +1270,7 @@ function App() {
   const [bookSelectedProductUid, setBookSelectedProductUid] = useState<string | null>(null);
   const [bookCreateStep, setBookCreateStep] = useState<BookCreateStep>("room");
   const [bookPeriod, setBookPeriod] = useState<BookPeriod>(() => ({ startDate: offsetDateKey(-30), endDate: todayDateKey() }));
+  const [bookCandidateContentTypes, setBookCandidateContentTypes] = useState<BookContentType[]>([]);
   const [bookTitle, setBookTitle] = useState("");
   const [bookQuantity, setBookQuantity] = useState(1);
   const [bookContentCandidates, setBookContentCandidates] = useState<BookContentCandidatesResponse | null>(null);
@@ -1466,6 +1468,7 @@ function App() {
     setBookSelectedProductUid(null);
     setBookCreateStep("room");
     setBookPeriod({ startDate: offsetDateKey(-30), endDate: todayDateKey() });
+    setBookCandidateContentTypes([]);
     setBookTitle("");
     setBookQuantity(1);
     setBookContentCandidates(null);
@@ -1808,18 +1811,32 @@ function App() {
     const room = bookRooms.find((candidate) => candidate.id === roomId);
     setBookSelectedRoomId(roomId);
     setBookTitle((current) => current || `${room?.name ?? "선택한 방"} 기록집`);
+    setBookCandidateContentTypes([]);
     clearBookComposition();
     setBookCreateStep("product");
   }
 
   function selectBookProduct(productUid: string) {
     setBookSelectedProductUid(productUid);
+    setBookCandidateContentTypes([]);
     clearBookComposition();
     setBookCreateStep("period");
   }
 
   function updateBookPeriod(nextPeriod: BookPeriod) {
     setBookPeriod(nextPeriod);
+    clearBookComposition();
+    setBookCreateStep("period");
+  }
+
+  function toggleBookCandidateContentType(type: BookContentType) {
+    setBookCandidateContentTypes((current) => {
+      const selected = current.includes(type)
+        ? current.filter((candidate) => candidate !== type)
+        : [...current, type];
+
+      return bookCandidateContentTypeOptions.filter((candidate) => selected.includes(candidate));
+    });
     clearBookComposition();
     setBookCreateStep("period");
   }
@@ -1850,6 +1867,11 @@ function App() {
       return;
     }
 
+    if (bookCandidateContentTypes.length === 0) {
+      setErrorMessage("불러올 콘텐츠를 1개 이상 선택해 주세요.");
+      return;
+    }
+
     setMessage(null);
     setErrorMessage(null);
     setBookCandidatesLoading(true);
@@ -1860,21 +1882,23 @@ function App() {
     let nextErrorMessage: string | null = null;
 
     try {
+      const contentTypesParam = encodeURIComponent(bookCandidateContentTypes.join(","));
       const response = await apiGet<BookContentCandidatesResponse>(
-        `/book-archive/content-candidates?roomId=${bookSelectedRoomId}&productUid=${encodeURIComponent(bookSelectedProductUid)}&startDate=${bookPeriod.startDate}&endDate=${bookPeriod.endDate}`,
+        `/book-archive/content-candidates?roomId=${bookSelectedRoomId}&productUid=${encodeURIComponent(bookSelectedProductUid)}&startDate=${bookPeriod.startDate}&endDate=${bookPeriod.endDate}&contentTypes=${contentTypesParam}`,
       );
-      nextCandidates = response;
+      nextCandidates = filterBookContentCandidatesResponse(response, bookCandidateContentTypes);
     } catch (error) {
       nextCandidates = buildDemoBookContentCandidates(
         bookSelectedRoomId,
         bookSelectedProductUid,
         bookPeriod,
         selectedDemoMember?.id ?? defaultDemoMember.id,
+        bookCandidateContentTypes,
       );
       nextErrorMessage = toMessage(error);
     }
 
-    await waitAtLeast(loadingStartedAt, 2000);
+    await waitAtLeast(loadingStartedAt, 3000);
 
     setBookContentCandidates(nextCandidates);
     setSelectedBookContentKeys(initialBookSelection(nextCandidates));
@@ -3262,6 +3286,7 @@ function App() {
             selectedProductUid={bookSelectedProductUid}
             activeStep={bookCreateStep}
             period={bookPeriod}
+            candidateContentTypes={bookCandidateContentTypes}
             title={bookTitle}
             quantity={bookQuantity}
             contentCandidates={bookContentCandidates}
@@ -3281,6 +3306,7 @@ function App() {
             onSelectRoom={selectBookRoom}
             onSelectProduct={selectBookProduct}
             onPeriodChange={updateBookPeriod}
+            onToggleCandidateContentType={toggleBookCandidateContentType}
             onTitleChange={setBookTitle}
             onQuantityChange={setBookQuantity}
             onContentFilterChange={setBookContentFilter}
@@ -5608,6 +5634,7 @@ function BookCreateView({
   selectedProductUid,
   activeStep,
   period,
+  candidateContentTypes,
   title,
   quantity,
   contentCandidates,
@@ -5627,6 +5654,7 @@ function BookCreateView({
   onSelectRoom,
   onSelectProduct,
   onPeriodChange,
+  onToggleCandidateContentType,
   onTitleChange,
   onQuantityChange,
   onContentFilterChange,
@@ -5644,6 +5672,7 @@ function BookCreateView({
   selectedProductUid: string | null;
   activeStep: BookCreateStep;
   period: BookPeriod;
+  candidateContentTypes: BookContentType[];
   title: string;
   quantity: number;
   contentCandidates: BookContentCandidatesResponse | null;
@@ -5663,6 +5692,7 @@ function BookCreateView({
   onSelectRoom: (roomId: number) => void;
   onSelectProduct: (productUid: string) => void;
   onPeriodChange: (period: BookPeriod) => void;
+  onToggleCandidateContentType: (type: BookContentType) => void;
   onTitleChange: (title: string) => void;
   onQuantityChange: (quantity: number) => void;
   onContentFilterChange: (filter: BookContentFilter) => void;
@@ -5676,7 +5706,7 @@ function BookCreateView({
 }) {
   const selectedProduct = products.find((product) => product.uid === selectedProductUid) ?? null;
   const selectedRoom = rooms.find((room) => room.id === selectedRoomId) ?? null;
-  const canLoadCandidates = Boolean(selectedRoom && selectedProduct && period.startDate && period.endDate && period.startDate <= period.endDate);
+  const canLoadCandidates = Boolean(selectedRoom && selectedProduct && period.startDate && period.endDate && period.startDate <= period.endDate && candidateContentTypes.length > 0);
   const canPreview = Boolean(selectedRoom && selectedProduct && selectedContents.length > 0 && draftPageRange?.status !== "OVER_MAX");
   const steps: Array<{ key: BookCreateStep; label: string }> = [
     { key: "room", label: "방 선택" },
@@ -5709,9 +5739,7 @@ function BookCreateView({
   };
   const filterCounts = buildBookContentFilterCounts(allContents, selectedContentKeys);
   const visibleContents = filterBookContents(allContents, contentFilter, selectedContentKeys);
-  const loadingPeriodMessage = selectedRoom
-    ? `${selectedRoom.name} 방의 ${formatDateLabel(period.startDate)}부터 ${formatDateLabel(period.endDate)}까지의 정보를 모두 불러오고 있습니다.`
-    : `선택한 방의 ${formatDateLabel(period.startDate)}부터 ${formatDateLabel(period.endDate)}까지의 정보를 모두 불러오고 있습니다.`;
+  const selectedCandidateContentLabel = candidateContentTypes.map(bookContentTypeLabel).join(", ");
 
   return (
     <>
@@ -5825,13 +5853,30 @@ function BookCreateView({
               </button>
             </div>
 
-            {candidatesLoading ? (
-              <div className="book-loading-panel" role="status" aria-live="polite">
-                <span className="book-loading-spinner" aria-hidden="true" />
-                <strong>기록을 불러오는 중입니다</strong>
-                <p>{loadingPeriodMessage}</p>
+            <div className="book-candidate-type-picker" aria-label="불러올 콘텐츠 선택">
+              <span>불러올 콘텐츠</span>
+              <div>
+                {bookCandidateContentTypeOptions.map((type) => {
+                  const selected = candidateContentTypes.includes(type);
+
+                  return (
+                    <button
+                      className={selected ? "selected" : ""}
+                      type="button"
+                      key={type}
+                      onClick={() => onToggleCandidateContentType(type)}
+                      disabled={candidatesLoading}
+                      aria-pressed={selected}
+                    >
+                      {bookContentTypeLabel(type)}
+                    </button>
+                  );
+                })}
               </div>
-            ) : null}
+              <p>{candidateContentTypes.length > 0 ? `${selectedCandidateContentLabel} 기록을 불러옵니다.` : "콘텐츠를 1개 이상 선택해야 기록을 불러올 수 있습니다."}</p>
+            </div>
+
+            {candidatesLoading ? <BookCandidateLoadingModal roomName={selectedRoom?.name ?? "선택한 방"} period={period} contentTypes={candidateContentTypes} /> : null}
 
           </section>
         ) : null}
@@ -5954,6 +5999,43 @@ function BookQuantityStepper({
           <Plus size={18} />
         </button>
       </div>
+    </div>
+  );
+}
+
+function BookCandidateLoadingModal({
+  roomName,
+  period,
+  contentTypes,
+}: {
+  roomName: string;
+  period: BookPeriod;
+  contentTypes: BookContentType[];
+}) {
+  const contentTypeLabel = contentTypes.length > 0
+    ? contentTypes.map(bookContentTypeLabel).join(", ")
+    : "선택한 콘텐츠 없음";
+
+  return (
+    <div className="modal-backdrop" role="presentation">
+      <section className="modal book-candidate-loading-modal" role="dialog" aria-modal="true" aria-labelledby="book-candidate-loading-title">
+        <span className="book-loading-spinner" aria-hidden="true" />
+        <h2 id="book-candidate-loading-title">잠시만 기다려 주세요</h2>
+        <dl>
+          <div>
+            <dt>선택한 방</dt>
+            <dd>{roomName}</dd>
+          </div>
+          <div>
+            <dt>선택한 날짜</dt>
+            <dd>{formatDateLabel(period.startDate)} ~ {formatDateLabel(period.endDate)}</dd>
+          </div>
+          <div>
+            <dt>선택한 콘텐츠</dt>
+            <dd>{contentTypeLabel}</dd>
+          </div>
+        </dl>
+      </section>
     </div>
   );
 }
@@ -7672,6 +7754,28 @@ function initialBookSelection(response: BookContentCandidatesResponse): Record<s
   return selection;
 }
 
+function filterBookContentCandidatesResponse(
+  response: BookContentCandidatesResponse,
+  contentTypes: BookContentType[],
+): BookContentCandidatesResponse {
+  if (contentTypes.length === bookCandidateContentTypeOptions.length) {
+    return response;
+  }
+
+  const selectedTypes = new Set(contentTypes);
+  const defaultContents = response.defaultContents.filter((content) => selectedTypes.has(content.type));
+  const additionalContents = response.additionalContents.filter((content) => selectedTypes.has(content.type));
+  const pageRange = buildBookPageRange(response.product, defaultContents) ?? response.pageRange;
+
+  return {
+    ...response,
+    defaultContents,
+    additionalContents,
+    summary: buildBookContentSummary(defaultContents, pageRange.estimatedPageCount),
+    pageRange,
+  };
+}
+
 function sortBookContents(
   contents: BookContentCandidate[],
   orderMode: BookContentOrderMode,
@@ -7967,9 +8071,11 @@ function buildDemoBookContentCandidates(
   productUid: string,
   period: BookPeriod,
   memberId: number,
+  contentTypes: BookContentType[] = bookCandidateContentTypeOptions,
 ): BookContentCandidatesResponse {
   const room = demoRoomsForMember(memberId).find((candidate) => candidate.id === roomId) ?? demoRooms[0];
   const product = demoBookProducts().find((candidate) => candidate.uid === productUid) ?? demoBookProducts()[0];
+  const selectedTypes = new Set(contentTypes);
   const memories = demoMemoryPosts(room.id).map((post): BookContentCandidate => ({
     type: "MEMORY",
     sourceId: post.id,
@@ -8028,10 +8134,12 @@ function buildDemoBookContentCandidates(
     sourceLabel: "채팅",
   }));
   const nonChatContents = [...memories, ...missions, ...letters];
-  const defaultContents = nonChatContents.filter((content) => inBookPeriod(content.occurredDate, period)).sort(bookContentSort);
+  const typeMatchedNonChatContents = nonChatContents.filter((content) => selectedTypes.has(content.type));
+  const typeMatchedChatDays = chatDays.filter((content) => selectedTypes.has(content.type));
+  const defaultContents = typeMatchedNonChatContents.filter((content) => inBookPeriod(content.occurredDate, period)).sort(bookContentSort);
   const additionalContents = [
-    ...nonChatContents.filter((content) => !inBookPeriod(content.occurredDate, period)),
-    ...chatDays.filter((content) => inBookPeriod(content.occurredDate, period)),
+    ...typeMatchedNonChatContents.filter((content) => !inBookPeriod(content.occurredDate, period)),
+    ...typeMatchedChatDays.filter((content) => inBookPeriod(content.occurredDate, period)),
   ].sort((first, second) => second.occurredDate.localeCompare(first.occurredDate));
   const pageRange = buildBookPageRange(product, defaultContents) ?? {
     minPage: product.minPage,
