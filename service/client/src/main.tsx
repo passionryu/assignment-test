@@ -5962,9 +5962,6 @@ function BookContentLibrary({
   onToggleContent: (content: BookContentCandidate) => void;
   onOpenContentDetail: (content: BookContentCandidate) => void;
 }) {
-  const [typeOrderPopoverOpen, setTypeOrderPopoverOpen] = useState(false);
-  const typeOrderPopoverId = "book-type-order-popover";
-
   return (
     <section className="book-content-library" aria-label="책 기록 라이브러리">
       <div className="book-content-toolbar">
@@ -6000,7 +5997,6 @@ function BookContentLibrary({
               className={orderMode === "DATE" ? "active" : ""}
               type="button"
               onClick={() => {
-                setTypeOrderPopoverOpen(false);
                 onOrderModeChange("DATE");
               }}
             >
@@ -6009,45 +6005,28 @@ function BookContentLibrary({
             <button
               className={orderMode === "TYPE" ? "active" : ""}
               type="button"
-              onClick={() => {
-                onOrderModeChange("TYPE");
-                setTypeOrderPopoverOpen(true);
-              }}
+              onClick={() => onOrderModeChange("TYPE")}
             >
               콘텐츠 순
             </button>
           </div>
           {orderMode === "TYPE" ? (
-            <div className="book-type-order-popover-wrapper">
-              <button
-                className="book-type-order-trigger"
-                type="button"
-                aria-expanded={typeOrderPopoverOpen}
-                aria-controls={typeOrderPopoverId}
-                onClick={() => setTypeOrderPopoverOpen((current) => !current)}
-              >
-                순서 설정
-                <ChevronDown size={16} />
-              </button>
-              {typeOrderPopoverOpen ? (
-                <div className="book-type-order-popover" id={typeOrderPopoverId} role="dialog" aria-label="콘텐츠 타입 순서 설정">
-                  <div className="book-type-order-list">
-                    {contentTypeOrder.map((type, index) => (
-                      <div className="book-type-order-item" key={type}>
-                        <strong>{bookContentTypeLabel(type)}</strong>
-                        <div>
-                          <button type="button" onClick={() => onMoveContentType(type, "UP")} disabled={index === 0} aria-label={`${bookContentTypeLabel(type)} 순서를 위로 이동`}>
-                            <ArrowUp size={14} />
-                          </button>
-                          <button type="button" onClick={() => onMoveContentType(type, "DOWN")} disabled={index === contentTypeOrder.length - 1} aria-label={`${bookContentTypeLabel(type)} 순서를 아래로 이동`}>
-                            <ArrowDown size={14} />
-                          </button>
-                        </div>
-                      </div>
-                    ))}
+            <div className="book-type-order-inline" aria-label="콘텐츠 타입 순서 설정">
+              <div className="book-type-order-list">
+                {contentTypeOrder.map((type, index) => (
+                  <div className="book-type-order-item" key={type}>
+                    <strong>{bookContentTypeLabel(type)}</strong>
+                    <div>
+                      <button type="button" onClick={() => onMoveContentType(type, "UP")} disabled={index === 0} aria-label={`${bookContentTypeLabel(type)} 순서를 위로 이동`}>
+                        <ArrowUp size={14} />
+                      </button>
+                      <button type="button" onClick={() => onMoveContentType(type, "DOWN")} disabled={index === contentTypeOrder.length - 1} aria-label={`${bookContentTypeLabel(type)} 순서를 아래로 이동`}>
+                        <ArrowDown size={14} />
+                      </button>
+                    </div>
                   </div>
-                </div>
-              ) : null}
+                ))}
+              </div>
             </div>
           ) : null}
         </div>
