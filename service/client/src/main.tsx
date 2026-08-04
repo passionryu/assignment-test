@@ -6825,7 +6825,7 @@ function BookPreviewPanel({
               <strong>{activeSlide.title}</strong>
               <span>{activeSlide.kicker}</span>
             </div>
-            <em>{activeSlide.pageRangeLabel}</em>
+            <em>{activeSlide.pageRangeLabel} · {activeSlideIndex + 1}/{slides.length}</em>
           </div>
 
           <div className="book-preview-stage">

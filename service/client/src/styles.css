@@ -5065,15 +5065,19 @@ dl {
 
 .book-preview-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 340px;
-  gap: 18px;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  gap: 20px;
   align-items: start;
 }
 
 .book-preview-viewer {
   min-width: 0;
   display: grid;
-  gap: 18px;
+  gap: 16px;
+  border: 1px solid #e4ebf5;
+  border-radius: 8px;
+  background: #fbfcff;
+  padding: 18px;
 }
 
 .book-preview-viewer-top {
@@ -5081,6 +5085,8 @@ dl {
   align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
+  border-bottom: 1px solid #e4ebf5;
+  padding-bottom: 14px;
 }
 
 .book-preview-viewer-top div {
@@ -5090,7 +5096,7 @@ dl {
 
 .book-preview-viewer-top strong {
   color: #253248;
-  font-size: 22px;
+  font-size: 20px;
   line-height: 1.25;
 }
 
@@ -5108,14 +5114,18 @@ dl {
 
 .book-preview-stage {
   display: grid;
-  grid-template-columns: 52px minmax(0, 1fr) 52px;
+  grid-template-columns: 46px minmax(0, 1fr) 46px;
   align-items: center;
-  gap: 16px;
+  gap: 14px;
+  border-radius: 8px;
+  background:
+    linear-gradient(90deg, rgba(248, 250, 252, 0.7), rgba(255, 241, 247, 0.5), rgba(243, 252, 251, 0.7));
+  padding: 20px 8px;
 }
 
 .book-preview-nav {
-  width: 52px;
-  height: 52px;
+  width: 46px;
+  height: 46px;
   display: grid;
   place-items: center;
   border: 1px solid #e4ebf5;
@@ -5139,15 +5149,15 @@ dl {
 }
 
 .book-template-page {
-  width: min(560px, 100%);
-  min-height: 620px;
+  width: min(500px, 100%);
+  min-height: 520px;
   justify-self: center;
   display: grid;
   border: 1px solid #e4ebf5;
   border-radius: 8px;
   background: #fffdf8;
-  padding: 18px;
-  box-shadow: 0 24px 54px rgba(15, 23, 42, 0.12);
+  padding: 14px;
+  box-shadow: 0 18px 42px rgba(15, 23, 42, 0.12);
 }
 
 .book-template-page.cover {
@@ -5166,11 +5176,18 @@ dl {
 
 .book-template-page-inner {
   display: grid;
-  align-content: start;
-  gap: 18px;
+  align-content: center;
+  gap: 16px;
   border: 1px solid rgba(12, 159, 168, 0.16);
   border-radius: 8px;
-  padding: 34px;
+  padding: 30px;
+}
+
+.book-template-page.memory .book-template-page-inner,
+.book-template-page.mission .book-template-page-inner,
+.book-template-page.letter .book-template-page-inner,
+.book-template-page.chat .book-template-page-inner {
+  align-content: start;
 }
 
 .book-template-kicker {
@@ -5181,7 +5198,7 @@ dl {
 
 .book-template-page h3 {
   color: #253248;
-  font-size: 34px;
+  font-size: 30px;
   line-height: 1.22;
 }
 
@@ -5192,7 +5209,7 @@ dl {
 
 .book-template-page p {
   color: #667085;
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 850;
   line-height: 1.65;
 }
@@ -5219,7 +5236,7 @@ dl {
 }
 
 .book-template-visual {
-  min-height: 210px;
+  min-height: 170px;
   display: grid;
   place-items: center;
   gap: 10px;
@@ -5231,7 +5248,7 @@ dl {
 }
 
 .book-template-visual.cover {
-  min-height: 250px;
+  min-height: 190px;
   background: linear-gradient(145deg, rgba(239, 75, 150, 0.16), rgba(12, 159, 168, 0.14));
 }
 
@@ -5301,13 +5318,14 @@ dl {
 
 .book-preview-thumbnails {
   display: flex;
-  gap: 12px;
+  gap: 10px;
   overflow-x: auto;
-  padding: 4px 4px 10px;
+  border-top: 1px solid #e4ebf5;
+  padding: 14px 4px 4px;
 }
 
 .book-preview-thumbnails button {
-  min-width: 96px;
+  min-width: 88px;
   display: grid;
   gap: 7px;
   justify-items: center;
@@ -5329,8 +5347,8 @@ dl {
 }
 
 .book-preview-thumb {
-  width: 96px;
-  height: 58px;
+  width: 88px;
+  height: 52px;
   display: grid;
   place-items: center;
   border: 1px solid #e4ebf5;
@@ -5388,7 +5406,8 @@ dl {
   border: 1px solid #e4ebf5;
   border-radius: 8px;
   background: #ffffff;
-  padding: 20px;
+  padding: 22px;
+  box-shadow: 0 18px 42px rgba(15, 23, 42, 0.06);
 }
 
 .book-estimate-panel h3 {
