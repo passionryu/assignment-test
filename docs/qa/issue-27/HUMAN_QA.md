@@ -5,6 +5,7 @@
 - Run the app with `docker compose -f service/infra/docker-compose.yml up --build`.
 - Open `http://localhost:5173`.
 - Seed data is restored on local server startup.
+- AI QA report and screen evidence are stored in `docs/qa/issue-27/AI_QA_REPORT.html`.
 
 ## Seed Users
 
