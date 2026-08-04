@@ -1,6 +1,7 @@
 package com.recordroom.book.model
 
 import java.time.LocalDate
+import java.time.OffsetDateTime
 
 enum class BookCreationType {
     TEMPLATE,
@@ -161,6 +162,78 @@ data class BookPreviewResponse(
     val estimate: BookEstimateResponse,
     val pages: List<BookPreviewPageResponse>,
     val warnings: List<String>,
+)
+
+data class CreatePrintOrderRequest(
+    val previewId: Long?,
+)
+
+data class CreatePrintOrderResponse(
+    val order: PrintOrderDetailResponse,
+)
+
+data class PrintOrdersResponse(
+    val orders: List<PrintOrderSummaryResponse>,
+)
+
+data class PrintOrderSummaryResponse(
+    val id: Long,
+    val orderNo: String,
+    val roomId: Long,
+    val roomName: String,
+    val product: BookProductResponse,
+    val title: String,
+    val quantity: Int,
+    val estimatedPageCount: Int,
+    val totalPrice: Int,
+    val status: PrintOrderStatus,
+    val statusLabel: String,
+    val requestedAt: OffsetDateTime,
+    val updatedAt: OffsetDateTime,
+)
+
+data class PrintOrderDetailResponse(
+    val id: Long,
+    val orderNo: String,
+    val roomId: Long,
+    val roomName: String,
+    val product: BookProductResponse,
+    val creationType: BookCreationType,
+    val title: String,
+    val quantity: Int,
+    val period: BookPeriodResponse,
+    val estimatedPageCount: Int,
+    val basePrice: Int,
+    val additionalPagePrice: Int,
+    val shippingPrice: Int,
+    val totalPrice: Int,
+    val status: PrintOrderStatus,
+    val statusLabel: String,
+    val requestedAt: OffsetDateTime,
+    val updatedAt: OffsetDateTime,
+    val cancelledAt: OffsetDateTime?,
+    val cancelReason: String?,
+    val contents: List<PrintOrderContentSnapshotResponse>,
+    val statusHistories: List<PrintOrderStatusHistoryResponse>,
+)
+
+data class PrintOrderContentSnapshotResponse(
+    val type: BookContentType,
+    val sourceId: Long,
+    val title: String,
+    val occurredDate: LocalDate,
+    val pageCount: Int,
+    val sortOrder: Int,
+    val snapshot: BookContentCandidateResponse?,
+)
+
+data class PrintOrderStatusHistoryResponse(
+    val id: Long,
+    val previousStatus: PrintOrderStatus?,
+    val nextStatus: PrintOrderStatus,
+    val nextStatusLabel: String,
+    val memo: String?,
+    val changedAt: OffsetDateTime,
 )
 
 data class BookContentCandidate(

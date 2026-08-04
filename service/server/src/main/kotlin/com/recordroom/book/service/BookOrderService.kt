@@ -1,0 +1,235 @@
+package com.recordroom.book.service
+
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.module.kotlin.readValue
+import com.recordroom.book.model.BookContentCandidateResponse
+import com.recordroom.book.model.BookPeriodResponse
+import com.recordroom.book.model.CreatePrintOrderRequest
+import com.recordroom.book.model.CreatePrintOrderResponse
+import com.recordroom.book.model.PrintOrderContentEntity
+import com.recordroom.book.model.PrintOrderContentSnapshotResponse
+import com.recordroom.book.model.PrintOrderDetailResponse
+import com.recordroom.book.model.PrintOrderEntity
+import com.recordroom.book.model.PrintOrderStatus
+import com.recordroom.book.model.PrintOrderStatusHistoryEntity
+import com.recordroom.book.model.PrintOrderStatusHistoryResponse
+import com.recordroom.book.model.PrintOrderSummaryResponse
+import com.recordroom.book.model.PrintOrdersResponse
+import com.recordroom.book.repository.BookPreviewContentJpaRepository
+import com.recordroom.book.repository.BookPreviewJpaRepository
+import com.recordroom.book.repository.PrintOrderContentJpaRepository
+import com.recordroom.book.repository.PrintOrderJpaRepository
+import com.recordroom.book.repository.PrintOrderStatusHistoryJpaRepository
+import com.recordroom.common.ApiException
+import com.recordroom.member.service.MemberService
+import com.recordroom.room.repository.RoomRepository
+import org.springframework.http.HttpStatus
+import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
+import java.time.OffsetDateTime
+
+@Service
+class BookOrderService(
+    private val memberService: MemberService,
+    private val roomRepository: RoomRepository,
+    private val bookProductCatalog: BookProductCatalog,
+    private val bookPreviewJpaRepository: BookPreviewJpaRepository,
+    private val bookPreviewContentJpaRepository: BookPreviewContentJpaRepository,
+    private val printOrderJpaRepository: PrintOrderJpaRepository,
+    private val printOrderContentJpaRepository: PrintOrderContentJpaRepository,
+    private val printOrderStatusHistoryJpaRepository: PrintOrderStatusHistoryJpaRepository,
+    private val printOrderNumberGenerator: PrintOrderNumberGenerator,
+    private val objectMapper: ObjectMapper,
+) {
+    // 확정된 미리보기 스냅샷을 주문 스냅샷으로 복사해 이후 원본 변경과 분리한다.
+    @Transactional
+    fun createOrder(memberId: Long, request: CreatePrintOrderRequest): CreatePrintOrderResponse {
+        memberService.getProfile(memberId)
+        val previewId = request.previewId ?: throw badRequest("BOOK_PREVIEW_REQUIRED", "주문할 미리보기를 선택해 주세요.")
+        val preview = bookPreviewJpaRepository.findByIdAndMemberId(previewId, memberId)
+            ?: throw ApiException(HttpStatus.NOT_FOUND, "BOOK_PREVIEW_NOT_FOUND", "미리보기를 찾을 수 없습니다.")
+        if (preview.expiresAt.isBefore(OffsetDateTime.now())) {
+            throw badRequest("BOOK_PREVIEW_EXPIRED", "만료된 미리보기는 주문할 수 없습니다.")
+        }
+        validateRoomAccess(preview.roomId, memberId)
+
+        val now = OffsetDateTime.now()
+        val order = printOrderJpaRepository.save(
+            PrintOrderEntity(
+                orderNo = printOrderNumberGenerator.generateOrderNo(now),
+                memberId = memberId,
+                roomId = preview.roomId,
+                previewId = preview.id,
+                bookSpecUid = preview.bookSpecUid,
+                creationType = preview.creationType,
+                title = preview.title,
+                quantity = preview.quantity,
+                periodStartDate = preview.periodStartDate,
+                periodEndDate = preview.periodEndDate,
+                estimatedPageCount = preview.estimatedPageCount,
+                basePrice = preview.basePrice,
+                additionalPagePrice = preview.additionalPagePrice,
+                shippingPrice = preview.shippingPrice,
+                totalPrice = preview.totalPrice,
+                status = PrintOrderStatus.PAID,
+                requestedAt = now,
+                updatedAt = now,
+            ),
+        )
+        val previewContents = bookPreviewContentJpaRepository.findByPreviewIdOrderBySortOrderAsc(preview.id)
+        printOrderContentJpaRepository.saveAll(
+            previewContents.map { content ->
+                PrintOrderContentEntity(
+                    orderId = order.id,
+                    contentType = content.contentType,
+                    sourceId = content.sourceId,
+                    title = content.title,
+                    occurredDate = content.occurredDate,
+                    pageCount = content.pageCount,
+                    sortOrder = content.sortOrder,
+                    snapshotJson = content.snapshotJson,
+                )
+            },
+        )
+        printOrderStatusHistoryJpaRepository.save(
+            PrintOrderStatusHistoryEntity(
+                orderId = order.id,
+                previousStatus = null,
+                nextStatus = PrintOrderStatus.PAID,
+                changedByMemberId = memberId,
+                memo = "사용자가 주문을 생성했습니다.",
+                changedAt = now,
+            ),
+        )
+
+        return CreatePrintOrderResponse(order = order.toDetailResponse())
+    }
+
+    // 주문 상태 화면에는 아직 완료되지 않은 사용자 본인 주문만 노출한다.
+    @Transactional(readOnly = true)
+    fun getMyActiveOrders(memberId: Long): PrintOrdersResponse {
+        memberService.getProfile(memberId)
+
+        return PrintOrdersResponse(
+            orders = printOrderJpaRepository
+                .findByMemberIdAndStatusInOrderByRequestedAtDesc(memberId, ACTIVE_STATUSES)
+                .map { it.toSummaryResponse() },
+        )
+    }
+
+    // 주문 내역 화면에는 완료, 취소, 오류처럼 종료된 사용자 본인 주문을 노출한다.
+    @Transactional(readOnly = true)
+    fun getMyOrderHistory(memberId: Long): PrintOrdersResponse {
+        memberService.getProfile(memberId)
+
+        return PrintOrdersResponse(
+            orders = printOrderJpaRepository
+                .findByMemberIdAndStatusInOrderByRequestedAtDesc(memberId, HISTORY_STATUSES)
+                .map { it.toSummaryResponse() },
+        )
+    }
+
+    // 일반 사용자는 본인 주문 상세만 볼 수 있으므로 memberId와 orderId를 함께 검증한다.
+    @Transactional(readOnly = true)
+    fun getMyOrderDetail(memberId: Long, orderId: Long): PrintOrderDetailResponse {
+        memberService.getProfile(memberId)
+        val order = printOrderJpaRepository.findByIdAndMemberId(orderId, memberId)
+            ?: throw ApiException(HttpStatus.NOT_FOUND, "PRINT_ORDER_NOT_FOUND", "주문을 찾을 수 없습니다.")
+
+        return order.toDetailResponse()
+    }
+
+    private fun validateRoomAccess(roomId: Long, memberId: Long) {
+        val hasRoomAccess = roomRepository.findActiveRoom(roomId) != null &&
+            roomRepository.existsActiveRoomMember(roomId, memberId)
+        if (!hasRoomAccess) {
+            throw ApiException(HttpStatus.FORBIDDEN, "ROOM_ACCESS_DENIED", "참여 중인 방의 주문만 생성할 수 있습니다.")
+        }
+    }
+
+    private fun PrintOrderEntity.toSummaryResponse(): PrintOrderSummaryResponse =
+        PrintOrderSummaryResponse(
+            id = id,
+            orderNo = orderNo,
+            roomId = roomId,
+            roomName = resolveRoomName(roomId),
+            product = bookProductCatalog.getProduct(bookSpecUid),
+            title = title,
+            quantity = quantity,
+            estimatedPageCount = estimatedPageCount,
+            totalPrice = totalPrice,
+            status = status,
+            statusLabel = status.toKoreanLabel(),
+            requestedAt = requestedAt,
+            updatedAt = updatedAt,
+        )
+
+    private fun PrintOrderEntity.toDetailResponse(): PrintOrderDetailResponse =
+        PrintOrderDetailResponse(
+            id = id,
+            orderNo = orderNo,
+            roomId = roomId,
+            roomName = resolveRoomName(roomId),
+            product = bookProductCatalog.getProduct(bookSpecUid),
+            creationType = creationType,
+            title = title,
+            quantity = quantity,
+            period = BookPeriodResponse(periodStartDate, periodEndDate),
+            estimatedPageCount = estimatedPageCount,
+            basePrice = basePrice,
+            additionalPagePrice = additionalPagePrice,
+            shippingPrice = shippingPrice,
+            totalPrice = totalPrice,
+            status = status,
+            statusLabel = status.toKoreanLabel(),
+            requestedAt = requestedAt,
+            updatedAt = updatedAt,
+            cancelledAt = cancelledAt,
+            cancelReason = cancelReason,
+            contents = printOrderContentJpaRepository.findByOrderIdOrderBySortOrderAsc(id).map { it.toResponse() },
+            statusHistories = printOrderStatusHistoryJpaRepository.findByOrderIdOrderByChangedAtAscIdAsc(id).map { it.toResponse() },
+        )
+
+    private fun PrintOrderContentEntity.toResponse(): PrintOrderContentSnapshotResponse =
+        PrintOrderContentSnapshotResponse(
+            type = contentType,
+            sourceId = sourceId,
+            title = title,
+            occurredDate = occurredDate,
+            pageCount = pageCount,
+            sortOrder = sortOrder,
+            snapshot = runCatching { objectMapper.readValue<BookContentCandidateResponse>(snapshotJson) }.getOrNull(),
+        )
+
+    private fun PrintOrderStatusHistoryEntity.toResponse(): PrintOrderStatusHistoryResponse =
+        PrintOrderStatusHistoryResponse(
+            id = id,
+            previousStatus = previousStatus,
+            nextStatus = nextStatus,
+            nextStatusLabel = nextStatus.toKoreanLabel(),
+            memo = memo,
+            changedAt = changedAt,
+        )
+
+    private fun resolveRoomName(roomId: Long): String =
+        roomRepository.findActiveRoom(roomId)?.name ?: "보관된 방"
+
+    private fun badRequest(code: String, message: String): ApiException =
+        ApiException(HttpStatus.BAD_REQUEST, code, message)
+
+    companion object {
+        private val ACTIVE_STATUSES = listOf(
+            PrintOrderStatus.PAID,
+            PrintOrderStatus.PDF_READY,
+            PrintOrderStatus.CONFIRMED,
+            PrintOrderStatus.IN_PRODUCTION,
+            PrintOrderStatus.PRODUCTION_COMPLETE,
+            PrintOrderStatus.SHIPPED,
+        )
+        private val HISTORY_STATUSES = listOf(
+            PrintOrderStatus.DELIVERED,
+            PrintOrderStatus.CANCELLED_REFUND,
+            PrintOrderStatus.ERROR,
+        )
+    }
+}

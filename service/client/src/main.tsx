@@ -544,6 +544,72 @@ type BookPreviewResponse = {
   warnings: string[];
 };
 
+type PrintOrderStatus =
+  | "PAID"
+  | "PDF_READY"
+  | "CONFIRMED"
+  | "IN_PRODUCTION"
+  | "PRODUCTION_COMPLETE"
+  | "SHIPPED"
+  | "DELIVERED"
+  | "CANCELLED_REFUND"
+  | "ERROR";
+
+type PrintOrderSummary = {
+  id: number;
+  orderNo: string;
+  roomId: number;
+  roomName: string;
+  product: BookProduct;
+  title: string;
+  quantity: number;
+  estimatedPageCount: number;
+  totalPrice: number;
+  status: PrintOrderStatus;
+  statusLabel: string;
+  requestedAt: string;
+  updatedAt: string;
+};
+
+type PrintOrdersResponse = {
+  orders: PrintOrderSummary[];
+};
+
+type PrintOrderContentSnapshot = {
+  type: BookContentType;
+  sourceId: number;
+  title: string;
+  occurredDate: string;
+  pageCount: number;
+  sortOrder: number;
+  snapshot: BookContentCandidate | null;
+};
+
+type PrintOrderStatusHistory = {
+  id: number;
+  previousStatus: PrintOrderStatus | null;
+  nextStatus: PrintOrderStatus;
+  nextStatusLabel: string;
+  memo: string | null;
+  changedAt: string;
+};
+
+type PrintOrderDetail = PrintOrderSummary & {
+  creationType: BookCreationType;
+  period: BookPeriod;
+  basePrice: number;
+  additionalPagePrice: number;
+  shippingPrice: number;
+  cancelledAt: string | null;
+  cancelReason: string | null;
+  contents: PrintOrderContentSnapshot[];
+  statusHistories: PrintOrderStatusHistory[];
+};
+
+type CreatePrintOrderResponse = {
+  order: PrintOrderDetail;
+};
+
 type ApiError = {
   code: string;
   message: string;
@@ -1169,6 +1235,13 @@ function App() {
   const [bookCandidatesLoading, setBookCandidatesLoading] = useState(false);
   const [bookPreviewLoading, setBookPreviewLoading] = useState(false);
   const [bookPreview, setBookPreview] = useState<BookPreviewResponse | null>(null);
+  const [bookOrderConfirmOpen, setBookOrderConfirmOpen] = useState(false);
+  const [bookStatusOrders, setBookStatusOrders] = useState<PrintOrderSummary[]>([]);
+  const [bookHistoryOrders, setBookHistoryOrders] = useState<PrintOrderSummary[]>([]);
+  const [selectedBookOrder, setSelectedBookOrder] = useState<PrintOrderDetail | null>(null);
+  const [bookOrdersLoading, setBookOrdersLoading] = useState(false);
+  const [bookOrderDetailLoading, setBookOrderDetailLoading] = useState(false);
+  const [bookOrderCreating, setBookOrderCreating] = useState(false);
   const [profileForm, setProfileForm] = useState<ProfileForm>({ displayName: "", profileImageUrl: "" });
   const [createRoomForm, setCreateRoomForm] = useState<CreateRoomForm>({ name: "", type: "COUPLE", description: "" });
   const [inviteContacts, setInviteContacts] = useState<Record<number, string>>({});
@@ -1284,6 +1357,18 @@ function App() {
     void prepareBookCreate();
   }, [activeView, selectedDemoMember?.id]);
 
+  useEffect(() => {
+    if (activeView !== "bookStatus" || !selectedDemoMember) return;
+
+    void loadBookOrders("status");
+  }, [activeView, selectedDemoMember?.id]);
+
+  useEffect(() => {
+    if (activeView !== "bookHistory" || !selectedDemoMember) return;
+
+    void loadBookOrders("history");
+  }, [activeView, selectedDemoMember?.id]);
+
   function resetSessionState() {
     setProfile(null);
     setSettings(null);
@@ -1320,6 +1405,10 @@ function App() {
     setBookContentCandidates(null);
     setSelectedBookContentKeys({});
     setBookPreview(null);
+    setBookOrderConfirmOpen(false);
+    setBookStatusOrders([]);
+    setBookHistoryOrders([]);
+    setSelectedBookOrder(null);
     setProfileForm({ displayName: "", profileImageUrl: "" });
     setMessage(null);
     setErrorMessage(null);
@@ -1754,6 +1843,79 @@ function App() {
       setErrorMessage(toMessage(error));
     } finally {
       setBookPreviewLoading(false);
+    }
+  }
+
+  async function createPrintOrder() {
+    if (!bookPreview) {
+      setErrorMessage("주문할 미리보기를 먼저 생성해 주세요.");
+      return;
+    }
+
+    setMessage(null);
+    setErrorMessage(null);
+    setBookOrderCreating(true);
+
+    try {
+      const response = await apiRequest<CreatePrintOrderResponse>("/book-archive/orders", {
+        method: "POST",
+        body: { previewId: bookPreview.previewId },
+      });
+      setSelectedBookOrder(response.order);
+      setBookStatusOrders((current) => [
+        orderDetailToSummary(response.order),
+        ...current.filter((order) => order.id !== response.order.id),
+      ]);
+      setBookOrderConfirmOpen(false);
+      setBookMenuExpanded(true);
+      setActiveView("bookStatus");
+      setMessage("주문 요청이 생성되었습니다. 진행 상태 화면에서 제작 흐름을 확인할 수 있습니다.");
+    } catch (error) {
+      setErrorMessage(toMessage(error));
+    } finally {
+      setBookOrderCreating(false);
+    }
+  }
+
+  async function loadBookOrders(scope: "status" | "history") {
+    setErrorMessage(null);
+    setBookOrdersLoading(true);
+    try {
+      const response = await apiGet<PrintOrdersResponse>(`/book-archive/orders/${scope}`);
+      if (scope === "status") {
+        setBookStatusOrders(response.orders);
+      } else {
+        setBookHistoryOrders(response.orders);
+      }
+      setSelectedBookOrder((current) =>
+        current && response.orders.some((order) => order.id === current.id && order.status === current.status)
+          ? current
+          : null,
+      );
+    } catch (error) {
+      if (scope === "status") {
+        setBookStatusOrders([]);
+      } else {
+        setBookHistoryOrders([]);
+      }
+      setSelectedBookOrder(null);
+      setErrorMessage(toMessage(error));
+    } finally {
+      setBookOrdersLoading(false);
+    }
+  }
+
+  async function openBookOrderDetail(orderId: number) {
+    setMessage(null);
+    setErrorMessage(null);
+    setBookOrderDetailLoading(true);
+    try {
+      const response = await apiGet<PrintOrderDetail>(`/book-archive/orders/${orderId}`);
+      setSelectedBookOrder(response);
+    } catch (error) {
+      setErrorMessage(toMessage(error));
+    } finally {
+      setBookOrderDetailLoading(false);
     }
   }
 
@@ -2814,10 +2976,29 @@ function App() {
             onLoadCandidates={loadBookContentCandidates}
             onToggleContent={toggleBookContent}
             onCreatePreview={createBookPreview}
+            onOpenOrderConfirm={() => setBookOrderConfirmOpen(true)}
           />
         ) : null}
-        {activeView === "bookStatus" ? <BookStatusPlaceholderView /> : null}
-        {activeView === "bookHistory" ? <BookHistoryPlaceholderView /> : null}
+        {activeView === "bookStatus" ? (
+          <BookOrdersView
+            mode="status"
+            orders={bookStatusOrders}
+            selectedOrder={selectedBookOrder}
+            loading={bookOrdersLoading}
+            detailLoading={bookOrderDetailLoading}
+            onOpenOrder={openBookOrderDetail}
+          />
+        ) : null}
+        {activeView === "bookHistory" ? (
+          <BookOrdersView
+            mode="history"
+            orders={bookHistoryOrders}
+            selectedOrder={selectedBookOrder}
+            loading={bookOrdersLoading}
+            detailLoading={bookOrderDetailLoading}
+            onOpenOrder={openBookOrderDetail}
+          />
+        ) : null}
         {activeView === "settings" ? (
           <SettingsView
             profile={profile}
@@ -2839,6 +3020,15 @@ function App() {
       ) : null}
 
       {logoutOpen ? <LogoutModal onClose={() => setLogoutOpen(false)} onConfirm={logoutToMemberSelection} /> : null}
+
+      {bookOrderConfirmOpen && bookPreview ? (
+        <BookOrderConfirmModal
+          preview={bookPreview}
+          creating={bookOrderCreating}
+          onCreateOrder={createPrintOrder}
+          onClose={() => setBookOrderConfirmOpen(false)}
+        />
+      ) : null}
 
       {inviteCandidateModal ? (
         <InviteeSelectionModal
@@ -4879,6 +5069,7 @@ function BookCreateView({
   onLoadCandidates,
   onToggleContent,
   onCreatePreview,
+  onOpenOrderConfirm,
 }: {
   rooms: BookCreateRoom[];
   products: BookProduct[];
@@ -4903,6 +5094,7 @@ function BookCreateView({
   onLoadCandidates: () => void;
   onToggleContent: (content: BookContentCandidate) => void;
   onCreatePreview: () => void;
+  onOpenOrderConfirm: () => void;
 }) {
   const selectedProduct = products.find((product) => product.uid === selectedProductUid) ?? null;
   const selectedRoom = rooms.find((room) => room.id === selectedRoomId) ?? null;
@@ -5073,7 +5265,7 @@ function BookCreateView({
           </aside>
         </section>
 
-        {preview ? <BookPreviewPanel preview={preview} /> : null}
+        {preview ? <BookPreviewPanel preview={preview} onOpenOrderConfirm={onOpenOrderConfirm} /> : null}
       </section>
     </>
   );
@@ -5129,7 +5321,13 @@ function BookSummaryMetrics({ summary }: { summary: BookContentSummary }) {
   );
 }
 
-function BookPreviewPanel({ preview }: { preview: BookPreviewResponse }) {
+function BookPreviewPanel({
+  preview,
+  onOpenOrderConfirm,
+}: {
+  preview: BookPreviewResponse;
+  onOpenOrderConfirm: () => void;
+}) {
   return (
     <section className="book-section book-preview-section" aria-labelledby="book-preview-title">
       <div className="book-section-heading">
@@ -5187,8 +5385,8 @@ function BookPreviewPanel({ preview }: { preview: BookPreviewResponse }) {
               ))}
             </ul>
           ) : null}
-          <button className="outline-button full-width" type="button" disabled>
-            주문 생성은 다음 단계에서 연결
+          <button className="primary-button full-width" type="button" onClick={onOpenOrderConfirm}>
+            주문 요청하기
           </button>
         </aside>
       </div>
@@ -5196,49 +5394,206 @@ function BookPreviewPanel({ preview }: { preview: BookPreviewResponse }) {
   );
 }
 
-function BookStatusPlaceholderView() {
+function BookOrdersView({
+  mode,
+  orders,
+  selectedOrder,
+  loading,
+  detailLoading,
+  onOpenOrder,
+}: {
+  mode: "status" | "history";
+  orders: PrintOrderSummary[];
+  selectedOrder: PrintOrderDetail | null;
+  loading: boolean;
+  detailLoading: boolean;
+  onOpenOrder: (orderId: number) => void;
+}) {
+  const isStatusMode = mode === "status";
+
   return (
     <>
       <header className="page-header">
         <div>
-          <h1>주문 상태</h1>
-          <p>주문 생성과 상태 조회/변경 화면은 다음 작업 단위에서 연결합니다.</p>
+          <h1>{isStatusMode ? "주문 상태" : "주문 내역"}</h1>
+          <p>{isStatusMode ? "제작이 끝나기 전까지의 주문 진행 상황을 확인합니다." : "완료, 취소, 오류 처리된 주문을 모아서 확인합니다."}</p>
         </div>
       </header>
-      <section className="book-page">
-        <div className="book-placeholder-panel">
-          <div>
-            <span className="eyebrow">준비중</span>
-            <h2>아직 조회할 주문 상태가 없습니다.</h2>
-            <p>이번 범위에서는 책 구성, 미리보기, 예상 견적까지 구현했습니다.</p>
+
+      <section className="book-page book-orders-page" aria-busy={loading || detailLoading}>
+        <div className="book-order-list-panel">
+          <div className="book-section-heading compact">
+            <div>
+              <span>{isStatusMode ? "진행 주문" : "지난 주문"}</span>
+              <h2>{orders.length}건</h2>
+            </div>
           </div>
-          <Clock size={30} />
+
+          {loading ? (
+            <div className="book-empty-state compact">주문을 불러오는 중입니다.</div>
+          ) : orders.length === 0 ? (
+            <div className="book-empty-state compact">
+              {isStatusMode ? "진행 중인 주문이 없습니다." : "완료되거나 취소된 주문 내역이 없습니다."}
+            </div>
+          ) : (
+            <div className="book-order-list">
+              {orders.map((order) => (
+                <button
+                  className={`book-order-card ${selectedOrder?.id === order.id ? "selected" : ""}`}
+                  type="button"
+                  key={order.id}
+                  onClick={() => onOpenOrder(order.id)}
+                >
+                  <span className={`book-order-status-badge ${printOrderStatusTone(order.status)}`}>{order.statusLabel}</span>
+                  <strong>{order.title}</strong>
+                  <small>{order.orderNo} · {order.roomName}</small>
+                  <em>{order.product.displayName} · {order.estimatedPageCount}p · {order.quantity}권</em>
+                  <b>{formatCurrency(order.totalPrice)}</b>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
+
+        <BookOrderDetailPanel order={selectedOrder} loading={detailLoading} />
       </section>
     </>
   );
 }
 
-function BookHistoryPlaceholderView() {
+function BookOrderDetailPanel({ order, loading }: { order: PrintOrderDetail | null; loading: boolean }) {
+  if (loading) {
+    return (
+      <aside className="book-order-detail-panel">
+        <div className="book-empty-state">주문 상세를 불러오는 중입니다.</div>
+      </aside>
+    );
+  }
+
+  if (!order) {
+    return (
+      <aside className="book-order-detail-panel">
+        <div className="book-empty-state">목록에서 주문을 선택하면 상품, 기간, 콘텐츠, 견적 스냅샷을 확인할 수 있습니다.</div>
+      </aside>
+    );
+  }
+
   return (
-    <>
-      <header className="page-header">
+    <aside className="book-order-detail-panel">
+      <div className="book-order-detail-header">
+        <span className={`book-order-status-badge ${printOrderStatusTone(order.status)}`}>{order.statusLabel}</span>
+        <h2>{order.title}</h2>
+        <p>{order.orderNo}</p>
+      </div>
+
+      <dl className="book-order-detail-list">
         <div>
-          <h1>주문 내역</h1>
-          <p>완료/취소 주문의 히스토리 목록은 주문 기능 구현 후 표시합니다.</p>
+          <dt>방</dt>
+          <dd>{order.roomName}</dd>
         </div>
-      </header>
-      <section className="book-page">
-        <div className="book-placeholder-panel">
+        <div>
+          <dt>상품</dt>
+          <dd>{order.product.displayName}</dd>
+        </div>
+        <div>
+          <dt>기간</dt>
+          <dd>{formatDateLabel(order.period.startDate)} ~ {formatDateLabel(order.period.endDate)}</dd>
+        </div>
+        <div>
+          <dt>페이지/수량</dt>
+          <dd>{order.estimatedPageCount}p · {order.quantity}권</dd>
+        </div>
+        <div className="total">
+          <dt>총액</dt>
+          <dd>{formatCurrency(order.totalPrice)}</dd>
+        </div>
+      </dl>
+
+      <div className="book-order-subsection">
+        <h3>담긴 콘텐츠</h3>
+        <div className="book-order-content-list">
+          {order.contents.map((content) => (
+            <div key={`${content.type}-${content.sourceId}-${content.sortOrder}`}>
+              <strong>{content.title}</strong>
+              <small>{bookContentTypeLabel(content.type)} · {formatDateLabel(content.occurredDate)} · {content.pageCount}p</small>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="book-order-subsection">
+        <h3>상태 이력</h3>
+        <div className="book-order-history-list">
+          {order.statusHistories.map((history) => (
+            <div key={history.id}>
+              <strong>{history.nextStatusLabel}</strong>
+              <small>{formatDateTimeLabel(history.changedAt)}</small>
+              {history.memo ? <p>{history.memo}</p> : null}
+            </div>
+          ))}
+        </div>
+      </div>
+    </aside>
+  );
+}
+
+function BookOrderConfirmModal({
+  preview,
+  creating,
+  onCreateOrder,
+  onClose,
+}: {
+  preview: BookPreviewResponse;
+  creating: boolean;
+  onCreateOrder: () => void;
+  onClose: () => void;
+}) {
+  return (
+    <div className="modal-backdrop" role="presentation">
+      <section className="modal book-order-confirm-modal" role="dialog" aria-modal="true" aria-labelledby="book-order-confirm-title">
+        <div className="modal-title-row">
           <div>
-            <span className="eyebrow">준비중</span>
-            <h2>주문 내역 MVP 화면을 위한 메뉴만 먼저 열어두었습니다.</h2>
-            <p>운영자 주문 확인은 일반 사용자 사이드바가 아닌 운영자 캐릭터 진입 흐름에서 다룹니다.</p>
+            <h2 id="book-order-confirm-title">주문 요청 확인</h2>
+            <p>미리보기와 견적 스냅샷을 주문으로 저장합니다.</p>
           </div>
-          <FileText size={30} />
+          <button className="icon-button" type="button" onClick={onClose} aria-label="닫기" disabled={creating}>
+            <X size={18} />
+          </button>
+        </div>
+
+        <dl className="book-order-confirm-list">
+          <div>
+            <dt>상품</dt>
+            <dd>{preview.product.displayName}</dd>
+          </div>
+          <div>
+            <dt>방</dt>
+            <dd>{preview.roomName}</dd>
+          </div>
+          <div>
+            <dt>기간</dt>
+            <dd>{formatDateLabel(preview.period.startDate)} ~ {formatDateLabel(preview.period.endDate)}</dd>
+          </div>
+          <div>
+            <dt>콘텐츠</dt>
+            <dd>{preview.contents.length}개 · {preview.pageRange.estimatedPageCount}p</dd>
+          </div>
+          <div className="total">
+            <dt>예상 총액</dt>
+            <dd>{formatCurrency(preview.estimate.totalPrice)}</dd>
+          </div>
+        </dl>
+
+        <div className="modal-actions">
+          <button className="outline-button" type="button" onClick={onClose} disabled={creating}>
+            취소
+          </button>
+          <button className="primary-button" type="button" onClick={onCreateOrder} disabled={creating}>
+            {creating ? "주문 요청 중" : "주문 요청 생성"}
+          </button>
         </div>
       </section>
-    </>
+    </div>
   );
 }
 
@@ -6399,6 +6754,39 @@ function bookContentTypeOrder(type: BookContentType): number {
   return 4;
 }
 
+function bookContentTypeLabel(type: BookContentType): string {
+  if (type === "MEMORY") return "추억 게시글";
+  if (type === "MISSION") return "미션 인증";
+  if (type === "LETTER") return "편지";
+  return "채팅";
+}
+
+function orderDetailToSummary(order: PrintOrderDetail): PrintOrderSummary {
+  return {
+    id: order.id,
+    orderNo: order.orderNo,
+    roomId: order.roomId,
+    roomName: order.roomName,
+    product: order.product,
+    title: order.title,
+    quantity: order.quantity,
+    estimatedPageCount: order.estimatedPageCount,
+    totalPrice: order.totalPrice,
+    status: order.status,
+    statusLabel: order.statusLabel,
+    requestedAt: order.requestedAt,
+    updatedAt: order.updatedAt,
+  };
+}
+
+function printOrderStatusTone(status: PrintOrderStatus): string {
+  if (status === "PAID" || status === "PDF_READY" || status === "CONFIRMED") return "ready";
+  if (status === "IN_PRODUCTION" || status === "PRODUCTION_COMPLETE" || status === "SHIPPED") return "working";
+  if (status === "DELIVERED") return "done";
+  if (status === "CANCELLED_REFUND") return "cancelled";
+  return "error";
+}
+
 function coverLabel(coverType: string): string {
   if (coverType === "HARDCOVER") return "하드커버";
   if (coverType === "SOFTCOVER") return "소프트커버";
@@ -6928,6 +7316,13 @@ function formatDateLabel(dateKey: string): string {
   const weekdays = ["일", "월", "화", "수", "목", "금", "토"];
 
   return `${date.getFullYear()}년 ${date.getMonth() + 1}월 ${date.getDate()}일 ${weekdays[date.getDay()]}요일`;
+}
+
+function formatDateTimeLabel(dateTime: string): string {
+  return new Intl.DateTimeFormat("ko-KR", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(new Date(dateTime));
 }
 
 function activitySummaryText(activity: Pick<CalendarDayActivity, "chatCount" | "memoryCount" | "missionCount" | "letterCount">): string {
