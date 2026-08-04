@@ -1986,7 +1986,10 @@ function App() {
       });
       setBookPreview(response);
       setBookCreateStep("preview");
-      setMessage("템플릿 기반 책 미리보기와 예상 견적을 계산했습니다.");
+      setRoomFeedbackModal({
+        title: "미리보기 계산 완료",
+        message: "템플릿 기반 책 미리보기와 예상 견적을 계산했습니다.",
+      });
     } catch (error) {
       setErrorMessage(toMessage(error));
     } finally {
