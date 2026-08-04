@@ -192,7 +192,7 @@ dl {
   display: grid;
   grid-template-columns: minmax(0, 1.4fr) minmax(340px, 0.8fr);
   gap: 18px;
-  align-items: start;
+  align-items: stretch;
 }
 
 .operator-order-list-panel,
@@ -207,6 +207,12 @@ dl {
 .operator-order-detail-panel {
   display: grid;
   gap: 18px;
+}
+
+.operator-order-list-panel,
+.operator-order-detail-panel {
+  max-height: min(760px, calc(100vh - 220px));
+  overflow-y: auto;
 }
 
 .operator-filter-field {
@@ -5462,7 +5468,7 @@ dl {
 
 .book-orders-page {
   grid-template-columns: minmax(0, 1.45fr) minmax(340px, 0.8fr);
-  align-items: start;
+  align-items: stretch;
 }
 
 .book-order-list-panel,
@@ -5472,6 +5478,8 @@ dl {
   background: rgba(255, 255, 255, 0.96);
   box-shadow: 0 18px 48px rgba(49, 70, 107, 0.1);
   padding: 24px;
+  max-height: min(760px, calc(100vh - 260px));
+  overflow-y: auto;
 }
 
 .book-order-list {
@@ -6726,6 +6734,13 @@ dl {
 
   .operator-header {
     flex-direction: column;
+  }
+
+  .operator-order-list-panel,
+  .operator-order-detail-panel,
+  .book-order-list-panel,
+  .book-order-detail-panel {
+    max-height: none;
   }
 
   .order-table-filter-grid {

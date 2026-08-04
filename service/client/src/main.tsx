@@ -29,7 +29,6 @@ import {
   Phone,
   Pencil,
   Plus,
-  RefreshCw,
   Search,
   Settings,
   ShieldAlert,
@@ -3139,7 +3138,6 @@ function App() {
           onAdvanceStatus={advanceOperatorOrderStatus}
           onAdvanceSelectedStatuses={advanceSelectedOperatorOrderStatuses}
           onOpenCancel={() => setOperatorCancelOrderOpen(true)}
-          onRefresh={() => loadOperatorOrders(operatorStatusFilter)}
           onLogout={logoutToMemberSelection}
         />
 
@@ -3560,7 +3558,6 @@ function OperatorBookOrdersView({
   onAdvanceStatus,
   onAdvanceSelectedStatuses,
   onOpenCancel,
-  onRefresh,
   onLogout,
 }: {
   operator: DemoMemberOption;
@@ -3577,7 +3574,6 @@ function OperatorBookOrdersView({
   onAdvanceStatus: () => void;
   onAdvanceSelectedStatuses: (orderIds: number[]) => void;
   onOpenCancel: () => void;
-  onRefresh: () => void;
   onLogout: () => void;
 }) {
   const table = useOrderTableState(orders, statusFilter, operatorOrderActionFilter);
@@ -3605,13 +3601,9 @@ function OperatorBookOrdersView({
           <p>{operator.displayName} 캐릭터로 전체 주문을 필터링하고 CSV 추출, 상세 조회, 상태 변경을 처리합니다.</p>
         </div>
         <div className="operator-header-actions">
-          <button className="outline-button" type="button" onClick={onRefresh} disabled={loading}>
-            <RefreshCw size={17} />
-            새로고침
-          </button>
           <button className="danger-button" type="button" onClick={onLogout}>
             <LogOut size={17} />
-            나가기
+            로그아웃
           </button>
         </div>
       </header>
