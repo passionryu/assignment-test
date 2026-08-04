@@ -3751,6 +3751,7 @@ dl {
 }
 
 .primary-button,
+.secondary-button,
 .outline-button,
 .danger-button {
   min-height: 44px;
@@ -3774,6 +3775,7 @@ dl {
   color: #ffffff;
 }
 
+.secondary-button,
 .outline-button {
   border: 1px solid #dfe7f2;
   background: #ffffff;
@@ -3787,12 +3789,14 @@ dl {
 }
 
 .primary-button:hover,
+.secondary-button:hover,
 .outline-button:hover,
 .danger-button:hover {
   transform: translateY(-1px);
 }
 
 .primary-button:disabled,
+.secondary-button:disabled,
 .outline-button:disabled,
 .danger-button:disabled {
   border-color: #dfe7f2;
@@ -3803,6 +3807,7 @@ dl {
 }
 
 .primary-button:disabled:hover,
+.secondary-button:disabled:hover,
 .outline-button:disabled:hover,
 .danger-button:disabled:hover {
   transform: none;
@@ -3828,6 +3833,11 @@ dl {
 .book-page {
   display: grid;
   gap: 18px;
+}
+
+.book-wizard-page {
+  width: min(100%, 1180px);
+  margin: 0 auto;
 }
 
 .book-placeholder-panel,
@@ -3877,20 +3887,35 @@ dl {
 }
 
 .book-stepper li {
-  min-height: 48px;
-  display: flex;
-  align-items: center;
-  gap: 9px;
+  min-width: 0;
+  min-height: 72px;
   border: 1px solid #dfe7f2;
   border-radius: 8px;
   background: #ffffff;
   color: #667085;
-  padding: 0 14px;
+  padding: 0;
   font-size: 14px;
   font-weight: 900;
+  overflow: hidden;
+}
+
+.book-stepper li button {
+  width: 100%;
+  min-height: 72px;
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  align-items: center;
+  gap: 3px 9px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  padding: 12px 14px;
+  text-align: left;
 }
 
 .book-stepper li span {
+  grid-row: 1 / 3;
   width: 26px;
   height: 26px;
   display: inline-grid;
@@ -3901,15 +3926,100 @@ dl {
   font-size: 13px;
 }
 
+.book-stepper li b,
+.book-stepper li small {
+  min-width: 0;
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.book-stepper li small {
+  color: #98a2b3;
+  font-size: 12px;
+  font-weight: 800;
+}
+
 .book-stepper li.active {
   border-color: #9edbd9;
   color: #253248;
   box-shadow: 0 12px 28px rgba(12, 159, 168, 0.12);
 }
 
-.book-stepper li.active span {
+.book-stepper li.active span,
+.book-stepper li.completed span {
   background: #0c9fa8;
   color: #ffffff;
+}
+
+.book-stepper li.completed {
+  border-color: #cbece9;
+}
+
+.book-stepper li:has(button:disabled) {
+  background: #f7f9fc;
+  color: #98a2b3;
+}
+
+.book-wizard-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.book-wizard-summary div {
+  min-width: 0;
+  border: 1px solid #dfe7f2;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.94);
+  padding: 14px 16px;
+}
+
+.book-wizard-summary span {
+  display: block;
+  color: #0c9fa8;
+  font-size: 12px;
+  font-weight: 950;
+  margin-bottom: 5px;
+}
+
+.book-wizard-summary strong {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  color: #253248;
+  font-size: 14px;
+  font-weight: 900;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.book-wizard-panel {
+  min-height: 330px;
+}
+
+.book-wizard-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.book-wizard-actions.stacked {
+  display: grid;
+  grid-template-columns: 1fr;
+}
+
+.book-wizard-actions.stacked .primary-button,
+.book-wizard-actions.stacked .secondary-button {
+  width: 100%;
+}
+
+.book-wizard-content-step,
+.book-wizard-preview-step {
+  min-width: 0;
 }
 
 .book-section,
@@ -5164,6 +5274,7 @@ dl {
   .notification-grid,
   .metric-grid,
   .room-hub-grid,
+  .book-wizard-summary,
   .book-room-grid,
   .book-product-grid,
   .book-preview-grid,
@@ -5247,6 +5358,7 @@ dl {
   .metric-grid,
   .room-hub-grid,
   .book-stepper,
+  .book-wizard-summary,
   .book-room-grid,
   .book-product-grid,
   .book-period-row,
