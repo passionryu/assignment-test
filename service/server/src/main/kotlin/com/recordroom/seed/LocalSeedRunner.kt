@@ -30,6 +30,7 @@ class LocalSeedRunner(
             seedNotificationSettings()
             seedContents()
             seedNotifications()
+            seedBookOrders()
             deleteLegacyAutomaticReplyMessages()
             syncIdentitySequences()
         }.onSuccess {
@@ -1077,6 +1078,275 @@ class LocalSeedRunner(
         )
     }
 
+    // Lv2 책 주문 흐름을 docker 실행 직후 바로 검증할 수 있도록 상태별 주문을 준비한다.
+    private fun seedBookOrders() {
+        jdbcTemplate.update(
+            """
+            delete from print_order_status_histories where order_id between 9001 and 9007;
+            delete from print_order_contents where order_id between 9001 and 9007;
+
+            insert into print_orders (
+                id,
+                order_no,
+                member_id,
+                room_id,
+                preview_id,
+                book_spec_uid,
+                creation_type,
+                title,
+                quantity,
+                period_start_date,
+                period_end_date,
+                estimated_page_count,
+                base_price,
+                additional_page_price,
+                shipping_price,
+                total_price,
+                status,
+                requested_at,
+                updated_at,
+                cancelled_at,
+                cancel_reason
+            )
+            values
+                (
+                    9001,
+                    'BO-SEED-9001',
+                    1,
+                    1,
+                    null,
+                    'PHOTOBOOK_A4_SC',
+                    'TEMPLATE',
+                    'QA 진행 주문 - 주문 요청',
+                    1,
+                    date_trunc('month', now() at time zone 'Asia/Seoul')::date,
+                    (date_trunc('month', now() at time zone 'Asia/Seoul')::date + interval '14 days')::date,
+                    24,
+                    32000,
+                    0,
+                    3000,
+                    35000,
+                    'PAID',
+                    now() - interval '6 hours',
+                    now() - interval '6 hours',
+                    null,
+                    null
+                ),
+                (
+                    9002,
+                    'BO-SEED-9002',
+                    1,
+                    1,
+                    null,
+                    'PHOTOBOOK_A5_SC',
+                    'TEMPLATE',
+                    'QA 진행 주문 - 파일 준비',
+                    1,
+                    date_trunc('month', now() at time zone 'Asia/Seoul')::date,
+                    (date_trunc('month', now() at time zone 'Asia/Seoul')::date + interval '21 days')::date,
+                    50,
+                    28000,
+                    0,
+                    3000,
+                    31000,
+                    'PDF_READY',
+                    now() - interval '5 hours',
+                    now() - interval '4 hours 30 minutes',
+                    null,
+                    null
+                ),
+                (
+                    9003,
+                    'BO-SEED-9003',
+                    1,
+                    1,
+                    null,
+                    'SQUAREBOOK_HC',
+                    'TEMPLATE',
+                    'QA 진행 주문 - 주문 확정',
+                    2,
+                    date_trunc('month', now() at time zone 'Asia/Seoul')::date,
+                    (date_trunc('month', now() at time zone 'Asia/Seoul')::date + interval '28 days')::date,
+                    24,
+                    46000,
+                    0,
+                    3000,
+                    95000,
+                    'CONFIRMED',
+                    now() - interval '4 hours',
+                    now() - interval '3 hours 30 minutes',
+                    null,
+                    null
+                ),
+                (
+                    9004,
+                    'BO-SEED-9004',
+                    1,
+                    2,
+                    null,
+                    'PHOTOBOOK_A5_SC',
+                    'TEMPLATE',
+                    'QA 완료 주문 - 배송 완료',
+                    1,
+                    (date_trunc('month', now() at time zone 'Asia/Seoul')::date - interval '1 month')::date,
+                    (date_trunc('month', now() at time zone 'Asia/Seoul')::date - interval '10 days')::date,
+                    58,
+                    28000,
+                    1760,
+                    3000,
+                    32760,
+                    'DELIVERED',
+                    now() - interval '8 days',
+                    now() - interval '2 days',
+                    null,
+                    null
+                ),
+                (
+                    9005,
+                    'BO-SEED-9005',
+                    1,
+                    1,
+                    null,
+                    'PHOTOBOOK_A4_SC',
+                    'TEMPLATE',
+                    'QA 취소 주문',
+                    1,
+                    date_trunc('month', now() at time zone 'Asia/Seoul')::date,
+                    (date_trunc('month', now() at time zone 'Asia/Seoul')::date + interval '7 days')::date,
+                    24,
+                    32000,
+                    0,
+                    3000,
+                    35000,
+                    'CANCELLED_REFUND',
+                    now() - interval '7 hours',
+                    now() - interval '6 hours 40 minutes',
+                    now() - interval '6 hours 40 minutes',
+                    '상품을 다시 선택하기 위해 취소'
+                ),
+                (
+                    9006,
+                    'BO-SEED-9006',
+                    1,
+                    3,
+                    null,
+                    'SQUAREBOOK_HC',
+                    'TEMPLATE',
+                    'QA 오류 주문',
+                    1,
+                    date_trunc('month', now() at time zone 'Asia/Seoul')::date,
+                    (date_trunc('month', now() at time zone 'Asia/Seoul')::date + interval '30 days')::date,
+                    24,
+                    46000,
+                    0,
+                    3000,
+                    49000,
+                    'ERROR',
+                    now() - interval '3 days',
+                    now() - interval '2 days 20 hours',
+                    null,
+                    null
+                ),
+                (
+                    9007,
+                    'BO-SEED-9007',
+                    2,
+                    1,
+                    null,
+                    'PHOTOBOOK_A4_SC',
+                    'TEMPLATE',
+                    'QA 타인 주문 - 권한 확인',
+                    1,
+                    date_trunc('month', now() at time zone 'Asia/Seoul')::date,
+                    (date_trunc('month', now() at time zone 'Asia/Seoul')::date + interval '10 days')::date,
+                    24,
+                    32000,
+                    0,
+                    3000,
+                    35000,
+                    'PAID',
+                    now() - interval '2 hours',
+                    now() - interval '2 hours',
+                    null,
+                    null
+                )
+            on conflict (id) do update set
+                order_no = excluded.order_no,
+                member_id = excluded.member_id,
+                room_id = excluded.room_id,
+                preview_id = excluded.preview_id,
+                book_spec_uid = excluded.book_spec_uid,
+                creation_type = excluded.creation_type,
+                title = excluded.title,
+                quantity = excluded.quantity,
+                period_start_date = excluded.period_start_date,
+                period_end_date = excluded.period_end_date,
+                estimated_page_count = excluded.estimated_page_count,
+                base_price = excluded.base_price,
+                additional_page_price = excluded.additional_page_price,
+                shipping_price = excluded.shipping_price,
+                total_price = excluded.total_price,
+                status = excluded.status,
+                requested_at = excluded.requested_at,
+                updated_at = excluded.updated_at,
+                cancelled_at = excluded.cancelled_at,
+                cancel_reason = excluded.cancel_reason;
+
+            insert into print_order_contents (
+                id,
+                order_id,
+                content_type,
+                source_id,
+                title,
+                occurred_date,
+                page_count,
+                sort_order,
+                snapshot_json
+            )
+            values
+                (900101, 9001, 'MEMORY', 347, '얼빡샷', ((now() at time zone 'Asia/Seoul')::date), 2, 1, jsonb_build_object('type', 'MEMORY', 'sourceId', 347, 'title', '얼빡샷', 'description', 'QA 주문에 포함된 추억 게시글', 'occurredDate', ((now() at time zone 'Asia/Seoul')::date)::text, 'authorName', '류성열', 'imageCount', 1, 'commentCount', 0, 'pageCount', 2, 'selectedByDefault', true, 'sourceLabel', '추억 게시글')::text),
+                (900102, 9001, 'MISSION', 102, '함께 먹은 음식', (date_trunc('month', now() at time zone 'Asia/Seoul')::date + interval '2 days')::date, 2, 2, jsonb_build_object('type', 'MISSION', 'sourceId', 102, 'title', '함께 먹은 음식', 'description', 'QA 주문에 포함된 미션 인증', 'occurredDate', (date_trunc('month', now() at time zone 'Asia/Seoul')::date + interval '2 days')::date::text, 'authorName', '여자친구', 'imageCount', 1, 'commentCount', 1, 'pageCount', 2, 'selectedByDefault', true, 'sourceLabel', '미션 인증')::text),
+                (900201, 9002, 'MEMORY', 303, '카페에서 찍은 사진', (date_trunc('month', now() at time zone 'Asia/Seoul')::date + interval '2 days')::date, 3, 1, jsonb_build_object('type', 'MEMORY', 'sourceId', 303, 'title', '카페에서 찍은 사진', 'description', 'QA 주문에 포함된 카페 추억', 'occurredDate', (date_trunc('month', now() at time zone 'Asia/Seoul')::date + interval '2 days')::date::text, 'authorName', '여자친구', 'imageCount', 2, 'commentCount', 1, 'pageCount', 3, 'selectedByDefault', true, 'sourceLabel', '추억 게시글')::text),
+                (900202, 9002, 'LETTER', 436, '주말 계획', ((now() at time zone 'Asia/Seoul')::date), 2, 2, jsonb_build_object('type', 'LETTER', 'sourceId', 436, 'title', '주말 계획', 'description', 'QA 주문에 포함된 비공개 편지', 'occurredDate', ((now() at time zone 'Asia/Seoul')::date)::text, 'authorName', '여자친구', 'imageCount', 0, 'commentCount', 0, 'pageCount', 2, 'selectedByDefault', true, 'sourceLabel', '편지')::text),
+                (900301, 9003, 'MEMORY', 305, '기념일 후보 사진', (date_trunc('month', now() at time zone 'Asia/Seoul')::date + interval '16 days')::date, 3, 1, jsonb_build_object('type', 'MEMORY', 'sourceId', 305, 'title', '기념일 후보 사진', 'description', 'QA 주문에 포함된 기념일 사진', 'occurredDate', (date_trunc('month', now() at time zone 'Asia/Seoul')::date + interval '16 days')::date::text, 'authorName', '류성열', 'imageCount', 2, 'commentCount', 0, 'pageCount', 3, 'selectedByDefault', true, 'sourceLabel', '추억 게시글')::text),
+                (900302, 9003, 'LETTER', 405, '기념일 편지', (date_trunc('month', now() at time zone 'Asia/Seoul')::date + interval '16 days')::date, 2, 2, jsonb_build_object('type', 'LETTER', 'sourceId', 405, 'title', '기념일 편지', 'description', 'QA 주문에 포함된 편지', 'occurredDate', (date_trunc('month', now() at time zone 'Asia/Seoul')::date + interval '16 days')::date::text, 'authorName', '여자친구', 'imageCount', 0, 'commentCount', 0, 'pageCount', 2, 'selectedByDefault', true, 'sourceLabel', '편지')::text),
+                (900401, 9004, 'MEMORY', 301, '가족 여행 사진', ((now() at time zone 'Asia/Seoul')::date), 3, 1, jsonb_build_object('type', 'MEMORY', 'sourceId', 301, 'title', '가족 여행 사진', 'description', 'QA 완료 주문에 포함된 가족 추억', 'occurredDate', ((now() at time zone 'Asia/Seoul')::date)::text, 'authorName', '아버지', 'imageCount', 2, 'commentCount', 1, 'pageCount', 3, 'selectedByDefault', true, 'sourceLabel', '추억 게시글')::text),
+                (900501, 9005, 'MISSION', 107, '카페 또는 디저트 인증', (date_trunc('month', now() at time zone 'Asia/Seoul')::date + interval '7 days')::date, 2, 1, jsonb_build_object('type', 'MISSION', 'sourceId', 107, 'title', '카페 또는 디저트 인증', 'description', 'QA 취소 주문에 포함된 미션 인증', 'occurredDate', (date_trunc('month', now() at time zone 'Asia/Seoul')::date + interval '7 days')::date::text, 'authorName', '류성열', 'imageCount', 1, 'commentCount', 1, 'pageCount', 2, 'selectedByDefault', true, 'sourceLabel', '미션 인증')::text),
+                (900601, 9006, 'MEMORY', 302, '프로젝트 회고 사진', ((now() at time zone 'Asia/Seoul')::date - 1), 2, 1, jsonb_build_object('type', 'MEMORY', 'sourceId', 302, 'title', '프로젝트 회고 사진', 'description', 'QA 오류 주문에 포함된 프로젝트 추억', 'occurredDate', ((now() at time zone 'Asia/Seoul')::date - 1)::text, 'authorName', '지훈', 'imageCount', 1, 'commentCount', 0, 'pageCount', 2, 'selectedByDefault', true, 'sourceLabel', '추억 게시글')::text),
+                (900701, 9007, 'MEMORY', 347, '얼빡샷', ((now() at time zone 'Asia/Seoul')::date), 2, 1, jsonb_build_object('type', 'MEMORY', 'sourceId', 347, 'title', '얼빡샷', 'description', '권한 확인용 타인 주문 콘텐츠', 'occurredDate', ((now() at time zone 'Asia/Seoul')::date)::text, 'authorName', '여자친구', 'imageCount', 1, 'commentCount', 0, 'pageCount', 2, 'selectedByDefault', true, 'sourceLabel', '추억 게시글')::text);
+
+            insert into print_order_status_histories (
+                id,
+                order_id,
+                previous_status,
+                next_status,
+                changed_by_member_id,
+                memo,
+                changed_at
+            )
+            values
+                (910001, 9001, null, 'PAID', 1, 'seed 주문 생성', now() - interval '6 hours'),
+                (910002, 9002, null, 'PAID', 1, 'seed 주문 생성', now() - interval '5 hours'),
+                (910003, 9002, 'PAID', 'PDF_READY', 100, 'seed 제작 파일 준비', now() - interval '4 hours 30 minutes'),
+                (910004, 9003, null, 'PAID', 1, 'seed 주문 생성', now() - interval '4 hours'),
+                (910005, 9003, 'PAID', 'PDF_READY', 100, 'seed 제작 파일 준비', now() - interval '3 hours 50 minutes'),
+                (910006, 9003, 'PDF_READY', 'CONFIRMED', 100, 'seed 주문 확정', now() - interval '3 hours 30 minutes'),
+                (910007, 9004, null, 'PAID', 1, 'seed 주문 생성', now() - interval '8 days'),
+                (910008, 9004, 'PAID', 'PDF_READY', 100, 'seed 제작 파일 준비', now() - interval '7 days'),
+                (910009, 9004, 'PDF_READY', 'CONFIRMED', 100, 'seed 주문 확정', now() - interval '6 days'),
+                (910010, 9004, 'CONFIRMED', 'IN_PRODUCTION', 100, 'seed 제작 중', now() - interval '5 days'),
+                (910011, 9004, 'IN_PRODUCTION', 'PRODUCTION_COMPLETE', 100, 'seed 제작 완료', now() - interval '4 days'),
+                (910012, 9004, 'PRODUCTION_COMPLETE', 'SHIPPED', 100, 'seed 배송 중', now() - interval '3 days'),
+                (910013, 9004, 'SHIPPED', 'DELIVERED', 100, 'seed 배송 완료', now() - interval '2 days'),
+                (910014, 9005, null, 'PAID', 1, 'seed 주문 생성', now() - interval '7 hours'),
+                (910015, 9005, 'PAID', 'CANCELLED_REFUND', 1, '취소 사유: 상품을 다시 선택하기 위해 취소', now() - interval '6 hours 40 minutes'),
+                (910016, 9006, null, 'PAID', 1, 'seed 주문 생성', now() - interval '3 days'),
+                (910017, 9006, 'PAID', 'ERROR', 100, 'seed 오류 상태 표시', now() - interval '2 days 20 hours'),
+                (910018, 9007, null, 'PAID', 2, 'seed 타인 주문 생성', now() - interval '2 hours');
+            """.trimIndent(),
+        )
+    }
+
     // 이전 로컬 fallback 응답이 화면에 남아 최신 채팅 정책과 섞이지 않도록 제거한다.
     private fun deleteLegacyAutomaticReplyMessages() {
         jdbcTemplate.update(
@@ -1109,6 +1379,11 @@ class LocalSeedRunner(
             "mission_comments",
             "letters",
             "notifications",
+            "book_previews",
+            "book_preview_contents",
+            "print_orders",
+            "print_order_contents",
+            "print_order_status_histories",
         ).forEach { tableName ->
             jdbcTemplate.execute(
                 """
