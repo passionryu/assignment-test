@@ -423,6 +423,127 @@ type MissionImageUploadResponse = {
   size: number;
 };
 
+type BookCreationType = "TEMPLATE";
+type BookContentType = "MEMORY" | "MISSION" | "LETTER" | "CHAT";
+type BookPageLimitStatus = "UNDER_MIN" | "AVAILABLE" | "OVER_MAX";
+
+type BookProduct = {
+  uid: string;
+  displayName: string;
+  sizeName: string;
+  widthMm: number;
+  heightMm: number;
+  coverType: string;
+  bindingType: string;
+  paperDescription: string;
+  minPage: number;
+  maxPage: number;
+  basePrice: number;
+  includedPageCount: number;
+  additionalPagePrice: number;
+  shippingPrice: number;
+  creationType: BookCreationType;
+  note: string;
+};
+
+type BookProductsResponse = {
+  products: BookProduct[];
+};
+
+type BookCreateRoom = {
+  id: number;
+  name: string;
+  type: RoomSummary["type"];
+  memberCount: number;
+  bookableRecordCount: number;
+};
+
+type BookCreateRoomsResponse = {
+  rooms: BookCreateRoom[];
+};
+
+type BookPeriod = {
+  startDate: string;
+  endDate: string;
+};
+
+type BookContentCandidate = {
+  type: BookContentType;
+  sourceId: number;
+  title: string;
+  description: string;
+  occurredDate: string;
+  authorName: string;
+  imageCount: number;
+  commentCount: number;
+  pageCount: number;
+  selectedByDefault: boolean;
+  sourceLabel: string;
+};
+
+type BookContentSummary = {
+  memoryCount: number;
+  missionCount: number;
+  letterCount: number;
+  chatCount: number;
+  estimatedPageCount: number;
+};
+
+type BookPageRange = {
+  minPage: number;
+  maxPage: number;
+  estimatedPageCount: number;
+  status: BookPageLimitStatus;
+  message: string;
+};
+
+type BookContentCandidatesResponse = {
+  roomId: number;
+  roomName: string;
+  product: BookProduct;
+  period: BookPeriod;
+  defaultContents: BookContentCandidate[];
+  additionalContents: BookContentCandidate[];
+  summary: BookContentSummary;
+  pageRange: BookPageRange;
+};
+
+type BookEstimate = {
+  basePrice: number;
+  includedPageCount: number;
+  additionalPageCount: number;
+  additionalPagePrice: number;
+  shippingPrice: number;
+  quantity: number;
+  subtotalPrice: number;
+  totalPrice: number;
+};
+
+type BookPreviewPage = {
+  pageNumber: number;
+  label: string;
+  title: string;
+  description: string;
+  contentType: BookContentType | null;
+  occurredDate: string | null;
+};
+
+type BookPreviewResponse = {
+  previewId: number;
+  creationType: BookCreationType;
+  roomId: number;
+  roomName: string;
+  product: BookProduct;
+  title: string;
+  period: BookPeriod;
+  contents: BookContentCandidate[];
+  summary: BookContentSummary;
+  pageRange: BookPageRange;
+  estimate: BookEstimate;
+  pages: BookPreviewPage[];
+  warnings: string[];
+};
+
 type ApiError = {
   code: string;
   message: string;
@@ -430,7 +551,8 @@ type ApiError = {
 };
 
 type RoomFeatureKind = "chat" | "memories" | "missions" | "letters";
-type AppView = "home" | "rooms" | "room" | "settings" | RoomFeatureKind;
+type BookArchiveView = "bookProducts" | "bookCreate" | "bookStatus" | "bookHistory";
+type AppView = "home" | "rooms" | "room" | "settings" | RoomFeatureKind | BookArchiveView;
 type RoomSettingsMode = "menu" | "info" | "edit" | "delete" | null;
 type MemoryActionMode = "edit" | "delete" | null;
 
@@ -987,6 +1109,7 @@ function App() {
   const [selectedRoomId, setSelectedRoomId] = useState<number | null>(null);
   const [expandedRoomId, setExpandedRoomId] = useState<number | null>(null);
   const [roomListExpanded, setRoomListExpanded] = useState(true);
+  const [bookMenuExpanded, setBookMenuExpanded] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [activeView, setActiveView] = useState<AppView>("home");
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
@@ -1033,6 +1156,19 @@ function App() {
   const [missionCreateOpen, setMissionCreateOpen] = useState(false);
   const [missionCommentDraft, setMissionCommentDraft] = useState("");
   const [missionCommentSending, setMissionCommentSending] = useState(false);
+  const [bookProducts, setBookProducts] = useState<BookProduct[]>(() => demoBookProducts());
+  const [bookRooms, setBookRooms] = useState<BookCreateRoom[]>([]);
+  const [bookSelectedRoomId, setBookSelectedRoomId] = useState<number | null>(null);
+  const [bookSelectedProductUid, setBookSelectedProductUid] = useState<string | null>(null);
+  const [bookPeriod, setBookPeriod] = useState<BookPeriod>(() => ({ startDate: offsetDateKey(-30), endDate: todayDateKey() }));
+  const [bookTitle, setBookTitle] = useState("");
+  const [bookQuantity, setBookQuantity] = useState(1);
+  const [bookContentCandidates, setBookContentCandidates] = useState<BookContentCandidatesResponse | null>(null);
+  const [selectedBookContentKeys, setSelectedBookContentKeys] = useState<Record<string, boolean>>({});
+  const [bookProductsLoading, setBookProductsLoading] = useState(false);
+  const [bookCandidatesLoading, setBookCandidatesLoading] = useState(false);
+  const [bookPreviewLoading, setBookPreviewLoading] = useState(false);
+  const [bookPreview, setBookPreview] = useState<BookPreviewResponse | null>(null);
   const [profileForm, setProfileForm] = useState<ProfileForm>({ displayName: "", profileImageUrl: "" });
   const [createRoomForm, setCreateRoomForm] = useState<CreateRoomForm>({ name: "", type: "COUPLE", description: "" });
   const [inviteContacts, setInviteContacts] = useState<Record<number, string>>({});
@@ -1060,6 +1196,33 @@ function App() {
     [rooms, selectedRoomId],
   );
   const initials = useMemo(() => profile?.displayName.slice(0, 1) ?? "나", [profile]);
+  const bookSelectedRoom = useMemo(
+    () => bookRooms.find((room) => room.id === bookSelectedRoomId) ?? null,
+    [bookRooms, bookSelectedRoomId],
+  );
+  const bookSelectedProduct = useMemo(
+    () => bookProducts.find((product) => product.uid === bookSelectedProductUid) ?? null,
+    [bookProducts, bookSelectedProductUid],
+  );
+  const allBookContentCandidates = useMemo(
+    () => [
+      ...(bookContentCandidates?.defaultContents ?? []),
+      ...(bookContentCandidates?.additionalContents ?? []),
+    ],
+    [bookContentCandidates],
+  );
+  const selectedBookContents = useMemo(
+    () => allBookContentCandidates.filter((content) => selectedBookContentKeys[bookContentKey(content)]),
+    [allBookContentCandidates, selectedBookContentKeys],
+  );
+  const bookDraftPageRange = useMemo(
+    () => buildBookPageRange(bookSelectedProduct, selectedBookContents),
+    [bookSelectedProduct, selectedBookContents],
+  );
+  const bookDraftSummary = useMemo(
+    () => buildBookContentSummary(selectedBookContents, bookDraftPageRange?.estimatedPageCount ?? 0),
+    [selectedBookContents, bookDraftPageRange],
+  );
 
   useEffect(() => {
     if (!selectedDemoMember) return;
@@ -1109,6 +1272,18 @@ function App() {
     void loadLetters(selectedRoom.id, letterBox, { focusId: letterFocusId });
   }, [activeView, selectedRoom?.id, letterBox, letterFocusId]);
 
+  useEffect(() => {
+    if (activeView !== "bookProducts" || !selectedDemoMember) return;
+
+    void loadBookProducts();
+  }, [activeView, selectedDemoMember?.id]);
+
+  useEffect(() => {
+    if (activeView !== "bookCreate" || !selectedDemoMember) return;
+
+    void prepareBookCreate();
+  }, [activeView, selectedDemoMember?.id]);
+
   function resetSessionState() {
     setProfile(null);
     setSettings(null);
@@ -1134,6 +1309,17 @@ function App() {
     setMissionList(null);
     setLetterBox("RECEIVED");
     setLetterFocusId(null);
+    setBookMenuExpanded(false);
+    setBookProducts(demoBookProducts());
+    setBookRooms([]);
+    setBookSelectedRoomId(null);
+    setBookSelectedProductUid(null);
+    setBookPeriod({ startDate: offsetDateKey(-30), endDate: todayDateKey() });
+    setBookTitle("");
+    setBookQuantity(1);
+    setBookContentCandidates(null);
+    setSelectedBookContentKeys({});
+    setBookPreview(null);
     setProfileForm({ displayName: "", profileImageUrl: "" });
     setMessage(null);
     setErrorMessage(null);
@@ -1375,6 +1561,9 @@ function App() {
   function moveToView(view: AppView) {
     setMessage(null);
     setErrorMessage(null);
+    if (isBookArchiveView(view)) {
+      setBookMenuExpanded(true);
+    }
     setActiveView(view);
   }
 
@@ -1387,6 +1576,10 @@ function App() {
 
   function toggleRoomList() {
     setRoomListExpanded((current) => !current);
+  }
+
+  function toggleBookMenu() {
+    setBookMenuExpanded((current) => !current);
   }
 
   function selectRoom(roomId: number, nextView: AppView = activeView === "rooms" || activeView === "settings" ? "home" : activeView) {
@@ -1410,6 +1603,158 @@ function App() {
     setExpandedRoomId(roomId);
     setRoomListExpanded(true);
     setActiveView(view);
+  }
+
+  async function loadBookProducts() {
+    setBookProductsLoading(true);
+    const response = await safeApiGet<BookProductsResponse>("/book-archive/products");
+    const products = response?.products.length ? response.products : demoBookProducts();
+    setBookProducts(products);
+    setBookSelectedProductUid((current) => (current && products.some((product) => product.uid === current) ? current : null));
+    setBookProductsLoading(false);
+  }
+
+  async function prepareBookCreate() {
+    setBookProductsLoading(true);
+    const fallbackProducts = demoBookProducts();
+    const fallbackRooms = demoBookRoomsForCreate(selectedDemoMember?.id ?? defaultDemoMember.id);
+
+    try {
+      const [productsResponse, roomsResponse] = await Promise.all([
+        apiGet<BookProductsResponse>("/book-archive/products"),
+        apiGet<BookCreateRoomsResponse>("/book-archive/rooms"),
+      ]);
+      const nextProducts = productsResponse.products.length ? productsResponse.products : fallbackProducts;
+      const nextRooms = roomsResponse.rooms.length ? roomsResponse.rooms : fallbackRooms;
+      setBookProducts(nextProducts);
+      setBookRooms(nextRooms);
+      setBookSelectedRoomId((current) => (current && nextRooms.some((room) => room.id === current) ? current : null));
+      setBookSelectedProductUid((current) => (current && nextProducts.some((product) => product.uid === current) ? current : null));
+    } catch {
+      setBookProducts(fallbackProducts);
+      setBookRooms(fallbackRooms);
+      setBookSelectedRoomId((current) => (current && fallbackRooms.some((room) => room.id === current) ? current : null));
+      setBookSelectedProductUid((current) => (current && fallbackProducts.some((product) => product.uid === current) ? current : null));
+    } finally {
+      setBookProductsLoading(false);
+    }
+  }
+
+  function selectBookRoom(roomId: number) {
+    const room = bookRooms.find((candidate) => candidate.id === roomId);
+    setBookSelectedRoomId(roomId);
+    setBookTitle((current) => current || `${room?.name ?? "선택한 방"} 기록집`);
+    clearBookComposition();
+  }
+
+  function selectBookProduct(productUid: string) {
+    setBookSelectedProductUid(productUid);
+    clearBookComposition();
+  }
+
+  function updateBookPeriod(nextPeriod: BookPeriod) {
+    setBookPeriod(nextPeriod);
+    clearBookComposition();
+  }
+
+  function clearBookComposition() {
+    setBookContentCandidates(null);
+    setSelectedBookContentKeys({});
+    setBookPreview(null);
+  }
+
+  async function loadBookContentCandidates() {
+    if (!bookSelectedRoomId) {
+      setErrorMessage("책으로 만들 방을 먼저 선택해 주세요.");
+      return;
+    }
+
+    if (!bookSelectedProductUid) {
+      setErrorMessage("상품을 먼저 선택해 주세요.");
+      return;
+    }
+
+    if (!bookPeriod.startDate || !bookPeriod.endDate || bookPeriod.startDate > bookPeriod.endDate) {
+      setErrorMessage("가져올 기록의 기간을 올바르게 선택해 주세요.");
+      return;
+    }
+
+    setMessage(null);
+    setErrorMessage(null);
+    setBookCandidatesLoading(true);
+    setBookPreview(null);
+
+    try {
+      const response = await apiGet<BookContentCandidatesResponse>(
+        `/book-archive/content-candidates?roomId=${bookSelectedRoomId}&productUid=${encodeURIComponent(bookSelectedProductUid)}&startDate=${bookPeriod.startDate}&endDate=${bookPeriod.endDate}`,
+      );
+      setBookContentCandidates(response);
+      setSelectedBookContentKeys(initialBookSelection(response));
+      setBookTitle((current) => current || `${response.roomName} 기록집`);
+    } catch (error) {
+      const fallback = buildDemoBookContentCandidates(
+        bookSelectedRoomId,
+        bookSelectedProductUid,
+        bookPeriod,
+        selectedDemoMember?.id ?? defaultDemoMember.id,
+      );
+      setBookContentCandidates(fallback);
+      setSelectedBookContentKeys(initialBookSelection(fallback));
+      setBookTitle((current) => current || `${fallback.roomName} 기록집`);
+      setErrorMessage(toMessage(error));
+    } finally {
+      setBookCandidatesLoading(false);
+    }
+  }
+
+  function toggleBookContent(content: BookContentCandidate) {
+    setSelectedBookContentKeys((current) => {
+      const key = bookContentKey(content);
+      return { ...current, [key]: !current[key] };
+    });
+    setBookPreview(null);
+  }
+
+  async function createBookPreview() {
+    if (!bookSelectedRoomId || !bookSelectedProductUid || !bookDraftPageRange) {
+      setErrorMessage("방, 상품, 콘텐츠를 모두 선택해 주세요.");
+      return;
+    }
+
+    if (selectedBookContents.length === 0) {
+      setErrorMessage("책에 담을 기록을 1개 이상 선택해 주세요.");
+      return;
+    }
+
+    if (bookDraftPageRange.status === "OVER_MAX") {
+      setErrorMessage(bookDraftPageRange.message);
+      return;
+    }
+
+    setMessage(null);
+    setErrorMessage(null);
+    setBookPreviewLoading(true);
+
+    try {
+      const response = await apiRequest<BookPreviewResponse>("/book-archive/previews", {
+        method: "POST",
+        body: {
+          roomId: bookSelectedRoomId,
+          bookSpecUid: bookSelectedProductUid,
+          title: bookTitle,
+          quantity: bookQuantity,
+          periodStartDate: bookPeriod.startDate,
+          periodEndDate: bookPeriod.endDate,
+          contents: selectedBookContents.map((content) => ({ type: content.type, sourceId: content.sourceId })),
+        },
+      });
+      setBookPreview(response);
+      setMessage("템플릿 기반 책 미리보기와 예상 견적을 계산했습니다.");
+    } catch (error) {
+      setErrorMessage(toMessage(error));
+    } finally {
+      setBookPreviewLoading(false);
+    }
   }
 
   async function loadChatMessages(roomId: number, options: { silent?: boolean } = {}) {
@@ -2274,11 +2619,13 @@ function App() {
         selectedRoomId={selectedRoom?.id ?? null}
         expandedRoomId={expandedRoomId}
         roomListExpanded={roomListExpanded}
+        bookMenuExpanded={bookMenuExpanded}
         collapsed={sidebarCollapsed}
         pendingInvitationCount={pendingInvitationCount}
         onMove={moveToView}
         onOpenRoomList={openRoomListView}
         onToggleRoomList={toggleRoomList}
+        onToggleBookMenu={toggleBookMenu}
         onSelectRoom={selectRoom}
         onMoveRoomFeature={moveToRoomFeature}
         onToggleSidebar={() => setSidebarCollapsed((current) => !current)}
@@ -2435,6 +2782,42 @@ function App() {
             }}
           />
         ) : null}
+        {activeView === "bookProducts" ? (
+          <BookProductGuideView
+            products={bookProducts}
+            loading={bookProductsLoading}
+            onStartCreate={() => moveToView("bookCreate")}
+          />
+        ) : null}
+        {activeView === "bookCreate" ? (
+          <BookCreateView
+            rooms={bookRooms}
+            products={bookProducts}
+            selectedRoomId={bookSelectedRoomId}
+            selectedProductUid={bookSelectedProductUid}
+            period={bookPeriod}
+            title={bookTitle}
+            quantity={bookQuantity}
+            contentCandidates={bookContentCandidates}
+            selectedContentKeys={selectedBookContentKeys}
+            selectedContents={selectedBookContents}
+            draftSummary={bookDraftSummary}
+            draftPageRange={bookDraftPageRange}
+            preview={bookPreview}
+            loading={bookProductsLoading || bookCandidatesLoading}
+            previewLoading={bookPreviewLoading}
+            onSelectRoom={selectBookRoom}
+            onSelectProduct={selectBookProduct}
+            onPeriodChange={updateBookPeriod}
+            onTitleChange={setBookTitle}
+            onQuantityChange={setBookQuantity}
+            onLoadCandidates={loadBookContentCandidates}
+            onToggleContent={toggleBookContent}
+            onCreatePreview={createBookPreview}
+          />
+        ) : null}
+        {activeView === "bookStatus" ? <BookStatusPlaceholderView /> : null}
+        {activeView === "bookHistory" ? <BookHistoryPlaceholderView /> : null}
         {activeView === "settings" ? (
           <SettingsView
             profile={profile}
@@ -2562,11 +2945,13 @@ function Sidebar({
   selectedRoomId,
   expandedRoomId,
   roomListExpanded,
+  bookMenuExpanded,
   collapsed,
   pendingInvitationCount,
   onMove,
   onOpenRoomList,
   onToggleRoomList,
+  onToggleBookMenu,
   onSelectRoom,
   onMoveRoomFeature,
   onToggleSidebar,
@@ -2576,16 +2961,19 @@ function Sidebar({
   selectedRoomId: number | null;
   expandedRoomId: number | null;
   roomListExpanded: boolean;
+  bookMenuExpanded: boolean;
   collapsed: boolean;
   pendingInvitationCount: number;
   onMove: (view: AppView) => void;
   onOpenRoomList: () => void;
   onToggleRoomList: () => void;
+  onToggleBookMenu: () => void;
   onSelectRoom: (roomId: number, nextView?: AppView) => void;
   onMoveRoomFeature: (roomId: number, view: RoomFeatureKind) => void;
   onToggleSidebar: () => void;
 }) {
   const selectedRoom = rooms.find((room) => room.id === selectedRoomId) ?? rooms[0] ?? null;
+  const bookMenuActive = isBookArchiveView(activeView);
 
   return (
     <aside className={`sidebar ${collapsed ? "is-collapsed" : ""}`} aria-label="기록방 메뉴">
@@ -2688,6 +3076,35 @@ function Sidebar({
                 </div>
               );
             })}
+          </div>
+
+          <div className={`nav-item-combo book-nav-combo ${bookMenuActive ? "active" : ""} ${bookMenuExpanded ? "is-expanded" : ""}`}>
+            <button className="nav-item room-list-nav" type="button" aria-label="추억을 책으로 소장" onClick={() => onMove("bookProducts")}>
+              <BookOpen size={18} />
+              <span className="nav-label">추억을 책으로 소장</span>
+            </button>
+            <button className="nav-icon-toggle" type="button" aria-label={bookMenuExpanded ? "책 메뉴 접기" : "책 메뉴 펼치기"} aria-expanded={bookMenuExpanded} onClick={onToggleBookMenu}>
+              <ChevronDown size={16} />
+            </button>
+          </div>
+
+          <div className={`room-submenu book-submenu ${bookMenuExpanded && !collapsed ? "is-open" : ""}`} aria-hidden={!bookMenuExpanded || collapsed}>
+            <button className={activeView === "bookProducts" ? "active" : ""} type="button" tabIndex={bookMenuExpanded && !collapsed ? 0 : -1} onClick={() => onMove("bookProducts")}>
+              <CircleHelp size={16} />
+              <span className="nav-label">상품 안내</span>
+            </button>
+            <button className={activeView === "bookCreate" ? "active" : ""} type="button" tabIndex={bookMenuExpanded && !collapsed ? 0 : -1} onClick={() => onMove("bookCreate")}>
+              <BookImage size={16} />
+              <span className="nav-label">책 만들기</span>
+            </button>
+            <button className={activeView === "bookStatus" ? "active" : ""} type="button" tabIndex={bookMenuExpanded && !collapsed ? 0 : -1} onClick={() => onMove("bookStatus")}>
+              <Clock size={16} />
+              <span className="nav-label">주문 상태</span>
+            </button>
+            <button className={activeView === "bookHistory" ? "active" : ""} type="button" tabIndex={bookMenuExpanded && !collapsed ? 0 : -1} onClick={() => onMove("bookHistory")}>
+              <FileText size={16} />
+              <span className="nav-label">주문 내역</span>
+            </button>
           </div>
         </nav>
       </div>
@@ -4378,6 +4795,453 @@ function RoomFeatureView({ selectedRoom, kind }: { selectedRoom: RoomSummary | n
   );
 }
 
+function BookProductGuideView({
+  products,
+  loading,
+  onStartCreate,
+}: {
+  products: BookProduct[];
+  loading: boolean;
+  onStartCreate: () => void;
+}) {
+  return (
+    <>
+      <header className="page-header">
+        <div>
+          <h1>상품 안내</h1>
+          <p>상품별 상세 안내 페이지는 기획중입니다.</p>
+        </div>
+        <button className="primary-button" type="button" onClick={onStartCreate}>
+          책 만들기
+        </button>
+      </header>
+
+      <section className="book-page">
+        <div className="book-placeholder-panel">
+          <div>
+            <span className="eyebrow">기획중</span>
+            <h2>상품 상세 안내는 별도 화면으로 정리할 예정입니다.</h2>
+            <p>현재 구현 범위에서는 책 만들기 과정의 상품 선택 카드에서 필요한 판형, 커버, 제본, 페이지 범위 정보를 제공합니다.</p>
+          </div>
+          <CircleHelp size={30} />
+        </div>
+
+        <div className="book-product-grid" aria-busy={loading}>
+          {products.map((product) => (
+            <article className="book-product-card" key={product.uid}>
+              <div className="book-product-card-title">
+                <BookOpen size={22} />
+                <h2>{product.displayName}</h2>
+              </div>
+              <dl className="book-spec-list compact">
+                <div>
+                  <dt>판형</dt>
+                  <dd>{product.widthMm} x {product.heightMm}mm</dd>
+                </div>
+                <div>
+                  <dt>커버/제본</dt>
+                  <dd>{coverLabel(product.coverType)} · {product.bindingType}</dd>
+                </div>
+                <div>
+                  <dt>페이지</dt>
+                  <dd>{product.minPage}~{product.maxPage}p</dd>
+                </div>
+              </dl>
+            </article>
+          ))}
+        </div>
+      </section>
+    </>
+  );
+}
+
+function BookCreateView({
+  rooms,
+  products,
+  selectedRoomId,
+  selectedProductUid,
+  period,
+  title,
+  quantity,
+  contentCandidates,
+  selectedContentKeys,
+  selectedContents,
+  draftSummary,
+  draftPageRange,
+  preview,
+  loading,
+  previewLoading,
+  onSelectRoom,
+  onSelectProduct,
+  onPeriodChange,
+  onTitleChange,
+  onQuantityChange,
+  onLoadCandidates,
+  onToggleContent,
+  onCreatePreview,
+}: {
+  rooms: BookCreateRoom[];
+  products: BookProduct[];
+  selectedRoomId: number | null;
+  selectedProductUid: string | null;
+  period: BookPeriod;
+  title: string;
+  quantity: number;
+  contentCandidates: BookContentCandidatesResponse | null;
+  selectedContentKeys: Record<string, boolean>;
+  selectedContents: BookContentCandidate[];
+  draftSummary: BookContentSummary;
+  draftPageRange: BookPageRange | null;
+  preview: BookPreviewResponse | null;
+  loading: boolean;
+  previewLoading: boolean;
+  onSelectRoom: (roomId: number) => void;
+  onSelectProduct: (productUid: string) => void;
+  onPeriodChange: (period: BookPeriod) => void;
+  onTitleChange: (title: string) => void;
+  onQuantityChange: (quantity: number) => void;
+  onLoadCandidates: () => void;
+  onToggleContent: (content: BookContentCandidate) => void;
+  onCreatePreview: () => void;
+}) {
+  const selectedProduct = products.find((product) => product.uid === selectedProductUid) ?? null;
+  const selectedRoom = rooms.find((room) => room.id === selectedRoomId) ?? null;
+  const canLoadCandidates = Boolean(selectedRoom && selectedProduct && period.startDate && period.endDate && period.startDate <= period.endDate);
+  const canPreview = Boolean(selectedRoom && selectedProduct && selectedContents.length > 0 && draftPageRange?.status !== "OVER_MAX");
+
+  return (
+    <>
+      <header className="page-header">
+        <div>
+          <h1>책 만들기</h1>
+          <p>하나의 방을 선택한 뒤 상품과 기간을 정하고, 자동으로 불러온 기록을 커스텀합니다.</p>
+        </div>
+      </header>
+
+      <section className="book-page">
+        <ol className="book-stepper" aria-label="책 만들기 진행 단계">
+          {["방", "상품", "기간", "콘텐츠", "미리보기"].map((step, index) => (
+            <li className={bookStepActive(index + 1, selectedRoom, selectedProduct, contentCandidates, preview) ? "active" : ""} key={step}>
+              <span>{index + 1}</span>
+              {step}
+            </li>
+          ))}
+        </ol>
+
+        <section className="book-section" aria-labelledby="book-room-step">
+          <div className="book-section-heading">
+            <div>
+              <span>1. 방 선택</span>
+              <h2 id="book-room-step">책으로 만들 방</h2>
+            </div>
+            <UsersRound size={24} />
+          </div>
+
+          <div className="book-room-grid" aria-busy={loading}>
+            {rooms.map((room) => (
+              <button className={`book-option-card ${selectedRoomId === room.id ? "selected" : ""}`} type="button" key={room.id} onClick={() => onSelectRoom(room.id)}>
+                <strong>{room.name}</strong>
+                <span>{roomTypeLabel(room.type)} · 구성원 {room.memberCount}명</span>
+                <small>책 후보 기록 {room.bookableRecordCount}개</small>
+              </button>
+            ))}
+          </div>
+        </section>
+
+        <section className="book-section" aria-labelledby="book-product-step">
+          <div className="book-section-heading">
+            <div>
+              <span>2. 상품 선택</span>
+              <h2 id="book-product-step">인쇄 상품</h2>
+            </div>
+            <BookOpen size={24} />
+          </div>
+
+          <div className="book-product-grid">
+            {products.map((product) => (
+              <button className={`book-product-card selectable ${selectedProductUid === product.uid ? "selected" : ""}`} type="button" key={product.uid} onClick={() => onSelectProduct(product.uid)}>
+                <div className="book-product-card-title">
+                  <BookOpen size={22} />
+                  <h3>{product.displayName}</h3>
+                </div>
+                <dl className="book-spec-list compact">
+                  <div>
+                    <dt>판형</dt>
+                    <dd>{product.widthMm} x {product.heightMm}mm</dd>
+                  </div>
+                  <div>
+                    <dt>제본</dt>
+                    <dd>{coverLabel(product.coverType)} · {product.bindingType}</dd>
+                  </div>
+                  <div>
+                    <dt>페이지</dt>
+                    <dd>{product.minPage}~{product.maxPage}p</dd>
+                  </div>
+                </dl>
+              </button>
+            ))}
+          </div>
+        </section>
+
+        <section className="book-section" aria-labelledby="book-period-step">
+          <div className="book-section-heading">
+            <div>
+              <span>3. 기간 선택</span>
+              <h2 id="book-period-step">자동으로 불러올 기록 기간</h2>
+            </div>
+            <CalendarDays size={24} />
+          </div>
+
+          <div className="book-period-row">
+            <label>
+              시작일
+              <input type="date" value={period.startDate} onChange={(event) => onPeriodChange({ ...period, startDate: event.target.value })} />
+            </label>
+            <label>
+              종료일
+              <input type="date" value={period.endDate} onChange={(event) => onPeriodChange({ ...period, endDate: event.target.value })} />
+            </label>
+            <button className="primary-button" type="button" onClick={onLoadCandidates} disabled={!canLoadCandidates || loading}>
+              {loading ? "불러오는 중" : "기록 불러오기"}
+            </button>
+          </div>
+        </section>
+
+        <section className="book-content-layout" aria-labelledby="book-content-step">
+          <div className="book-section">
+            <div className="book-section-heading">
+              <div>
+                <span>4. 콘텐츠 커스텀</span>
+                <h2 id="book-content-step">책에 담을 기록</h2>
+              </div>
+              <CheckCircle2 size={24} />
+            </div>
+
+            {!contentCandidates ? (
+              <div className="book-empty-state">기간을 선택하고 기록을 불러오면 추억 게시글, 미션 인증, 편지가 자동으로 선택됩니다.</div>
+            ) : (
+              <div className="book-content-columns">
+                <BookContentSelectionGroup
+                  title="기간 안에서 자동으로 불러온 기록"
+                  contents={contentCandidates.defaultContents}
+                  selectedContentKeys={selectedContentKeys}
+                  onToggleContent={onToggleContent}
+                />
+                <BookContentSelectionGroup
+                  title="다른 기간에서 추가할 수 있는 기록"
+                  contents={contentCandidates.additionalContents}
+                  selectedContentKeys={selectedContentKeys}
+                  onToggleContent={onToggleContent}
+                />
+              </div>
+            )}
+          </div>
+
+          <aside className="book-summary-panel">
+            <div className="book-section-heading compact">
+              <div>
+                <span>선택 요약</span>
+                <h2>페이지와 견적 입력</h2>
+              </div>
+            </div>
+
+            <label className="book-input-field">
+              책 제목
+              <input value={title} maxLength={120} onChange={(event) => onTitleChange(event.target.value)} placeholder={selectedRoom ? `${selectedRoom.name} 기록집` : "방을 먼저 선택하세요"} />
+            </label>
+            <label className="book-input-field">
+              수량
+              <input type="number" min={1} max={20} value={quantity} onChange={(event) => onQuantityChange(clampNumber(Number(event.target.value), 1, 20))} />
+            </label>
+
+            <BookSummaryMetrics summary={draftSummary} />
+
+            {draftPageRange ? (
+              <div className={`book-page-meter ${draftPageRange.status === "OVER_MAX" ? "danger" : ""}`}>
+                <div>
+                  <strong>{draftPageRange.estimatedPageCount}p</strong>
+                  <span>{draftPageRange.minPage}~{draftPageRange.maxPage}p</span>
+                </div>
+                <meter min={0} max={draftPageRange.maxPage} value={Math.min(draftPageRange.estimatedPageCount, draftPageRange.maxPage)} />
+                <p>{draftPageRange.message}</p>
+              </div>
+            ) : null}
+
+            <button className="primary-button full-width" type="button" onClick={onCreatePreview} disabled={!canPreview || previewLoading}>
+              {previewLoading ? "계산 중" : "미리보기/견적 계산"}
+            </button>
+          </aside>
+        </section>
+
+        {preview ? <BookPreviewPanel preview={preview} /> : null}
+      </section>
+    </>
+  );
+}
+
+function BookContentSelectionGroup({
+  title,
+  contents,
+  selectedContentKeys,
+  onToggleContent,
+}: {
+  title: string;
+  contents: BookContentCandidate[];
+  selectedContentKeys: Record<string, boolean>;
+  onToggleContent: (content: BookContentCandidate) => void;
+}) {
+  return (
+    <section className="book-content-group">
+      <h3>{title}</h3>
+      {contents.length === 0 ? (
+        <div className="book-empty-state compact">표시할 기록이 없습니다.</div>
+      ) : (
+        <div className="book-content-list">
+          {contents.map((content) => {
+            const selected = Boolean(selectedContentKeys[bookContentKey(content)]);
+
+            return (
+              <label className={`book-content-row ${selected ? "selected" : ""}`} key={bookContentKey(content)}>
+                <input type="checkbox" checked={selected} onChange={() => onToggleContent(content)} />
+                <span>
+                  <strong>{content.title}</strong>
+                  <small>{content.sourceLabel} · {formatDateLabel(content.occurredDate)} · {content.authorName}</small>
+                  <em>{content.description}</em>
+                </span>
+                <b>{content.pageCount}p</b>
+              </label>
+            );
+          })}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function BookSummaryMetrics({ summary }: { summary: BookContentSummary }) {
+  return (
+    <div className="book-summary-metrics">
+      <Metric label="추억" value={`${summary.memoryCount}개`} />
+      <Metric label="미션" value={`${summary.missionCount}개`} />
+      <Metric label="편지" value={`${summary.letterCount}개`} />
+      <Metric label="채팅" value={`${summary.chatCount}일`} />
+    </div>
+  );
+}
+
+function BookPreviewPanel({ preview }: { preview: BookPreviewResponse }) {
+  return (
+    <section className="book-section book-preview-section" aria-labelledby="book-preview-title">
+      <div className="book-section-heading">
+        <div>
+          <span>5. 미리보기</span>
+          <h2 id="book-preview-title">대표 페이지와 예상 견적</h2>
+        </div>
+        <BookImage size={24} />
+      </div>
+
+      <div className="book-preview-layout">
+        <div className="book-preview-grid">
+          {preview.pages.map((page) => (
+            <article className="book-preview-page" key={`${page.pageNumber}-${page.title}`}>
+              <span>{page.pageNumber}p · {page.label}</span>
+              <h3>{page.title}</h3>
+              <p>{page.description}</p>
+              {page.occurredDate ? <small>{formatDateLabel(page.occurredDate)}</small> : null}
+            </article>
+          ))}
+        </div>
+
+        <aside className="book-estimate-panel">
+          <h3>{preview.product.displayName}</h3>
+          <dl>
+            <div>
+              <dt>예상 페이지</dt>
+              <dd>{preview.pageRange.estimatedPageCount}p</dd>
+            </div>
+            <div>
+              <dt>기본가</dt>
+              <dd>{formatCurrency(preview.estimate.basePrice)}</dd>
+            </div>
+            <div>
+              <dt>추가 페이지</dt>
+              <dd>{formatCurrency(preview.estimate.additionalPagePrice)}</dd>
+            </div>
+            <div>
+              <dt>배송비</dt>
+              <dd>{formatCurrency(preview.estimate.shippingPrice)}</dd>
+            </div>
+            <div>
+              <dt>수량</dt>
+              <dd>{preview.estimate.quantity}권</dd>
+            </div>
+            <div className="total">
+              <dt>예상 총액</dt>
+              <dd>{formatCurrency(preview.estimate.totalPrice)}</dd>
+            </div>
+          </dl>
+          {preview.warnings.length > 0 ? (
+            <ul className="book-warning-list">
+              {preview.warnings.map((warning) => (
+                <li key={warning}>{warning}</li>
+              ))}
+            </ul>
+          ) : null}
+          <button className="outline-button full-width" type="button" disabled>
+            주문 생성은 다음 단계에서 연결
+          </button>
+        </aside>
+      </div>
+    </section>
+  );
+}
+
+function BookStatusPlaceholderView() {
+  return (
+    <>
+      <header className="page-header">
+        <div>
+          <h1>주문 상태</h1>
+          <p>주문 생성과 상태 조회/변경 화면은 다음 작업 단위에서 연결합니다.</p>
+        </div>
+      </header>
+      <section className="book-page">
+        <div className="book-placeholder-panel">
+          <div>
+            <span className="eyebrow">준비중</span>
+            <h2>아직 조회할 주문 상태가 없습니다.</h2>
+            <p>이번 범위에서는 책 구성, 미리보기, 예상 견적까지 구현했습니다.</p>
+          </div>
+          <Clock size={30} />
+        </div>
+      </section>
+    </>
+  );
+}
+
+function BookHistoryPlaceholderView() {
+  return (
+    <>
+      <header className="page-header">
+        <div>
+          <h1>주문 내역</h1>
+          <p>완료/취소 주문의 히스토리 목록은 주문 기능 구현 후 표시합니다.</p>
+        </div>
+      </header>
+      <section className="book-page">
+        <div className="book-placeholder-panel">
+          <div>
+            <span className="eyebrow">준비중</span>
+            <h2>주문 내역 MVP 화면을 위한 메뉴만 먼저 열어두었습니다.</h2>
+            <p>운영자 주문 확인은 일반 사용자 사이드바가 아닌 운영자 캐릭터 진입 흐름에서 다룹니다.</p>
+          </div>
+          <FileText size={30} />
+        </div>
+      </section>
+    </>
+  );
+}
+
 function SettingsView({
   profile,
   initials,
@@ -5260,6 +6124,294 @@ function roomFeatureCopy(kind: RoomFeatureKind) {
     body: "받은 편지함, 보낸 편지함, 편지 쓰기는 이후 편지 기능 이슈에서 구현한다.",
     icon: <MailPlus size={24} />,
   };
+}
+
+function isBookArchiveView(view: AppView): view is BookArchiveView {
+  return view === "bookProducts" || view === "bookCreate" || view === "bookStatus" || view === "bookHistory";
+}
+
+function bookStepActive(
+  step: number,
+  selectedRoom: BookCreateRoom | null,
+  selectedProduct: BookProduct | null,
+  contentCandidates: BookContentCandidatesResponse | null,
+  preview: BookPreviewResponse | null,
+): boolean {
+  if (step === 1) return true;
+  if (step === 2) return Boolean(selectedRoom);
+  if (step === 3) return Boolean(selectedRoom && selectedProduct);
+  if (step === 4) return Boolean(contentCandidates);
+  return Boolean(preview);
+}
+
+function bookContentKey(content: Pick<BookContentCandidate, "type" | "sourceId">): string {
+  return `${content.type}:${content.sourceId}`;
+}
+
+function initialBookSelection(response: BookContentCandidatesResponse): Record<string, boolean> {
+  const selection: Record<string, boolean> = {};
+  response.defaultContents.forEach((content) => {
+    selection[bookContentKey(content)] = true;
+  });
+  response.additionalContents.forEach((content) => {
+    selection[bookContentKey(content)] = false;
+  });
+
+  return selection;
+}
+
+function buildBookContentSummary(contents: BookContentCandidate[], estimatedPageCount: number): BookContentSummary {
+  return {
+    memoryCount: contents.filter((content) => content.type === "MEMORY").length,
+    missionCount: contents.filter((content) => content.type === "MISSION").length,
+    letterCount: contents.filter((content) => content.type === "LETTER").length,
+    chatCount: contents.filter((content) => content.type === "CHAT").length,
+    estimatedPageCount,
+  };
+}
+
+function buildBookPageRange(product: BookProduct | null, contents: BookContentCandidate[]): BookPageRange | null {
+  if (!product) return null;
+  if (contents.length === 0) {
+    return {
+      minPage: product.minPage,
+      maxPage: product.maxPage,
+      estimatedPageCount: 0,
+      status: "AVAILABLE",
+      message: "책에 담을 기록을 선택해 주세요.",
+    };
+  }
+
+  const rawPageCount = 4 + contents.reduce((sum, content) => sum + content.pageCount, 0);
+  if (rawPageCount > product.maxPage) {
+    return {
+      minPage: product.minPage,
+      maxPage: product.maxPage,
+      estimatedPageCount: rawPageCount,
+      status: "OVER_MAX",
+      message: `선택한 콘텐츠가 ${product.maxPage}페이지를 넘어 다음 단계로 진행할 수 없습니다.`,
+    };
+  }
+
+  if (rawPageCount < product.minPage) {
+    return {
+      minPage: product.minPage,
+      maxPage: product.maxPage,
+      estimatedPageCount: product.minPage,
+      status: "AVAILABLE",
+      message: "선택 콘텐츠가 최소 페이지보다 적어 템플릿 기본 페이지로 보정됩니다.",
+    };
+  }
+
+  return {
+    minPage: product.minPage,
+    maxPage: product.maxPage,
+    estimatedPageCount: rawPageCount,
+    status: "AVAILABLE",
+    message: "선택한 콘텐츠가 상품 페이지 범위 안에 있습니다.",
+  };
+}
+
+function demoBookProducts(): BookProduct[] {
+  return [
+    {
+      uid: "PHOTOBOOK_A4_SC",
+      displayName: "A4 소프트커버 포토북",
+      sizeName: "A4",
+      widthMm: 210,
+      heightMm: 297,
+      coverType: "SOFTCOVER",
+      bindingType: "무선제본",
+      paperDescription: "사진 중심 템플릿에 적합한 큰 판형",
+      minPage: 24,
+      maxPage: 130,
+      basePrice: 32000,
+      includedPageCount: 40,
+      additionalPagePrice: 300,
+      shippingPrice: 3000,
+      creationType: "TEMPLATE",
+      note: "큰 사진과 긴 기록을 넉넉하게 보여주는 소프트커버 상품",
+    },
+    {
+      uid: "PHOTOBOOK_A5_SC",
+      displayName: "A5 소프트커버 포토북",
+      sizeName: "A5",
+      widthMm: 148,
+      heightMm: 210,
+      coverType: "SOFTCOVER",
+      bindingType: "무선제본",
+      paperDescription: "텍스트와 사진이 섞인 일상 기록에 적합한 휴대형 판형",
+      minPage: 50,
+      maxPage: 200,
+      basePrice: 28000,
+      includedPageCount: 50,
+      additionalPagePrice: 220,
+      shippingPrice: 3000,
+      creationType: "TEMPLATE",
+      note: "추억 게시글, 미션, 편지를 길게 담기 좋은 소프트커버 상품",
+    },
+    {
+      uid: "SQUAREBOOK_HC",
+      displayName: "고화질 스퀘어북 (하드커버)",
+      sizeName: "Square",
+      widthMm: 204,
+      heightMm: 204,
+      coverType: "HARDCOVER",
+      bindingType: "양장제본",
+      paperDescription: "대표 사진과 기념일 기록을 강조하는 정사각 판형",
+      minPage: 24,
+      maxPage: 130,
+      basePrice: 46000,
+      includedPageCount: 40,
+      additionalPagePrice: 420,
+      shippingPrice: 3000,
+      creationType: "TEMPLATE",
+      note: "기념 선물용 완성도를 강조한 하드커버 상품",
+    },
+  ];
+}
+
+function demoBookRoomsForCreate(memberId: number): BookCreateRoom[] {
+  return demoRoomsForMember(memberId).map((room) => ({
+    id: room.id,
+    name: room.name,
+    type: room.type,
+    memberCount: room.memberCount,
+    bookableRecordCount: demoMemoryPosts(room.id).length
+      + demoMissionList(room.id).missions.filter((mission) => mission.latestSubmission).length
+      + demoLetters(room.id, "RECEIVED").length
+      + demoLetters(room.id, "SENT").length,
+  }));
+}
+
+function buildDemoBookContentCandidates(
+  roomId: number,
+  productUid: string,
+  period: BookPeriod,
+  memberId: number,
+): BookContentCandidatesResponse {
+  const room = demoRoomsForMember(memberId).find((candidate) => candidate.id === roomId) ?? demoRooms[0];
+  const product = demoBookProducts().find((candidate) => candidate.uid === productUid) ?? demoBookProducts()[0];
+  const memories = demoMemoryPosts(room.id).map((post): BookContentCandidate => ({
+    type: "MEMORY",
+    sourceId: post.id,
+    title: post.title,
+    description: post.bodyPreview,
+    occurredDate: post.occurredDate,
+    authorName: post.authorName,
+    imageCount: post.imageCount,
+    commentCount: post.commentCount,
+    pageCount: estimateDemoBookContentPage("MEMORY", post.imageCount, post.commentCount),
+    selectedByDefault: inBookPeriod(post.occurredDate, period),
+    sourceLabel: "추억 게시글",
+  }));
+  const missions = demoMissionList(room.id).missions
+    .filter((mission) => mission.latestSubmission)
+    .map((mission): BookContentCandidate => {
+      const submission = mission.latestSubmission!;
+      return {
+        type: "MISSION",
+        sourceId: submission.id,
+        title: mission.title,
+        description: submission.body,
+        occurredDate: submission.occurredDate,
+        authorName: submission.submitterName,
+        imageCount: submission.imageUrl ? 1 : 0,
+        commentCount: mission.comments.length,
+        pageCount: estimateDemoBookContentPage("MISSION", submission.imageUrl ? 1 : 0, mission.comments.length),
+        selectedByDefault: inBookPeriod(submission.occurredDate, period),
+        sourceLabel: "미션 인증",
+      };
+    });
+  const letters = [...demoLetters(room.id, "RECEIVED"), ...demoLetters(room.id, "SENT")].map((letter): BookContentCandidate => ({
+    type: "LETTER",
+    sourceId: letter.id,
+    title: letter.title,
+    description: `${letter.counterpartName} · ${letter.bodyPreview}`,
+    occurredDate: letter.occurredDate,
+    authorName: letter.counterpartName,
+    imageCount: 0,
+    commentCount: 0,
+    pageCount: estimateDemoBookContentPage("LETTER", 0, 0),
+    selectedByDefault: inBookPeriod(letter.occurredDate, period),
+    sourceLabel: "편지",
+  }));
+  const chatDays = groupChatMessagesByDate(demoChatMessages(room.id)).map((chatDay): BookContentCandidate => ({
+    type: "CHAT",
+    sourceId: Number(chatDay.date.replace(/-/g, "")),
+    title: `${chatDay.date} 채팅 묶음`,
+    description: `선택한 날짜의 채팅 ${chatDay.messages.length}개를 책 구성에 포함합니다.`,
+    occurredDate: chatDay.date,
+    authorName: "방 구성원",
+    imageCount: 0,
+    commentCount: chatDay.messages.length,
+    pageCount: estimateDemoBookContentPage("CHAT", 0, chatDay.messages.length),
+    selectedByDefault: false,
+    sourceLabel: "채팅",
+  }));
+  const nonChatContents = [...memories, ...missions, ...letters];
+  const defaultContents = nonChatContents.filter((content) => inBookPeriod(content.occurredDate, period)).sort(bookContentSort);
+  const additionalContents = [
+    ...nonChatContents.filter((content) => !inBookPeriod(content.occurredDate, period)),
+    ...chatDays.filter((content) => inBookPeriod(content.occurredDate, period)),
+  ].sort((first, second) => second.occurredDate.localeCompare(first.occurredDate));
+  const pageRange = buildBookPageRange(product, defaultContents) ?? {
+    minPage: product.minPage,
+    maxPage: product.maxPage,
+    estimatedPageCount: 0,
+    status: "AVAILABLE" as const,
+    message: "책에 담을 기록을 선택해 주세요.",
+  };
+
+  return {
+    roomId: room.id,
+    roomName: room.name,
+    product,
+    period,
+    defaultContents,
+    additionalContents,
+    summary: buildBookContentSummary(defaultContents, pageRange.estimatedPageCount),
+    pageRange,
+  };
+}
+
+function estimateDemoBookContentPage(type: BookContentType, imageCount: number, commentCount: number): number {
+  if (type === "MEMORY") return 2 + Math.ceil(Math.max(imageCount - 1, 0) / 3) + (commentCount >= 6 ? 1 : 0);
+  if (type === "MISSION") return 2 + (commentCount >= 5 ? 1 : 0);
+  if (type === "LETTER") return 2;
+  return Math.max(1, Math.ceil(commentCount / 14));
+}
+
+function inBookPeriod(date: string, period: BookPeriod): boolean {
+  return date >= period.startDate && date <= period.endDate;
+}
+
+function bookContentSort(first: BookContentCandidate, second: BookContentCandidate): number {
+  const dateCompare = first.occurredDate.localeCompare(second.occurredDate);
+  if (dateCompare !== 0) return dateCompare;
+  return bookContentTypeOrder(first.type) - bookContentTypeOrder(second.type) || first.sourceId - second.sourceId;
+}
+
+function bookContentTypeOrder(type: BookContentType): number {
+  if (type === "MEMORY") return 1;
+  if (type === "MISSION") return 2;
+  if (type === "LETTER") return 3;
+  return 4;
+}
+
+function coverLabel(coverType: string): string {
+  if (coverType === "HARDCOVER") return "하드커버";
+  if (coverType === "SOFTCOVER") return "소프트커버";
+  return coverType;
+}
+
+function formatCurrency(value: number): string {
+  return `${value.toLocaleString("ko-KR")}원`;
+}
+
+function clampNumber(value: number, min: number, max: number): number {
+  if (!Number.isFinite(value)) return min;
+  return Math.min(max, Math.max(min, value));
 }
 
 function initialLetterForm(): LetterForm {
