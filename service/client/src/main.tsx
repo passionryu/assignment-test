@@ -7,6 +7,8 @@ import {
   BookOpen,
   CalendarDays,
   CheckCircle2,
+  ArrowDown,
+  ArrowUp,
   ChevronDown,
   Clock,
   CircleHelp,
@@ -18,10 +20,12 @@ import {
   Mail,
   MailPlus,
   MessageCircle,
+  Minus,
   PanelLeftClose,
   PanelLeftOpen,
   Phone,
   Pencil,
+  Plus,
   Settings,
   ShieldAlert,
   Trash2,
@@ -425,6 +429,8 @@ type MissionImageUploadResponse = {
 
 type BookCreationType = "TEMPLATE";
 type BookContentType = "MEMORY" | "MISSION" | "LETTER" | "CHAT";
+type BookContentFilter = "ALL" | "SELECTED" | "UNSELECTED" | BookContentType;
+type BookContentOrderMode = "DATE" | "TYPE";
 type BookPageLimitStatus = "UNDER_MIN" | "AVAILABLE" | "OVER_MAX";
 
 type BookProduct = {
@@ -479,6 +485,15 @@ type BookContentCandidate = {
   pageCount: number;
   selectedByDefault: boolean;
   sourceLabel: string;
+};
+
+type BookContentDetailModalState = {
+  content: BookContentCandidate;
+  loading: boolean;
+  memoryDetail?: MemoryPostDetail;
+  missionDetail?: MissionSummary;
+  letterDetail?: LetterDetail;
+  chatMessages?: ChatMessage[];
 };
 
 type BookContentSummary = {
@@ -543,6 +558,11 @@ type BookPreviewResponse = {
   pages: BookPreviewPage[];
   warnings: string[];
 };
+
+const defaultBookContentTypeOrder: BookContentType[] = ["MEMORY", "MISSION", "LETTER", "CHAT"];
+const bookCandidateContentTypeOptions: BookContentType[] = ["MEMORY", "MISSION", "LETTER", "CHAT"];
+const bookContentStatusFilters: BookContentFilter[] = ["ALL", "SELECTED", "UNSELECTED"];
+const bookContentTypeFilters: BookContentFilter[] = ["MEMORY", "MISSION", "LETTER", "CHAT"];
 
 type PrintOrderStatus =
   | "PAID"
@@ -1250,10 +1270,15 @@ function App() {
   const [bookSelectedProductUid, setBookSelectedProductUid] = useState<string | null>(null);
   const [bookCreateStep, setBookCreateStep] = useState<BookCreateStep>("room");
   const [bookPeriod, setBookPeriod] = useState<BookPeriod>(() => ({ startDate: offsetDateKey(-30), endDate: todayDateKey() }));
+  const [bookCandidateContentTypes, setBookCandidateContentTypes] = useState<BookContentType[]>([]);
   const [bookTitle, setBookTitle] = useState("");
   const [bookQuantity, setBookQuantity] = useState(1);
   const [bookContentCandidates, setBookContentCandidates] = useState<BookContentCandidatesResponse | null>(null);
   const [selectedBookContentKeys, setSelectedBookContentKeys] = useState<Record<string, boolean>>({});
+  const [bookContentFilter, setBookContentFilter] = useState<BookContentFilter>("ALL");
+  const [bookContentOrderMode, setBookContentOrderMode] = useState<BookContentOrderMode>("DATE");
+  const [bookContentTypeOrder, setBookContentTypeOrder] = useState<BookContentType[]>(defaultBookContentTypeOrder);
+  const [bookContentDetailModal, setBookContentDetailModal] = useState<BookContentDetailModalState | null>(null);
   const [bookProductsLoading, setBookProductsLoading] = useState(false);
   const [bookCandidatesLoading, setBookCandidatesLoading] = useState(false);
   const [bookPreviewLoading, setBookPreviewLoading] = useState(false);
@@ -1316,9 +1341,13 @@ function App() {
     ],
     [bookContentCandidates],
   );
+  const orderedBookContentCandidates = useMemo(
+    () => sortBookContents(allBookContentCandidates, bookContentOrderMode, bookContentTypeOrder),
+    [allBookContentCandidates, bookContentOrderMode, bookContentTypeOrder],
+  );
   const selectedBookContents = useMemo(
-    () => allBookContentCandidates.filter((content) => selectedBookContentKeys[bookContentKey(content)]),
-    [allBookContentCandidates, selectedBookContentKeys],
+    () => orderedBookContentCandidates.filter((content) => selectedBookContentKeys[bookContentKey(content)]),
+    [orderedBookContentCandidates, selectedBookContentKeys],
   );
   const bookDraftPageRange = useMemo(
     () => buildBookPageRange(bookSelectedProduct, selectedBookContents),
@@ -1439,10 +1468,15 @@ function App() {
     setBookSelectedProductUid(null);
     setBookCreateStep("room");
     setBookPeriod({ startDate: offsetDateKey(-30), endDate: todayDateKey() });
+    setBookCandidateContentTypes([]);
     setBookTitle("");
     setBookQuantity(1);
     setBookContentCandidates(null);
     setSelectedBookContentKeys({});
+    setBookContentFilter("ALL");
+    setBookContentOrderMode("DATE");
+    setBookContentTypeOrder(defaultBookContentTypeOrder);
+    setBookContentDetailModal(null);
     setBookPreview(null);
     setBookOrderConfirmOpen(false);
     setBookStatusOrders([]);
@@ -1777,12 +1811,14 @@ function App() {
     const room = bookRooms.find((candidate) => candidate.id === roomId);
     setBookSelectedRoomId(roomId);
     setBookTitle((current) => current || `${room?.name ?? "선택한 방"} 기록집`);
+    setBookCandidateContentTypes([]);
     clearBookComposition();
     setBookCreateStep("product");
   }
 
   function selectBookProduct(productUid: string) {
     setBookSelectedProductUid(productUid);
+    setBookCandidateContentTypes([]);
     clearBookComposition();
     setBookCreateStep("period");
   }
@@ -1793,9 +1829,25 @@ function App() {
     setBookCreateStep("period");
   }
 
+  function toggleBookCandidateContentType(type: BookContentType) {
+    setBookCandidateContentTypes((current) => {
+      const selected = current.includes(type)
+        ? current.filter((candidate) => candidate !== type)
+        : [...current, type];
+
+      return bookCandidateContentTypeOptions.filter((candidate) => selected.includes(candidate));
+    });
+    clearBookComposition();
+    setBookCreateStep("period");
+  }
+
   function clearBookComposition() {
     setBookContentCandidates(null);
     setSelectedBookContentKeys({});
+    setBookContentFilter("ALL");
+    setBookContentOrderMode("DATE");
+    setBookContentTypeOrder(defaultBookContentTypeOrder);
+    setBookContentDetailModal(null);
     setBookPreview(null);
   }
 
@@ -1815,34 +1867,45 @@ function App() {
       return;
     }
 
+    if (bookCandidateContentTypes.length === 0) {
+      setErrorMessage("불러올 콘텐츠를 1개 이상 선택해 주세요.");
+      return;
+    }
+
     setMessage(null);
     setErrorMessage(null);
     setBookCandidatesLoading(true);
     setBookPreview(null);
 
+    const loadingStartedAt = Date.now();
+    let nextCandidates: BookContentCandidatesResponse;
+    let nextErrorMessage: string | null = null;
+
     try {
+      const contentTypesParam = encodeURIComponent(bookCandidateContentTypes.join(","));
       const response = await apiGet<BookContentCandidatesResponse>(
-        `/book-archive/content-candidates?roomId=${bookSelectedRoomId}&productUid=${encodeURIComponent(bookSelectedProductUid)}&startDate=${bookPeriod.startDate}&endDate=${bookPeriod.endDate}`,
+        `/book-archive/content-candidates?roomId=${bookSelectedRoomId}&productUid=${encodeURIComponent(bookSelectedProductUid)}&startDate=${bookPeriod.startDate}&endDate=${bookPeriod.endDate}&contentTypes=${contentTypesParam}`,
       );
-      setBookContentCandidates(response);
-      setSelectedBookContentKeys(initialBookSelection(response));
-      setBookTitle((current) => current || `${response.roomName} 기록집`);
-      setBookCreateStep("content");
+      nextCandidates = filterBookContentCandidatesResponse(response, bookCandidateContentTypes);
     } catch (error) {
-      const fallback = buildDemoBookContentCandidates(
+      nextCandidates = buildDemoBookContentCandidates(
         bookSelectedRoomId,
         bookSelectedProductUid,
         bookPeriod,
         selectedDemoMember?.id ?? defaultDemoMember.id,
+        bookCandidateContentTypes,
       );
-      setBookContentCandidates(fallback);
-      setSelectedBookContentKeys(initialBookSelection(fallback));
-      setBookTitle((current) => current || `${fallback.roomName} 기록집`);
-      setBookCreateStep("content");
-      setErrorMessage(toMessage(error));
-    } finally {
-      setBookCandidatesLoading(false);
+      nextErrorMessage = toMessage(error);
     }
+
+    await waitAtLeast(loadingStartedAt, 3000);
+
+    setBookContentCandidates(nextCandidates);
+    setSelectedBookContentKeys(initialBookSelection(nextCandidates));
+    setBookTitle((current) => current || `${nextCandidates.roomName} 기록집`);
+    setBookCreateStep("content");
+    setErrorMessage(nextErrorMessage);
+    setBookCandidatesLoading(false);
   }
 
   function toggleBookContent(content: BookContentCandidate) {
@@ -1851,6 +1914,65 @@ function App() {
       return { ...current, [key]: !current[key] };
     });
     setBookPreview(null);
+  }
+
+  function moveBookContentType(type: BookContentType, direction: "UP" | "DOWN") {
+    setBookContentTypeOrder((current) => {
+      const index = current.indexOf(type);
+      const nextIndex = direction === "UP" ? index - 1 : index + 1;
+      if (index < 0 || nextIndex < 0 || nextIndex >= current.length) return current;
+
+      const next = [...current];
+      [next[index], next[nextIndex]] = [next[nextIndex], next[index]];
+      return next;
+    });
+    setBookPreview(null);
+  }
+
+  async function openBookContentDetail(content: BookContentCandidate) {
+    if (!bookSelectedRoomId) return;
+
+    setBookContentDetailModal({ content, loading: true });
+
+    if (content.type === "MEMORY") {
+      const detail = await safeApiGet<MemoryPostDetail>(`/rooms/${bookSelectedRoomId}/memories/${content.sourceId}`);
+      setBookContentDetailModal({
+        content,
+        loading: false,
+        memoryDetail: detail ?? fallbackMemoryDetailFromBookContent(bookSelectedRoomId, content),
+      });
+      return;
+    }
+
+    if (content.type === "MISSION") {
+      const missionListResponse = await safeApiGet<MissionListResponse>(`/rooms/${bookSelectedRoomId}/missions`);
+      const missionList = missionListResponse ?? demoMissionList(bookSelectedRoomId);
+      setBookContentDetailModal({
+        content,
+        loading: false,
+        missionDetail: findMissionByBookContent(missionList, content) ?? fallbackMissionDetailFromBookContent(bookSelectedRoomId, content),
+      });
+      return;
+    }
+
+    if (content.type === "LETTER") {
+      const detail = await safeApiGet<LetterDetail>(`/rooms/${bookSelectedRoomId}/letters/${content.sourceId}`);
+      setBookContentDetailModal({
+        content,
+        loading: false,
+        letterDetail: detail ?? fallbackLetterDetailFromBookContent(bookSelectedRoomId, content),
+      });
+      return;
+    }
+
+    const messagesResponse = await safeApiGet<ChatMessagesResponse>(`/rooms/${bookSelectedRoomId}/chat/messages`);
+    const messages = (messagesResponse?.messages ?? demoChatMessages(bookSelectedRoomId))
+      .filter((message) => message.occurredDate === content.occurredDate);
+    setBookContentDetailModal({
+      content,
+      loading: false,
+      chatMessages: messages.length > 0 ? messages : fallbackChatMessagesFromBookContent(bookSelectedRoomId, content),
+    });
   }
 
   async function createBookPreview() {
@@ -1871,6 +1993,7 @@ function App() {
 
     setMessage(null);
     setErrorMessage(null);
+    const loadingStartedAt = Date.now();
     setBookPreviewLoading(true);
 
     try {
@@ -1886,9 +2009,13 @@ function App() {
           contents: selectedBookContents.map((content) => ({ type: content.type, sourceId: content.sourceId })),
         },
       });
+      await waitAtLeast(loadingStartedAt, 3000);
       setBookPreview(response);
       setBookCreateStep("preview");
-      setMessage("템플릿 기반 책 미리보기와 예상 견적을 계산했습니다.");
+      setRoomFeedbackModal({
+        title: "미리보기 계산 완료",
+        message: "템플릿 기반 책 미리보기와 예상 견적을 계산했습니다.",
+      });
     } catch (error) {
       setErrorMessage(toMessage(error));
     } finally {
@@ -3157,28 +3284,43 @@ function App() {
           <BookCreateView
             rooms={bookRooms}
             products={bookProducts}
+            calendar={calendar}
             selectedRoomId={bookSelectedRoomId}
             selectedProductUid={bookSelectedProductUid}
             activeStep={bookCreateStep}
             period={bookPeriod}
+            candidateContentTypes={bookCandidateContentTypes}
             title={bookTitle}
             quantity={bookQuantity}
             contentCandidates={bookContentCandidates}
             selectedContentKeys={selectedBookContentKeys}
             selectedContents={selectedBookContents}
+            allContents={orderedBookContentCandidates}
+            contentFilter={bookContentFilter}
+            contentOrderMode={bookContentOrderMode}
+            contentTypeOrder={bookContentTypeOrder}
             draftSummary={bookDraftSummary}
             draftPageRange={bookDraftPageRange}
             preview={bookPreview}
             loading={bookProductsLoading || bookCandidatesLoading}
+            candidatesLoading={bookCandidatesLoading}
             previewLoading={bookPreviewLoading}
             onStepChange={setBookCreateStep}
             onSelectRoom={selectBookRoom}
             onSelectProduct={selectBookProduct}
             onPeriodChange={updateBookPeriod}
+            onToggleCandidateContentType={toggleBookCandidateContentType}
             onTitleChange={setBookTitle}
             onQuantityChange={setBookQuantity}
+            onContentFilterChange={setBookContentFilter}
+            onContentOrderModeChange={(mode) => {
+              setBookContentOrderMode(mode);
+              setBookPreview(null);
+            }}
+            onMoveContentType={moveBookContentType}
             onLoadCandidates={loadBookContentCandidates}
             onToggleContent={toggleBookContent}
+            onOpenContentDetail={openBookContentDetail}
             onCreatePreview={createBookPreview}
             onOpenOrderConfirm={() => setBookOrderConfirmOpen(true)}
           />
@@ -3241,6 +3383,13 @@ function App() {
           loading={bookOrderActionLoading}
           onCancelOrder={cancelPrintOrder}
           onClose={() => setBookOrderCancelOpen(false)}
+        />
+      ) : null}
+
+      {bookContentDetailModal ? (
+        <BookContentDetailModal
+          detail={bookContentDetailModal}
+          onClose={() => setBookContentDetailModal(null)}
         />
       ) : null}
 
@@ -4008,6 +4157,76 @@ function ActivityIcon({ type }: { type: "chat" | "mission" | "memory" | "letter"
   if (type === "memory") return <ImageIcon className={className} size={16} aria-hidden="true" />;
 
   return <Mail className={className} size={16} aria-hidden="true" />;
+}
+
+function BookPeriodRangeCalendar({
+  calendar,
+  period,
+  rangeAnchor,
+  disabled,
+  onDateSelect,
+}: {
+  calendar: CalendarResponse;
+  period: BookPeriod;
+  rangeAnchor: string | null;
+  disabled: boolean;
+  onDateSelect: (date: string) => void;
+}) {
+  const days = useMemo(() => buildCalendarCells(calendar.month), [calendar.month]);
+  const activityByDate = useMemo(() => new Map(calendar.days.map((day) => [day.date, day])), [calendar.days]);
+  const rangeStart = period.startDate <= period.endDate ? period.startDate : period.endDate;
+  const rangeEnd = period.startDate <= period.endDate ? period.endDate : period.startDate;
+
+  return (
+    <div className="book-range-calendar" aria-label="책에 담을 기록 기간 캘린더">
+      <div className="book-range-calendar-header">
+        <div>
+          <strong>{formatMonthLabel(calendar.month)}</strong>
+          <p>{rangeAnchor ? `${formatDateLabel(rangeAnchor)}부터 끝 날짜를 선택하세요.` : "캘린더에서 시작일과 종료일을 차례로 선택하세요."}</p>
+        </div>
+        <div className="calendar-legend" aria-label="기록 유형 범례">
+          <span><ActivityIcon type="chat" />채팅</span>
+          <span><ActivityIcon type="mission" />미션</span>
+          <span><ActivityIcon type="memory" />추억</span>
+          <span><ActivityIcon type="letter" />편지</span>
+        </div>
+      </div>
+
+      <div className="book-range-weekdays" aria-hidden="true">
+        {["일", "월", "화", "수", "목", "금", "토"].map((weekday) => (
+          <span key={weekday}>{weekday}</span>
+        ))}
+      </div>
+      <div className="book-range-grid">
+        {days.map((cell, index) => {
+          const cellDate = cell.date;
+          if (!cellDate) {
+            return <span className="book-range-day empty" key={`book-empty-${index}`} />;
+          }
+
+          const activity = activityByDate.get(cellDate) ?? null;
+          const isStart = cellDate === rangeStart;
+          const isEnd = cellDate === rangeEnd;
+          const isInRange = cellDate >= rangeStart && cellDate <= rangeEnd;
+          const isAnchor = cellDate === rangeAnchor;
+
+          return (
+            <button
+              className={`book-range-day ${activity ? "has-activity" : ""} ${isInRange ? "in-range" : ""} ${isStart ? "range-start" : ""} ${isEnd ? "range-end" : ""} ${isAnchor ? "range-anchor" : ""}`}
+              type="button"
+              key={cellDate}
+              onClick={() => onDateSelect(cellDate)}
+              disabled={disabled}
+              aria-pressed={isInRange}
+            >
+              <span>{cell.dayNumber}</span>
+              {activity ? <ActivityDots activity={activity} /> : null}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
 }
 
 function isInteractiveTarget(target: EventTarget | null) {
@@ -5484,61 +5703,87 @@ function BookProductGuideView({
 function BookCreateView({
   rooms,
   products,
+  calendar,
   selectedRoomId,
   selectedProductUid,
   activeStep,
   period,
+  candidateContentTypes,
   title,
   quantity,
   contentCandidates,
   selectedContentKeys,
   selectedContents,
+  allContents,
+  contentFilter,
+  contentOrderMode,
+  contentTypeOrder,
   draftSummary,
   draftPageRange,
   preview,
   loading,
+  candidatesLoading,
   previewLoading,
   onStepChange,
   onSelectRoom,
   onSelectProduct,
   onPeriodChange,
+  onToggleCandidateContentType,
   onTitleChange,
   onQuantityChange,
+  onContentFilterChange,
+  onContentOrderModeChange,
+  onMoveContentType,
   onLoadCandidates,
   onToggleContent,
+  onOpenContentDetail,
   onCreatePreview,
   onOpenOrderConfirm,
 }: {
   rooms: BookCreateRoom[];
   products: BookProduct[];
+  calendar: CalendarResponse | null;
   selectedRoomId: number | null;
   selectedProductUid: string | null;
   activeStep: BookCreateStep;
   period: BookPeriod;
+  candidateContentTypes: BookContentType[];
   title: string;
   quantity: number;
   contentCandidates: BookContentCandidatesResponse | null;
   selectedContentKeys: Record<string, boolean>;
   selectedContents: BookContentCandidate[];
+  allContents: BookContentCandidate[];
+  contentFilter: BookContentFilter;
+  contentOrderMode: BookContentOrderMode;
+  contentTypeOrder: BookContentType[];
   draftSummary: BookContentSummary;
   draftPageRange: BookPageRange | null;
   preview: BookPreviewResponse | null;
   loading: boolean;
+  candidatesLoading: boolean;
   previewLoading: boolean;
   onStepChange: (step: BookCreateStep) => void;
   onSelectRoom: (roomId: number) => void;
   onSelectProduct: (productUid: string) => void;
   onPeriodChange: (period: BookPeriod) => void;
+  onToggleCandidateContentType: (type: BookContentType) => void;
   onTitleChange: (title: string) => void;
   onQuantityChange: (quantity: number) => void;
+  onContentFilterChange: (filter: BookContentFilter) => void;
+  onContentOrderModeChange: (mode: BookContentOrderMode) => void;
+  onMoveContentType: (type: BookContentType, direction: "UP" | "DOWN") => void;
   onLoadCandidates: () => void;
   onToggleContent: (content: BookContentCandidate) => void;
+  onOpenContentDetail: (content: BookContentCandidate) => void;
   onCreatePreview: () => void;
   onOpenOrderConfirm: () => void;
 }) {
   const selectedProduct = products.find((product) => product.uid === selectedProductUid) ?? null;
   const selectedRoom = rooms.find((room) => room.id === selectedRoomId) ?? null;
-  const canLoadCandidates = Boolean(selectedRoom && selectedProduct && period.startDate && period.endDate && period.startDate <= period.endDate);
+  const periodCalendar = useMemo(() => buildBookPeriodCalendar(calendar, selectedRoomId), [calendar, selectedRoomId]);
+  const [periodRangeAnchor, setPeriodRangeAnchor] = useState<string | null>(null);
+  const canLoadCandidates = Boolean(selectedRoom && selectedProduct && period.startDate && period.endDate && period.startDate <= period.endDate && candidateContentTypes.length > 0);
   const canPreview = Boolean(selectedRoom && selectedProduct && selectedContents.length > 0 && draftPageRange?.status !== "OVER_MAX");
   const steps: Array<{ key: BookCreateStep; label: string }> = [
     { key: "room", label: "방 선택" },
@@ -5569,6 +5814,26 @@ function BookCreateView({
     if (step === "content") return contentCandidates ? `${selectedContents.length}개 · ${draftPageRange?.estimatedPageCount ?? 0}p` : "불러오기 전";
     return preview ? `${preview.pageRange.estimatedPageCount}p · ${formatCurrency(preview.estimate.totalPrice)}` : "계산 전";
   };
+  const filterCounts = buildBookContentFilterCounts(allContents, selectedContentKeys);
+  const visibleContents = filterBookContents(allContents, contentFilter, selectedContentKeys);
+  const selectedCandidateContentLabel = candidateContentTypes.map(bookContentTypeLabel).join(", ");
+  const selectPeriodDateFromCalendar = (date: string) => {
+    if (!periodRangeAnchor) {
+      setPeriodRangeAnchor(date);
+      onPeriodChange({ startDate: date, endDate: date });
+      return;
+    }
+
+    const nextPeriod = date < periodRangeAnchor
+      ? { startDate: date, endDate: periodRangeAnchor }
+      : { startDate: periodRangeAnchor, endDate: date };
+    setPeriodRangeAnchor(null);
+    onPeriodChange(nextPeriod);
+  };
+
+  useEffect(() => {
+    setPeriodRangeAnchor(null);
+  }, [selectedRoomId]);
 
   return (
     <>
@@ -5611,8 +5876,11 @@ function BookCreateView({
             <div className="book-room-grid" aria-busy={loading}>
               {rooms.map((room) => (
                 <button className={`book-option-card ${selectedRoomId === room.id ? "selected" : ""}`} type="button" key={room.id} onClick={() => onSelectRoom(room.id)}>
-                  <strong>{room.name}</strong>
-                  <span>{roomTypeLabel(room.type)} · 구성원 {room.memberCount}명</span>
+                  <div className="book-room-card-main">
+                    <span>{roomTypeLabel(room.type)}</span>
+                    <strong>{room.name}</strong>
+                  </div>
+                  <small>구성원 {room.memberCount}명</small>
                   <small>책 후보 기록 {room.bookableRecordCount}개</small>
                 </button>
               ))}
@@ -5655,9 +5923,6 @@ function BookCreateView({
               ))}
             </div>
 
-            <div className="book-wizard-actions">
-              <button className="secondary-button" type="button" onClick={() => onStepChange("room")}>이전</button>
-            </div>
           </section>
         ) : null}
 
@@ -5674,20 +5939,53 @@ function BookCreateView({
             <div className="book-period-row">
               <label>
                 시작일
-                <input type="date" value={period.startDate} onChange={(event) => onPeriodChange({ ...period, startDate: event.target.value })} />
+                <input type="date" value={period.startDate} disabled={candidatesLoading} onChange={(event) => onPeriodChange({ ...period, startDate: event.target.value })} />
               </label>
               <label>
                 종료일
-                <input type="date" value={period.endDate} onChange={(event) => onPeriodChange({ ...period, endDate: event.target.value })} />
+                <input type="date" value={period.endDate} disabled={candidatesLoading} onChange={(event) => onPeriodChange({ ...period, endDate: event.target.value })} />
               </label>
-              <button className="primary-button" type="button" onClick={onLoadCandidates} disabled={!canLoadCandidates || loading}>
-                {loading ? "불러오는 중" : "기록 불러오기"}
-              </button>
             </div>
 
-            <div className="book-wizard-actions">
-              <button className="secondary-button" type="button" onClick={() => onStepChange("product")}>이전</button>
+            <BookPeriodRangeCalendar
+              calendar={periodCalendar}
+              period={period}
+              rangeAnchor={periodRangeAnchor}
+              disabled={candidatesLoading}
+              onDateSelect={selectPeriodDateFromCalendar}
+            />
+
+            <div className="book-candidate-type-picker" aria-label="불러올 콘텐츠 선택">
+              <span>불러올 콘텐츠</span>
+              <div>
+                {bookCandidateContentTypeOptions.map((type) => {
+                  const selected = candidateContentTypes.includes(type);
+
+                  return (
+                    <button
+                      className={selected ? "selected" : ""}
+                      type="button"
+                      key={type}
+                      onClick={() => onToggleCandidateContentType(type)}
+                      disabled={candidatesLoading}
+                      aria-pressed={selected}
+                    >
+                      <ActivityIcon type={bookContentTypeActivityKind(type)} />
+                      <strong>{bookContentTypeLabel(type)}</strong>
+                      <small>{selected ? "불러오기 포함" : "제외됨"}</small>
+                    </button>
+                  );
+                })}
+              </div>
+              <p>{candidateContentTypes.length > 0 ? `${selectedCandidateContentLabel} 기록을 불러옵니다.` : "콘텐츠를 1개 이상 선택해야 기록을 불러올 수 있습니다."}</p>
             </div>
+
+            <button className="primary-button book-load-candidates-button" type="button" onClick={onLoadCandidates} disabled={!canLoadCandidates || loading}>
+              {loading ? "불러오는 중" : "기록 불러오기"}
+            </button>
+
+            {candidatesLoading ? <BookCandidateLoadingModal roomName={selectedRoom?.name ?? "선택한 방"} period={period} contentTypes={candidateContentTypes} /> : null}
+
           </section>
         ) : null}
 
@@ -5705,20 +6003,19 @@ function BookCreateView({
               {!contentCandidates ? (
                 <div className="book-empty-state">기간을 선택하고 기록을 불러오면 추억 게시글, 미션 인증, 편지가 자동으로 선택됩니다.</div>
               ) : (
-                <div className="book-content-columns">
-                  <BookContentSelectionGroup
-                    title="기간 안에서 자동으로 불러온 기록"
-                    contents={contentCandidates.defaultContents}
-                    selectedContentKeys={selectedContentKeys}
-                    onToggleContent={onToggleContent}
-                  />
-                  <BookContentSelectionGroup
-                    title="다른 기간에서 추가할 수 있는 기록"
-                    contents={contentCandidates.additionalContents}
-                    selectedContentKeys={selectedContentKeys}
-                    onToggleContent={onToggleContent}
-                  />
-                </div>
+                <BookContentLibrary
+                  contents={visibleContents}
+                  filterCounts={filterCounts}
+                  activeFilter={contentFilter}
+                  orderMode={contentOrderMode}
+                  contentTypeOrder={contentTypeOrder}
+                  selectedContentKeys={selectedContentKeys}
+                  onFilterChange={onContentFilterChange}
+                  onOrderModeChange={onContentOrderModeChange}
+                  onMoveContentType={onMoveContentType}
+                  onToggleContent={onToggleContent}
+                  onOpenContentDetail={onOpenContentDetail}
+                />
               )}
             </div>
 
@@ -5734,10 +6031,7 @@ function BookCreateView({
                 책 제목
                 <input value={title} maxLength={120} onChange={(event) => onTitleChange(event.target.value)} placeholder={selectedRoom ? `${selectedRoom.name} 기록집` : "방을 먼저 선택하세요"} />
               </label>
-              <label className="book-input-field">
-                수량
-                <input type="number" min={1} max={20} value={quantity} onChange={(event) => onQuantityChange(clampNumber(Number(event.target.value), 1, 20))} />
-              </label>
+              <BookQuantityStepper quantity={quantity} onQuantityChange={onQuantityChange} />
 
               <BookSummaryMetrics summary={draftSummary} />
 
@@ -5752,8 +6046,13 @@ function BookCreateView({
                 </div>
               ) : null}
 
+              <BookCompositionOrderPanel
+                selectedContents={selectedContents}
+                orderMode={contentOrderMode}
+                contentTypeOrder={contentTypeOrder}
+              />
+
               <div className="book-wizard-actions stacked">
-                <button className="secondary-button" type="button" onClick={() => onStepChange("period")}>이전</button>
                 <button className="primary-button" type="button" onClick={onCreatePreview} disabled={!canPreview || previewLoading}>
                   {previewLoading ? "계산 중" : "미리보기/견적 계산"}
                 </button>
@@ -5764,9 +6063,6 @@ function BookCreateView({
 
         {activeStep === "preview" ? (
           <div className="book-wizard-preview-step">
-            <div className="book-wizard-actions">
-              <button className="secondary-button" type="button" onClick={() => onStepChange("content")}>이전</button>
-            </div>
             {preview ? <BookPreviewPanel preview={preview} onOpenOrderConfirm={onOpenOrderConfirm} /> : (
               <section className="book-section book-wizard-panel">
                 <div className="book-empty-state">콘텐츠 선택 단계에서 미리보기와 견적을 먼저 계산해 주세요.</div>
@@ -5774,25 +6070,230 @@ function BookCreateView({
             )}
           </div>
         ) : null}
+
+        {previewLoading ? (
+          <BookPreviewLoadingModal
+            roomName={selectedRoom?.name ?? "선택한 방"}
+            productName={selectedProduct?.displayName ?? "선택한 상품"}
+            title={title}
+            quantity={quantity}
+            selectedCount={selectedContents.length}
+            estimatedPageCount={draftPageRange?.estimatedPageCount ?? 0}
+          />
+        ) : null}
       </section>
     </>
   );
 }
 
-function BookContentSelectionGroup({
-  title,
-  contents,
-  selectedContentKeys,
-  onToggleContent,
+function BookQuantityStepper({
+  quantity,
+  onQuantityChange,
 }: {
+  quantity: number;
+  onQuantityChange: (quantity: number) => void;
+}) {
+  const updateQuantity = (nextQuantity: number) => {
+    const normalizedQuantity = Number.isFinite(nextQuantity) ? Math.trunc(nextQuantity) : 1;
+    onQuantityChange(clampNumber(normalizedQuantity, 1, 20));
+  };
+
+  return (
+    <div className="book-input-field book-quantity-field">
+      <span>수량</span>
+      <div className="book-quantity-stepper">
+        <button type="button" onClick={() => updateQuantity(quantity - 1)} disabled={quantity <= 1} aria-label="수량 줄이기">
+          <Minus size={18} />
+        </button>
+        <input
+          type="number"
+          inputMode="numeric"
+          min={1}
+          max={20}
+          value={quantity}
+          onChange={(event) => updateQuantity(Number(event.target.value))}
+          aria-label="수량"
+        />
+        <button type="button" onClick={() => updateQuantity(quantity + 1)} disabled={quantity >= 20} aria-label="수량 늘리기">
+          <Plus size={18} />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function BookCandidateLoadingModal({
+  roomName,
+  period,
+  contentTypes,
+}: {
+  roomName: string;
+  period: BookPeriod;
+  contentTypes: BookContentType[];
+}) {
+  const contentTypeLabel = contentTypes.length > 0
+    ? contentTypes.map(bookContentTypeLabel).join(", ")
+    : "선택한 콘텐츠 없음";
+
+  return (
+    <div className="modal-backdrop" role="presentation">
+      <section className="modal book-candidate-loading-modal" role="dialog" aria-modal="true" aria-labelledby="book-candidate-loading-title">
+        <span className="book-loading-spinner" aria-hidden="true" />
+        <h2 id="book-candidate-loading-title">잠시만 기다려 주세요</h2>
+        <dl>
+          <div>
+            <dt>선택한 방</dt>
+            <dd>{roomName}</dd>
+          </div>
+          <div>
+            <dt>선택한 날짜</dt>
+            <dd>{formatDateLabel(period.startDate)} ~ {formatDateLabel(period.endDate)}</dd>
+          </div>
+          <div>
+            <dt>선택한 콘텐츠</dt>
+            <dd>{contentTypeLabel}</dd>
+          </div>
+        </dl>
+      </section>
+    </div>
+  );
+}
+
+function BookPreviewLoadingModal({
+  roomName,
+  productName,
+  title,
+  quantity,
+  selectedCount,
+  estimatedPageCount,
+}: {
+  roomName: string;
+  productName: string;
   title: string;
-  contents: BookContentCandidate[];
-  selectedContentKeys: Record<string, boolean>;
-  onToggleContent: (content: BookContentCandidate) => void;
+  quantity: number;
+  selectedCount: number;
+  estimatedPageCount: number;
 }) {
   return (
-    <section className="book-content-group">
-      <h3>{title}</h3>
+    <div className="modal-backdrop" role="presentation">
+      <section className="modal book-candidate-loading-modal" role="dialog" aria-modal="true" aria-labelledby="book-preview-loading-title">
+        <span className="book-loading-spinner" aria-hidden="true" />
+        <h2 id="book-preview-loading-title">잠시만 기다려 주세요</h2>
+        <p className="book-loading-modal-description">템플릿 기반 책 미리보기와 예상 견적을 계산하고 있습니다.</p>
+        <dl>
+          <div>
+            <dt>선택한 방</dt>
+            <dd>{roomName}</dd>
+          </div>
+          <div>
+            <dt>선택한 상품</dt>
+            <dd>{productName}</dd>
+          </div>
+          <div>
+            <dt>책 구성</dt>
+            <dd>{title} · {selectedCount}개 · {estimatedPageCount}p · {quantity}권</dd>
+          </div>
+        </dl>
+      </section>
+    </div>
+  );
+}
+
+function BookContentLibrary({
+  contents,
+  filterCounts,
+  activeFilter,
+  orderMode,
+  contentTypeOrder,
+  selectedContentKeys,
+  onFilterChange,
+  onOrderModeChange,
+  onMoveContentType,
+  onToggleContent,
+  onOpenContentDetail,
+}: {
+  contents: BookContentCandidate[];
+  filterCounts: Record<BookContentFilter, number>;
+  activeFilter: BookContentFilter;
+  orderMode: BookContentOrderMode;
+  contentTypeOrder: BookContentType[];
+  selectedContentKeys: Record<string, boolean>;
+  onFilterChange: (filter: BookContentFilter) => void;
+  onOrderModeChange: (mode: BookContentOrderMode) => void;
+  onMoveContentType: (type: BookContentType, direction: "UP" | "DOWN") => void;
+  onToggleContent: (content: BookContentCandidate) => void;
+  onOpenContentDetail: (content: BookContentCandidate) => void;
+}) {
+  return (
+    <section className="book-content-library" aria-label="책 기록 라이브러리">
+      <div className="book-content-toolbar">
+        <div className="book-filter-tabs" role="tablist" aria-label="기록 필터">
+          <div className="book-filter-row status">
+            {bookContentStatusFilters.map((filter) => (
+              <BookContentFilterTab
+                key={filter}
+                filter={filter}
+                count={filterCounts[filter]}
+                active={activeFilter === filter}
+                onClick={() => onFilterChange(filter)}
+              />
+            ))}
+          </div>
+          <div className="book-filter-row type">
+            {bookContentTypeFilters.map((filter) => (
+              <BookContentFilterTab
+                key={filter}
+                filter={filter}
+                count={filterCounts[filter]}
+                active={activeFilter === filter}
+                onClick={() => onFilterChange(filter)}
+              />
+            ))}
+          </div>
+        </div>
+
+        <div className="book-order-controls" aria-label="책 구성 순서">
+          <span>책 구성 순서</span>
+          <div className="segmented-control">
+            <button
+              className={orderMode === "DATE" ? "active" : ""}
+              type="button"
+              onClick={() => {
+                onOrderModeChange("DATE");
+              }}
+            >
+              날짜 순
+            </button>
+            <button
+              className={orderMode === "TYPE" ? "active" : ""}
+              type="button"
+              onClick={() => onOrderModeChange("TYPE")}
+            >
+              콘텐츠 순
+            </button>
+          </div>
+          {orderMode === "TYPE" ? (
+            <div className="book-type-order-inline" aria-label="콘텐츠 타입 순서 설정">
+              <div className="book-type-order-list">
+                {contentTypeOrder.map((type, index) => (
+                  <div className="book-type-order-item" key={type}>
+                    <strong>{bookContentTypeLabel(type)}</strong>
+                    <div>
+                      <button type="button" onClick={() => onMoveContentType(type, "UP")} disabled={index === 0} aria-label={`${bookContentTypeLabel(type)} 순서를 위로 이동`}>
+                        <ArrowUp size={14} />
+                      </button>
+                      <button type="button" onClick={() => onMoveContentType(type, "DOWN")} disabled={index === contentTypeOrder.length - 1} aria-label={`${bookContentTypeLabel(type)} 순서를 아래로 이동`}>
+                        <ArrowDown size={14} />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null}
+        </div>
+      </div>
+
       {contents.length === 0 ? (
         <div className="book-empty-state compact">표시할 기록이 없습니다.</div>
       ) : (
@@ -5801,19 +6302,331 @@ function BookContentSelectionGroup({
             const selected = Boolean(selectedContentKeys[bookContentKey(content)]);
 
             return (
-              <label className={`book-content-row ${selected ? "selected" : ""}`} key={bookContentKey(content)}>
-                <input type="checkbox" checked={selected} onChange={() => onToggleContent(content)} />
-                <span>
+              <article className={`book-content-row ${selected ? "selected" : ""}`} key={bookContentKey(content)}>
+                <label className="book-content-checkbox" aria-label={`${content.title} 선택`}>
+                  <input type="checkbox" checked={selected} onChange={() => onToggleContent(content)} />
+                </label>
+                <button className="book-content-detail-button" type="button" onClick={() => onOpenContentDetail(content)}>
                   <strong>{content.title}</strong>
                   <small>{content.sourceLabel} · {formatDateLabel(content.occurredDate)} · {content.authorName}</small>
                   <em>{content.description}</em>
+                </button>
+                <span className="book-page-allocation" title={bookPageAllocationTooltip()} aria-label={`예상 ${content.pageCount}페이지 할당. ${bookPageAllocationTooltip()}`}>
+                  {content.pageCount}p 할당
                 </span>
-                <b>{content.pageCount}p</b>
-              </label>
+              </article>
             );
           })}
         </div>
       )}
+    </section>
+  );
+}
+
+function BookContentFilterTab({
+  filter,
+  count,
+  active,
+  onClick,
+}: {
+  filter: BookContentFilter;
+  count: number;
+  active: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      className={active ? "active" : ""}
+      type="button"
+      role="tab"
+      onClick={onClick}
+      aria-selected={active}
+    >
+      <span>{bookContentFilterLabel(filter)}</span>
+      <b>{count}</b>
+    </button>
+  );
+}
+
+function BookCompositionOrderPanel({
+  selectedContents,
+  orderMode,
+  contentTypeOrder,
+}: {
+  selectedContents: BookContentCandidate[];
+  orderMode: BookContentOrderMode;
+  contentTypeOrder: BookContentType[];
+}) {
+  const [compositionModalOpen, setCompositionModalOpen] = useState(false);
+  const orderSummary = orderMode === "TYPE"
+    ? contentTypeOrder.map(bookContentTypeLabel).join(" -> ")
+    : "오래된 기록 -> 최신 기록";
+
+  return (
+    <section className="book-composition-panel" aria-label="책에 들어갈 최종 구성 순서">
+      <div>
+        <span>책 구성 순서</span>
+        <strong>{orderMode === "DATE" ? "날짜 순" : "콘텐츠 순"}</strong>
+      </div>
+      <p>{orderSummary}</p>
+      {selectedContents.length === 0 ? (
+        <div className="book-empty-state compact">선택한 기록이 없습니다.</div>
+      ) : (
+        <button className="book-composition-open-button" type="button" onClick={() => setCompositionModalOpen(true)}>
+          전체 순서 보기
+          <span>{selectedContents.length}개</span>
+        </button>
+      )}
+      {compositionModalOpen ? (
+        <BookCompositionOrderModal
+          selectedContents={selectedContents}
+          orderMode={orderMode}
+          orderSummary={orderSummary}
+          onClose={() => setCompositionModalOpen(false)}
+        />
+      ) : null}
+    </section>
+  );
+}
+
+function BookCompositionOrderModal({
+  selectedContents,
+  orderMode,
+  orderSummary,
+  onClose,
+}: {
+  selectedContents: BookContentCandidate[];
+  orderMode: BookContentOrderMode;
+  orderSummary: string;
+  onClose: () => void;
+}) {
+  const titleId = "book-composition-order-modal-title";
+
+  return (
+    <div className="modal-backdrop" role="presentation">
+      <section className="modal book-composition-modal" role="dialog" aria-modal="true" aria-labelledby={titleId}>
+        <div className="modal-title-row">
+          <div>
+            <span>{orderMode === "DATE" ? "날짜 순" : "콘텐츠 순"}</span>
+            <h2 id={titleId}>책 구성 순서</h2>
+            <p>{orderSummary}</p>
+          </div>
+          <button className="modal-icon-button" type="button" onClick={onClose} aria-label="책 구성 순서 닫기">
+            <X size={20} />
+          </button>
+        </div>
+
+        <div className="book-composition-modal-list">
+          {selectedContents.length === 0 ? (
+            <div className="book-empty-state compact">선택한 기록이 없습니다.</div>
+          ) : (
+            <ol>
+              {selectedContents.map((content, index) => (
+                <li key={bookContentKey(content)}>
+                  <span>{index + 1}</span>
+                  <div>
+                    <strong>{content.title}</strong>
+                    <small>{content.sourceLabel} · {formatDateLabel(content.occurredDate)} · {content.authorName} · {content.pageCount}p 할당</small>
+                    <em>{content.description}</em>
+                  </div>
+                </li>
+              ))}
+            </ol>
+          )}
+        </div>
+
+        <div className="modal-actions">
+          <button className="primary-button" type="button" onClick={onClose}>확인</button>
+        </div>
+      </section>
+    </div>
+  );
+}
+function BookContentDetailModal({
+  detail,
+  onClose,
+}: {
+  detail: BookContentDetailModalState;
+  onClose: () => void;
+}) {
+  const content = detail.content;
+  const titleId = `book-content-detail-${bookContentKey(content).replace(":", "-")}`;
+
+  return (
+    <div className="modal-backdrop" role="presentation">
+      <section className="modal book-content-detail-modal" role="dialog" aria-modal="true" aria-labelledby={titleId}>
+        <div className="modal-title-row">
+          <div>
+            <span>{content.sourceLabel} · {content.pageCount}p 할당</span>
+            <h2 id={titleId}>{content.title}</h2>
+          </div>
+          <button className="modal-icon-button" type="button" onClick={onClose} aria-label="상세 닫기">
+            <X size={20} />
+          </button>
+        </div>
+
+        {detail.loading ? <p className="empty-state">상세 내용을 불러오는 중입니다.</p> : null}
+
+        {!detail.loading && content.type === "MEMORY" ? (
+          <BookMemoryDetailContent content={content} detail={detail.memoryDetail} />
+        ) : null}
+        {!detail.loading && content.type === "MISSION" ? (
+          <BookMissionDetailContent content={content} detail={detail.missionDetail} />
+        ) : null}
+        {!detail.loading && content.type === "LETTER" ? (
+          <BookLetterDetailContent content={content} detail={detail.letterDetail} />
+        ) : null}
+        {!detail.loading && content.type === "CHAT" ? (
+          <BookChatDetailContent content={content} messages={detail.chatMessages ?? []} />
+        ) : null}
+
+        <div className="modal-actions">
+          <button className="primary-button" type="button" onClick={onClose}>확인</button>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function BookMemoryDetailContent({ content, detail }: { content: BookContentCandidate; detail?: MemoryPostDetail }) {
+  const comments = detail?.comments ?? [];
+
+  return (
+    <div className="book-content-detail-body">
+      <MemoryImage imageUrl={detail?.representativeImageUrl ?? null} title={content.title} large />
+      <div className="book-detail-meta-grid">
+        <div>
+          <span>작성자</span>
+          <strong>{detail?.authorName ?? content.authorName}</strong>
+        </div>
+        <div>
+          <span>날짜</span>
+          <strong>{formatDateLabel(detail?.occurredDate ?? content.occurredDate)}</strong>
+        </div>
+        <div>
+          <span>사진</span>
+          <strong>{detail?.imageCount ?? content.imageCount}장</strong>
+        </div>
+        <div>
+          <span>댓글</span>
+          <strong>{detail?.commentCount ?? content.commentCount}개</strong>
+        </div>
+      </div>
+      <p className="book-detail-text">{detail?.body ?? content.description}</p>
+      <BookDetailCommentList comments={comments.map((comment) => ({
+        id: comment.id,
+        authorName: comment.authorName,
+        body: comment.body,
+        createdAt: comment.createdAt,
+      }))} />
+    </div>
+  );
+}
+
+function BookMissionDetailContent({ content, detail }: { content: BookContentCandidate; detail?: MissionSummary }) {
+  const submission = detail?.latestSubmission ?? fallbackMissionDetailFromBookContent(0, content).latestSubmission!;
+
+  return (
+    <div className="book-content-detail-body">
+      <div className="book-detail-meta-grid">
+        <div>
+          <span>미션 상태</span>
+          <strong>{detail ? missionStatusLabel(detail.status) : "인증 기록"}</strong>
+        </div>
+        <div>
+          <span>인증자</span>
+          <strong>{submission.submitterName}</strong>
+        </div>
+        <div>
+          <span>인증일</span>
+          <strong>{formatDateLabel(submission.occurredDate)}</strong>
+        </div>
+        <div>
+          <span>동의</span>
+          <strong>{submission.approvedCount}/{submission.requiredApprovalCount}</strong>
+        </div>
+      </div>
+      {submission.imageUrl ? <MissionProofImage imageUrl={submission.imageUrl} title={content.title} /> : null}
+      <p className="book-detail-text">{submission.body}</p>
+      {detail?.description ? <p className="book-detail-muted">{detail.description}</p> : null}
+      <BookDetailCommentList comments={(detail?.comments ?? []).map((comment) => ({
+        id: comment.id,
+        authorName: comment.authorName,
+        body: comment.body,
+        createdAt: comment.createdAt,
+      }))} />
+    </div>
+  );
+}
+
+function BookLetterDetailContent({ content, detail }: { content: BookContentCandidate; detail?: LetterDetail }) {
+  return (
+    <div className="book-content-detail-body">
+      <div className="letter-paper book-detail-letter-paper">
+        <div className="letter-paper-meta">
+          <span>보낸 사람</span>
+          <strong>{detail?.senderName ?? content.authorName}</strong>
+        </div>
+        <div className="letter-paper-meta">
+          <span>받는 사람</span>
+          <strong>{detail?.receiverName ?? "방 구성원"}</strong>
+        </div>
+        <p>{detail?.body ?? content.description}</p>
+      </div>
+      <div className="book-detail-info-row">
+        <span>{formatDateLabel(detail?.occurredDate ?? content.occurredDate)}</span>
+        {detail?.sentAt ? <span>{formatChatTime(detail.sentAt)}</span> : null}
+        <span>{detail?.mine ? "보낸 편지" : "받은 편지"}</span>
+      </div>
+    </div>
+  );
+}
+
+function BookChatDetailContent({ content, messages }: { content: BookContentCandidate; messages: ChatMessage[] }) {
+  return (
+    <div className="book-content-detail-body">
+      <div className="book-detail-meta-grid">
+        <div>
+          <span>날짜</span>
+          <strong>{formatDateLabel(content.occurredDate)}</strong>
+        </div>
+        <div>
+          <span>메시지</span>
+          <strong>{messages.length}개</strong>
+        </div>
+      </div>
+      <div className="book-detail-chat-list">
+        {messages.length === 0 ? <p className="empty-state">표시할 채팅이 없습니다.</p> : null}
+        {messages.map((message) => (
+          <div className={`chat-message-row ${message.mine ? "mine" : ""}`} key={message.id}>
+            <div className="chat-message-meta">
+              <strong>{message.senderName}</strong>
+              <span>{formatChatTime(message.sentAt)}</span>
+            </div>
+            <p className="chat-message-bubble">{message.body}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function BookDetailCommentList({
+  comments,
+}: {
+  comments: Array<{ id: number; authorName: string; body: string; createdAt: string }>;
+}) {
+  return (
+    <section className="book-detail-comments">
+      <h3>댓글 일부</h3>
+      {comments.length === 0 ? <p className="empty-state compact">표시할 댓글이 없습니다.</p> : null}
+      {comments.slice(0, 4).map((comment) => (
+        <div className="book-detail-comment" key={comment.id}>
+          <strong>{comment.authorName}</strong>
+          <span>{formatChatTime(comment.createdAt)}</span>
+          <p>{comment.body}</p>
+        </div>
+      ))}
     </section>
   );
 }
@@ -7100,6 +7913,194 @@ function initialBookSelection(response: BookContentCandidatesResponse): Record<s
   return selection;
 }
 
+function filterBookContentCandidatesResponse(
+  response: BookContentCandidatesResponse,
+  contentTypes: BookContentType[],
+): BookContentCandidatesResponse {
+  if (contentTypes.length === bookCandidateContentTypeOptions.length) {
+    return response;
+  }
+
+  const selectedTypes = new Set(contentTypes);
+  const defaultContents = response.defaultContents.filter((content) => selectedTypes.has(content.type));
+  const additionalContents = response.additionalContents.filter((content) => selectedTypes.has(content.type));
+  const pageRange = buildBookPageRange(response.product, defaultContents) ?? response.pageRange;
+
+  return {
+    ...response,
+    defaultContents,
+    additionalContents,
+    summary: buildBookContentSummary(defaultContents, pageRange.estimatedPageCount),
+    pageRange,
+  };
+}
+
+function sortBookContents(
+  contents: BookContentCandidate[],
+  orderMode: BookContentOrderMode,
+  contentTypeOrder: BookContentType[],
+): BookContentCandidate[] {
+  const typeRank = (type: BookContentType) => {
+    const index = contentTypeOrder.indexOf(type);
+    return index === -1 ? defaultBookContentTypeOrder.indexOf(type) : index;
+  };
+
+  return [...contents].sort((first, second) => {
+    if (orderMode === "TYPE") {
+      const typeCompare = typeRank(first.type) - typeRank(second.type);
+      if (typeCompare !== 0) return typeCompare;
+      const dateCompare = first.occurredDate.localeCompare(second.occurredDate);
+      if (dateCompare !== 0) return dateCompare;
+      return first.sourceId - second.sourceId;
+    }
+
+    const dateCompare = first.occurredDate.localeCompare(second.occurredDate);
+    if (dateCompare !== 0) return dateCompare;
+    return defaultBookContentTypeOrder.indexOf(first.type) - defaultBookContentTypeOrder.indexOf(second.type) || first.sourceId - second.sourceId;
+  });
+}
+
+function filterBookContents(
+  contents: BookContentCandidate[],
+  filter: BookContentFilter,
+  selectedContentKeys: Record<string, boolean>,
+): BookContentCandidate[] {
+  if (filter === "ALL") return contents;
+  if (filter === "SELECTED") return contents.filter((content) => selectedContentKeys[bookContentKey(content)]);
+  if (filter === "UNSELECTED") return contents.filter((content) => !selectedContentKeys[bookContentKey(content)]);
+  return contents.filter((content) => content.type === filter);
+}
+
+function buildBookContentFilterCounts(
+  contents: BookContentCandidate[],
+  selectedContentKeys: Record<string, boolean>,
+): Record<BookContentFilter, number> {
+  return {
+    ALL: contents.length,
+    MEMORY: contents.filter((content) => content.type === "MEMORY").length,
+    MISSION: contents.filter((content) => content.type === "MISSION").length,
+    LETTER: contents.filter((content) => content.type === "LETTER").length,
+    CHAT: contents.filter((content) => content.type === "CHAT").length,
+    SELECTED: contents.filter((content) => selectedContentKeys[bookContentKey(content)]).length,
+    UNSELECTED: contents.filter((content) => !selectedContentKeys[bookContentKey(content)]).length,
+  };
+}
+
+function bookContentFilterLabel(filter: BookContentFilter): string {
+  if (filter === "ALL") return "전체";
+  if (filter === "SELECTED") return "선택됨";
+  if (filter === "UNSELECTED") return "미선택";
+  if (filter === "MEMORY") return "추억";
+  if (filter === "MISSION") return "미션";
+  if (filter === "LETTER") return "편지";
+  return "채팅";
+}
+
+function bookPageAllocationTooltip(): string {
+  return [
+    "편지: 기본 2p",
+    "미션 인증: 기본 2p, 댓글이 많으면 추가",
+    "추억 게시글: 기본 2p, 사진/댓글 수에 따라 추가",
+    "채팅 묶음: 메시지 수 기준으로 1p+",
+  ].join("\n");
+}
+
+function findMissionByBookContent(missionList: MissionListResponse, content: BookContentCandidate): MissionSummary | null {
+  return missionList.missions.find((mission) => mission.latestSubmission?.id === content.sourceId || mission.id === content.sourceId) ?? null;
+}
+
+function fallbackMemoryDetailFromBookContent(roomId: number, content: BookContentCandidate): MemoryPostDetail {
+  return {
+    id: content.sourceId,
+    roomId,
+    authorMemberId: 0,
+    authorName: content.authorName,
+    title: content.title,
+    body: content.description,
+    representativeImageUrl: content.imageCount > 0 ? `https://picsum.photos/seed/book-memory-${content.sourceId}/900/620` : null,
+    imageCount: content.imageCount,
+    commentCount: content.commentCount,
+    occurredDate: content.occurredDate,
+    createdAt: `${content.occurredDate}T12:00:00+09:00`,
+    mine: false,
+    comments: [],
+  };
+}
+
+function fallbackMissionDetailFromBookContent(roomId: number, content: BookContentCandidate): MissionSummary {
+  const requiredApprovalCount = 1;
+
+  return {
+    id: content.sourceId,
+    roomId,
+    title: content.title,
+    description: "책 만들기 후보로 불러온 미션 인증 기록입니다.",
+    status: "WAITING_APPROVAL",
+    createdByMemberId: 0,
+    createdByName: content.authorName,
+    custom: false,
+    completedAt: null,
+    latestSubmission: {
+      id: content.sourceId,
+      missionId: content.sourceId,
+      submitterMemberId: 0,
+      submitterName: content.authorName,
+      body: content.description,
+      imageUrl: content.imageCount > 0 ? `https://picsum.photos/seed/book-mission-${content.sourceId}/900/620` : "",
+      occurredDate: content.occurredDate,
+      submittedAt: `${content.occurredDate}T12:00:00+09:00`,
+      mine: false,
+      approvedCount: 0,
+      totalMemberCount: 1,
+      requiredApprovalCount,
+      approvalRate: 0,
+      myDecision: null,
+      canApprove: false,
+      completed: false,
+    },
+    comments: [],
+  };
+}
+
+function fallbackLetterDetailFromBookContent(roomId: number, content: BookContentCandidate): LetterDetail {
+  const [routeText, bodyText] = content.description.split(" · ");
+  const [senderName, receiverName] = routeText?.includes("->")
+    ? routeText.split("->").map((value) => value.trim())
+    : [content.authorName, "방 구성원"];
+
+  return {
+    id: content.sourceId,
+    roomId,
+    title: content.title,
+    body: bodyText || content.description,
+    senderMemberId: 0,
+    senderName: senderName || content.authorName,
+    receiverMemberId: 0,
+    receiverName: receiverName || "방 구성원",
+    sentAt: `${content.occurredDate}T12:00:00+09:00`,
+    occurredDate: content.occurredDate,
+    readAt: null,
+    read: true,
+    mine: false,
+  };
+}
+
+function fallbackChatMessagesFromBookContent(roomId: number, content: BookContentCandidate): ChatMessage[] {
+  return [
+    {
+      id: content.sourceId,
+      roomId,
+      senderMemberId: 0,
+      senderName: content.authorName,
+      senderType: "MEMBER",
+      body: content.description,
+      sentAt: `${content.occurredDate}T12:00:00+09:00`,
+      occurredDate: content.occurredDate,
+      mine: false,
+    },
+  ];
+}
+
 function buildBookContentSummary(contents: BookContentCandidate[], estimatedPageCount: number): BookContentSummary {
   return {
     memoryCount: contents.filter((content) => content.type === "MEMORY").length,
@@ -7229,9 +8230,11 @@ function buildDemoBookContentCandidates(
   productUid: string,
   period: BookPeriod,
   memberId: number,
+  contentTypes: BookContentType[] = bookCandidateContentTypeOptions,
 ): BookContentCandidatesResponse {
   const room = demoRoomsForMember(memberId).find((candidate) => candidate.id === roomId) ?? demoRooms[0];
   const product = demoBookProducts().find((candidate) => candidate.uid === productUid) ?? demoBookProducts()[0];
+  const selectedTypes = new Set(contentTypes);
   const memories = demoMemoryPosts(room.id).map((post): BookContentCandidate => ({
     type: "MEMORY",
     sourceId: post.id,
@@ -7290,10 +8293,12 @@ function buildDemoBookContentCandidates(
     sourceLabel: "채팅",
   }));
   const nonChatContents = [...memories, ...missions, ...letters];
-  const defaultContents = nonChatContents.filter((content) => inBookPeriod(content.occurredDate, period)).sort(bookContentSort);
+  const typeMatchedNonChatContents = nonChatContents.filter((content) => selectedTypes.has(content.type));
+  const typeMatchedChatDays = chatDays.filter((content) => selectedTypes.has(content.type));
+  const defaultContents = typeMatchedNonChatContents.filter((content) => inBookPeriod(content.occurredDate, period)).sort(bookContentSort);
   const additionalContents = [
-    ...nonChatContents.filter((content) => !inBookPeriod(content.occurredDate, period)),
-    ...chatDays.filter((content) => inBookPeriod(content.occurredDate, period)),
+    ...typeMatchedNonChatContents.filter((content) => !inBookPeriod(content.occurredDate, period)),
+    ...typeMatchedChatDays.filter((content) => inBookPeriod(content.occurredDate, period)),
   ].sort((first, second) => second.occurredDate.localeCompare(first.occurredDate));
   const pageRange = buildBookPageRange(product, defaultContents) ?? {
     minPage: product.minPage,
@@ -7344,6 +8349,13 @@ function bookContentTypeLabel(type: BookContentType): string {
   if (type === "MISSION") return "미션 인증";
   if (type === "LETTER") return "편지";
   return "채팅";
+}
+
+function bookContentTypeActivityKind(type: BookContentType): "memory" | "mission" | "letter" | "chat" {
+  if (type === "MEMORY") return "memory";
+  if (type === "MISSION") return "mission";
+  if (type === "LETTER") return "letter";
+  return "chat";
 }
 
 function orderDetailToSummary(order: PrintOrderDetail): PrintOrderSummary {
@@ -7978,6 +8990,43 @@ function calendarTarget(day: CalendarDayActivity, roomId?: number): { roomId: nu
   return null;
 }
 
+function buildBookPeriodCalendar(calendar: CalendarResponse | null, roomId: number | null): CalendarResponse {
+  const source = calendar ?? demoCalendar;
+  if (!roomId) {
+    return source;
+  }
+
+  const days = source.days
+    .map((day) => {
+      const rooms = day.rooms.filter((room) => room.roomId === roomId);
+      const chatCount = sumCalendarRooms(rooms, "chatCount");
+      const memoryCount = sumCalendarRooms(rooms, "memoryCount");
+      const missionCount = sumCalendarRooms(rooms, "missionCount");
+      const letterCount = sumCalendarRooms(rooms, "letterCount");
+
+      return {
+        ...day,
+        rooms,
+        chatCount,
+        memoryCount,
+        missionCount,
+        letterCount,
+        totalCount: chatCount + memoryCount + missionCount + letterCount,
+      };
+    })
+    .filter((day) => day.totalCount > 0);
+
+  if (days.length === 0 && calendar) {
+    return filterDemoCalendar(roomId);
+  }
+
+  return {
+    month: source.month,
+    selectedDate: days[0]?.date ?? null,
+    days,
+  };
+}
+
 function filterDemoCalendar(roomId: number | null): CalendarResponse {
   if (!roomId) {
     return demoCalendar;
@@ -8032,6 +9081,13 @@ async function safeApiRequest<T>(path: string, options: { method: string; body?:
   } catch {
     return null;
   }
+}
+
+async function waitAtLeast(startedAt: number, minimumMs: number): Promise<void> {
+  const remainingMs = minimumMs - (Date.now() - startedAt);
+  if (remainingMs <= 0) return;
+
+  await new Promise<void>((resolve) => window.setTimeout(resolve, remainingMs));
 }
 
 async function apiFormDataRequest<T>(path: string, formData: FormData): Promise<T> {

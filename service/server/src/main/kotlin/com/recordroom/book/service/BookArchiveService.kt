@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.recordroom.book.model.BookContentCandidate
 import com.recordroom.book.model.BookContentCandidateResponse
 import com.recordroom.book.model.BookContentCandidatesResponse
+import com.recordroom.book.model.BookContentType
 import com.recordroom.book.model.BookContentSummaryResponse
 import com.recordroom.book.model.BookCreateRoomResponse
 import com.recordroom.book.model.BookCreateRoomsResponse
@@ -75,16 +76,21 @@ class BookArchiveService(
         productUid: String,
         startDate: LocalDate,
         endDate: LocalDate,
+        rawContentTypes: String? = null,
     ): BookContentCandidatesResponse {
         memberService.getProfile(memberId)
         val room = validateRoomAccess(roomId, memberId)
         val product = bookProductCatalog.getProduct(productUid)
         validatePeriod(startDate, endDate)
+        val selectedContentTypes = resolveCandidateContentTypes(rawContentTypes)
 
         val defaultContents = bookContentRepository.findDefaultCandidates(roomId, memberId, startDate, endDate)
+            .filter { it.type in selectedContentTypes }
         val defaultResponses = defaultContents.map { it.toResponse() }
         val rawPageCount = bookPageEstimator.estimateTotalPage(defaultContents)
         val pageRange = bookPageLimitChecker.check(product, rawPageCount)
+        val additionalContents = bookContentRepository.findAdditionalCandidates(roomId, memberId, startDate, endDate)
+            .filter { it.type in selectedContentTypes }
 
         return BookContentCandidatesResponse(
             roomId = room.id,
@@ -92,7 +98,7 @@ class BookArchiveService(
             product = product,
             period = BookPeriodResponse(startDate = startDate, endDate = endDate),
             defaultContents = defaultResponses,
-            additionalContents = bookContentRepository.findAdditionalCandidates(roomId, memberId, startDate, endDate).map { it.toResponse() },
+            additionalContents = additionalContents.map { it.toResponse() },
             summary = bookPageEstimator.summarize(defaultContents, pageRange.estimatedPageCount),
             pageRange = pageRange,
         )
@@ -180,6 +186,25 @@ class BookArchiveService(
         if (startDate.isAfter(endDate)) {
             throw badRequest("BOOK_PERIOD_INVALID", "시작일은 종료일보다 늦을 수 없습니다.")
         }
+    }
+
+    private fun resolveCandidateContentTypes(rawContentTypes: String?): Set<BookContentType> {
+        if (rawContentTypes == null) {
+            return BookContentType.entries.toSet()
+        }
+
+        val tokens = rawContentTypes.split(",")
+            .map { it.trim().uppercase() }
+            .filter { it.isNotBlank() }
+
+        if (tokens.isEmpty()) {
+            throw badRequest("BOOK_CONTENT_TYPES_REQUIRED", "불러올 콘텐츠를 1개 이상 선택해 주세요.")
+        }
+
+        return tokens.map { rawType ->
+            runCatching { BookContentType.valueOf(rawType) }
+                .getOrElse { throw badRequest("BOOK_CONTENT_TYPE_NOT_SUPPORTED", "지원하지 않는 콘텐츠 종류입니다.") }
+        }.toSet()
     }
 
     private fun validateTitle(rawTitle: String?, roomName: String): String {

@@ -53,6 +53,7 @@ class BookArchiveController(
         @RequestParam productUid: String,
         @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) startDate: LocalDate,
         @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) endDate: LocalDate,
+        @RequestParam(required = false) contentTypes: String?,
     ): BookContentCandidatesResponse =
         bookArchiveService.getContentCandidates(
             memberId = currentMemberResolver.resolve(rawMemberId),
@@ -60,6 +61,7 @@ class BookArchiveController(
             productUid = productUid,
             startDate = startDate,
             endDate = endDate,
+            rawContentTypes = contentTypes,
         )
 
     @PostMapping("/previews")
