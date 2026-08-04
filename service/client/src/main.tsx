@@ -12,7 +12,6 @@ import {
   ChevronDown,
   Clock,
   CircleHelp,
-  Eye,
   FileText,
   Home,
   Image as ImageIcon,
@@ -6006,9 +6005,6 @@ function BookContentLibrary({
                 <span className="book-page-allocation" title={bookPageAllocationTooltip()} aria-label={`예상 ${content.pageCount}페이지 할당. ${bookPageAllocationTooltip()}`}>
                   {content.pageCount}p 할당
                 </span>
-                <button className="book-content-open-button" type="button" onClick={() => onOpenContentDetail(content)} aria-label={`${content.title} 상세 보기`}>
-                  <Eye size={16} />
-                </button>
               </article>
             );
           })}

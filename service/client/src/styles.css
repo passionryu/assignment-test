@@ -4194,8 +4194,7 @@ dl {
 
 .book-filter-tabs button,
 .segmented-control button,
-.book-type-order-item button,
-.book-content-open-button {
+.book-type-order-item button {
   border: 1px solid #dfe7f2;
   border-radius: 8px;
   background: #ffffff;
@@ -4313,7 +4312,7 @@ dl {
 .book-content-row {
   min-width: 0;
   display: grid;
-  grid-template-columns: 28px minmax(0, 1fr) auto 36px;
+  grid-template-columns: 28px minmax(0, 1fr) auto;
   align-items: center;
   gap: 12px;
   border: 1px solid #e4ebf5;
@@ -4321,11 +4320,26 @@ dl {
   background: #ffffff;
   color: #253248;
   padding: 13px;
+  transition: border-color 160ms ease, background 160ms ease, box-shadow 160ms ease;
 }
 
 .book-content-row.selected {
   border-color: #f7b5d1;
   background: #fff8fb;
+}
+
+.book-content-row:has(.book-content-detail-button:hover),
+.book-content-row:has(.book-content-detail-button:focus-visible) {
+  border-color: #9edbd9;
+  background: #f7fdfd;
+  box-shadow: 0 10px 24px rgba(12, 159, 168, 0.1);
+}
+
+.book-content-row.selected:has(.book-content-detail-button:hover),
+.book-content-row.selected:has(.book-content-detail-button:focus-visible) {
+  border-color: #f04f95;
+  background: #fff5fa;
+  box-shadow: 0 10px 24px rgba(240, 79, 149, 0.12);
 }
 
 .book-content-checkbox {
@@ -4346,10 +4360,22 @@ dl {
   display: grid;
   gap: 4px;
   border: 0;
+  border-radius: 6px;
   background: transparent;
   color: inherit;
   padding: 0;
+  cursor: pointer;
   text-align: left;
+}
+
+.book-content-detail-button:focus-visible {
+  outline: 3px solid rgba(12, 159, 168, 0.16);
+  outline-offset: 4px;
+}
+
+.book-content-detail-button:hover strong,
+.book-content-detail-button:focus-visible strong {
+  color: #0b7780;
 }
 
 .book-content-detail-button strong {
@@ -4384,15 +4410,6 @@ dl {
   font-size: 12px;
   font-weight: 950;
   white-space: nowrap;
-}
-
-.book-content-open-button {
-  width: 34px;
-  height: 34px;
-  display: inline-grid;
-  place-items: center;
-  color: #0c9fa8;
-  padding: 0;
 }
 
 .book-empty-state {
@@ -5742,8 +5759,7 @@ dl {
   }
 
   .book-content-checkbox,
-  .book-page-allocation,
-  .book-content-open-button {
+  .book-page-allocation {
     justify-self: start;
   }
 
