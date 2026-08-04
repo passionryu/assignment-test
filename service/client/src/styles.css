@@ -3962,39 +3962,6 @@ dl {
   color: #98a2b3;
 }
 
-.book-wizard-summary {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 10px;
-}
-
-.book-wizard-summary div {
-  min-width: 0;
-  border: 1px solid #dfe7f2;
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.94);
-  padding: 14px 16px;
-}
-
-.book-wizard-summary span {
-  display: block;
-  color: #0c9fa8;
-  font-size: 12px;
-  font-weight: 950;
-  margin-bottom: 5px;
-}
-
-.book-wizard-summary strong {
-  display: block;
-  min-width: 0;
-  overflow: hidden;
-  color: #253248;
-  font-size: 14px;
-  font-weight: 900;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 .book-wizard-panel {
   min-height: 330px;
 }
@@ -5274,7 +5241,6 @@ dl {
   .notification-grid,
   .metric-grid,
   .room-hub-grid,
-  .book-wizard-summary,
   .book-room-grid,
   .book-product-grid,
   .book-preview-grid,
@@ -5358,7 +5324,6 @@ dl {
   .metric-grid,
   .room-hub-grid,
   .book-stepper,
-  .book-wizard-summary,
   .book-room-grid,
   .book-product-grid,
   .book-period-row,

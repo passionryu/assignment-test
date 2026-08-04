@@ -5598,25 +5598,6 @@ function BookCreateView({
           })}
         </ol>
 
-        <div className="book-wizard-summary" aria-label="책 만들기 선택 요약">
-          <div>
-            <span>방</span>
-            <strong>{selectedRoom?.name ?? "아직 선택하지 않음"}</strong>
-          </div>
-          <div>
-            <span>상품</span>
-            <strong>{selectedProduct?.displayName ?? "아직 선택하지 않음"}</strong>
-          </div>
-          <div>
-            <span>기간</span>
-            <strong>{formatDateLabel(period.startDate)} ~ {formatDateLabel(period.endDate)}</strong>
-          </div>
-          <div>
-            <span>구성</span>
-            <strong>{selectedContents.length}개 · {draftPageRange?.estimatedPageCount ?? 0}p</strong>
-          </div>
-        </div>
-
         {activeStep === "room" ? (
           <section className="book-section book-wizard-panel" aria-labelledby="book-room-step">
             <div className="book-section-heading">
