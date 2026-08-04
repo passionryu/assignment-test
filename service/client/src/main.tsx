@@ -5936,6 +5936,9 @@ function BookContentLibrary({
   onToggleContent: (content: BookContentCandidate) => void;
   onOpenContentDetail: (content: BookContentCandidate) => void;
 }) {
+  const [typeOrderPopoverOpen, setTypeOrderPopoverOpen] = useState(false);
+  const typeOrderPopoverId = "book-type-order-popover";
+
   return (
     <section className="book-content-library" aria-label="책 기록 라이브러리">
       <div className="book-content-toolbar">
@@ -5958,28 +5961,58 @@ function BookContentLibrary({
         <div className="book-order-controls" aria-label="책 구성 순서">
           <span>책 구성 순서</span>
           <div className="segmented-control">
-            <button className={orderMode === "DATE" ? "active" : ""} type="button" onClick={() => onOrderModeChange("DATE")}>
+            <button
+              className={orderMode === "DATE" ? "active" : ""}
+              type="button"
+              onClick={() => {
+                setTypeOrderPopoverOpen(false);
+                onOrderModeChange("DATE");
+              }}
+            >
               날짜 순
             </button>
-            <button className={orderMode === "TYPE" ? "active" : ""} type="button" onClick={() => onOrderModeChange("TYPE")}>
+            <button
+              className={orderMode === "TYPE" ? "active" : ""}
+              type="button"
+              onClick={() => {
+                onOrderModeChange("TYPE");
+                setTypeOrderPopoverOpen(true);
+              }}
+            >
               콘텐츠 순
             </button>
           </div>
           {orderMode === "TYPE" ? (
-            <div className="book-type-order-list">
-              {contentTypeOrder.map((type, index) => (
-                <div className="book-type-order-item" key={type}>
-                  <strong>{bookContentTypeLabel(type)}</strong>
-                  <div>
-                    <button type="button" onClick={() => onMoveContentType(type, "UP")} disabled={index === 0} aria-label={`${bookContentTypeLabel(type)} 순서를 위로 이동`}>
-                      <ArrowUp size={14} />
-                    </button>
-                    <button type="button" onClick={() => onMoveContentType(type, "DOWN")} disabled={index === contentTypeOrder.length - 1} aria-label={`${bookContentTypeLabel(type)} 순서를 아래로 이동`}>
-                      <ArrowDown size={14} />
-                    </button>
+            <div className="book-type-order-popover-wrapper">
+              <button
+                className="book-type-order-trigger"
+                type="button"
+                aria-expanded={typeOrderPopoverOpen}
+                aria-controls={typeOrderPopoverId}
+                onClick={() => setTypeOrderPopoverOpen((current) => !current)}
+              >
+                순서 설정
+                <ChevronDown size={16} />
+              </button>
+              {typeOrderPopoverOpen ? (
+                <div className="book-type-order-popover" id={typeOrderPopoverId} role="dialog" aria-label="콘텐츠 타입 순서 설정">
+                  <div className="book-type-order-list">
+                    {contentTypeOrder.map((type, index) => (
+                      <div className="book-type-order-item" key={type}>
+                        <strong>{bookContentTypeLabel(type)}</strong>
+                        <div>
+                          <button type="button" onClick={() => onMoveContentType(type, "UP")} disabled={index === 0} aria-label={`${bookContentTypeLabel(type)} 순서를 위로 이동`}>
+                            <ArrowUp size={14} />
+                          </button>
+                          <button type="button" onClick={() => onMoveContentType(type, "DOWN")} disabled={index === contentTypeOrder.length - 1} aria-label={`${bookContentTypeLabel(type)} 순서를 아래로 이동`}>
+                            <ArrowDown size={14} />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
-              ))}
+              ) : null}
             </div>
           ) : null}
         </div>
@@ -6023,17 +6056,17 @@ function BookCompositionOrderPanel({
   orderMode: BookContentOrderMode;
   contentTypeOrder: BookContentType[];
 }) {
+  const orderSummary = orderMode === "TYPE"
+    ? contentTypeOrder.map(bookContentTypeLabel).join(" -> ")
+    : "오래된 기록 -> 최신 기록";
+
   return (
     <section className="book-composition-panel" aria-label="책에 들어갈 최종 구성 순서">
       <div>
         <span>책 구성 순서</span>
         <strong>{orderMode === "DATE" ? "날짜 순" : "콘텐츠 순"}</strong>
       </div>
-      {orderMode === "TYPE" ? (
-        <p>{contentTypeOrder.map(bookContentTypeLabel).join(" -> ")}</p>
-      ) : (
-        <p>오래된 기록부터 최신 기록 순으로 배치합니다.</p>
-      )}
+      <p>{orderSummary}</p>
       {selectedContents.length === 0 ? (
         <div className="book-empty-state compact">선택한 기록이 없습니다.</div>
       ) : (

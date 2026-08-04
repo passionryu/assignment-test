@@ -4194,6 +4194,7 @@ dl {
 
 .book-filter-tabs button,
 .segmented-control button,
+.book-type-order-trigger,
 .book-type-order-item button {
   border: 1px solid #dfe7f2;
   border-radius: 8px;
@@ -4233,6 +4234,7 @@ dl {
 }
 
 .book-order-controls {
+  position: relative;
   display: grid;
   gap: 10px;
   border: 1px solid #dfe7f2;
@@ -4263,6 +4265,39 @@ dl {
   border-color: #0c9fa8;
   background: #0c9fa8;
   color: #ffffff;
+}
+
+.book-type-order-popover-wrapper {
+  position: relative;
+}
+
+.book-type-order-trigger {
+  width: 100%;
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 10px;
+}
+
+.book-type-order-trigger[aria-expanded="true"] {
+  border-color: #0c9fa8;
+  background: #f3fcfb;
+  color: #0b7780;
+}
+
+.book-type-order-popover {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 5;
+  width: 220px;
+  border: 1px solid #dfe7f2;
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 18px 38px rgba(49, 70, 107, 0.16);
+  padding: 12px;
 }
 
 .book-type-order-list {
@@ -4507,11 +4542,15 @@ dl {
 
 .book-composition-panel p,
 .book-composition-panel em {
+  min-width: 0;
+  overflow: hidden;
   color: #667085;
   font-size: 13px;
   font-style: normal;
   font-weight: 800;
   line-height: 1.55;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .book-composition-panel ol {
@@ -5756,6 +5795,13 @@ dl {
 
   .book-content-row {
     align-items: stretch;
+  }
+
+  .book-type-order-popover {
+    position: static;
+    width: 100%;
+    margin-top: 8px;
+    box-shadow: none;
   }
 
   .book-content-checkbox,
