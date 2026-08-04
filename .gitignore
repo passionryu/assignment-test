@@ -32,10 +32,5 @@ service/server/uploads/
 .idea/
 .vscode/
 
-# Playwright generated artifacts can be large.
-# Keep report directories in git with .gitkeep files, and commit selected evidence explicitly when needed.
-test-results/playwright/**/*.webm
-test-results/playwright/**/*.zip
-test-results/playwright/**/*.png
-test-results/playwright/**/*.html
-!test-results/playwright/**/.gitkeep
+# Local test runner artifacts.
+test-results/

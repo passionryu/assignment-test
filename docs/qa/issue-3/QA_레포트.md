@@ -59,10 +59,10 @@ Content-Type: application/json
 
 | 유형 | 경로 |
 | --- | --- |
-| Screenshot | `test-results/playwright/issue-3/issue-3-client-home.png` |
-| Trace | `test-results/playwright/issue-3/issue-3-trace.zip` |
-| Video | `test-results/playwright/issue-3/page@6caf2cab0c8bc1cfef244f2333bcb54f.webm` |
-| Browser check JSON | `test-results/playwright/issue-3/issue-3-browser-check.json` |
+| Screenshot | `docs/qa/issue-3/evidence/issue-3-client-home.png` |
+| Trace | `docs/qa/issue-3/evidence/issue-3-trace.zip` |
+| Video | `docs/qa/issue-3/evidence/page@6caf2cab0c8bc1cfef244f2333bcb54f.webm` |
+| Browser check JSON | `docs/qa/issue-3/evidence/issue-3-browser-check.json` |
 
 ## 비고
 
