@@ -64,6 +64,7 @@ class LocalSeedRunner(
                 (12, '하준', 'hajun', 'hajun@example.com', '010-5555-0012', null, 'local-dummy-hash', false),
                 (13, '수아', 'sua', 'sua@example.com', '010-5555-0013', null, 'local-dummy-hash', false),
                 (99, '기록방 AI', 'recordbot', 'recordbot@example.com', '010-9999-0000', null, 'local-dummy-hash', false),
+                (100, '운영자', 'operator', 'operator@example.com', '010-0000-0100', null, 'local-dummy-hash', false),
                 (20, '초대회원0', 'invitee0', 'invitee0@example.com', '010-0000-0000', null, 'local-dummy-hash', false),
                 (21, '초대회원1', 'invitee1', 'invitee1@example.com', '010-1111-1111', null, 'local-dummy-hash', false),
                 (22, '초대회원2', 'invitee2', 'invitee2@example.com', '010-2222-2222', null, 'local-dummy-hash', false),

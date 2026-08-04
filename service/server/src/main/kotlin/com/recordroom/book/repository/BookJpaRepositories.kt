@@ -26,6 +26,10 @@ interface PrintOrderJpaRepository : JpaRepository<PrintOrderEntity, Long> {
         memberId: Long,
         statuses: Collection<PrintOrderStatus>,
     ): List<PrintOrderEntity>
+
+    fun findAllByOrderByRequestedAtDesc(): List<PrintOrderEntity>
+
+    fun findByStatusOrderByRequestedAtDesc(status: PrintOrderStatus): List<PrintOrderEntity>
 }
 
 interface PrintOrderContentJpaRepository : JpaRepository<PrintOrderContentEntity, Long> {
