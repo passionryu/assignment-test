@@ -4254,6 +4254,11 @@ dl {
 }
 
 .book-filter-tabs {
+  display: grid;
+  gap: 8px;
+}
+
+.book-filter-row {
   display: flex;
   align-items: center;
   flex-wrap: wrap;

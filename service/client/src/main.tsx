@@ -429,7 +429,7 @@ type MissionImageUploadResponse = {
 
 type BookCreationType = "TEMPLATE";
 type BookContentType = "MEMORY" | "MISSION" | "LETTER" | "CHAT";
-type BookContentFilter = "ALL" | "SELECTED" | BookContentType;
+type BookContentFilter = "ALL" | "SELECTED" | "UNSELECTED" | BookContentType;
 type BookContentOrderMode = "DATE" | "TYPE";
 type BookPageLimitStatus = "UNDER_MIN" | "AVAILABLE" | "OVER_MAX";
 
@@ -560,7 +560,8 @@ type BookPreviewResponse = {
 };
 
 const defaultBookContentTypeOrder: BookContentType[] = ["MEMORY", "MISSION", "LETTER", "CHAT"];
-const bookContentFilters: BookContentFilter[] = ["ALL", "MEMORY", "MISSION", "LETTER", "CHAT", "SELECTED"];
+const bookContentStatusFilters: BookContentFilter[] = ["ALL", "SELECTED", "UNSELECTED"];
+const bookContentTypeFilters: BookContentFilter[] = ["MEMORY", "MISSION", "LETTER", "CHAT"];
 
 type PrintOrderStatus =
   | "PAID"
@@ -5978,19 +5979,28 @@ function BookContentLibrary({
     <section className="book-content-library" aria-label="책 기록 라이브러리">
       <div className="book-content-toolbar">
         <div className="book-filter-tabs" role="tablist" aria-label="기록 필터">
-          {bookContentFilters.map((filter) => (
-            <button
-              className={activeFilter === filter ? "active" : ""}
-              type="button"
-              key={filter}
-              role="tab"
-              onClick={() => onFilterChange(filter)}
-              aria-selected={activeFilter === filter}
-            >
-              <span>{bookContentFilterLabel(filter)}</span>
-              <b>{filterCounts[filter]}</b>
-            </button>
-          ))}
+          <div className="book-filter-row status">
+            {bookContentStatusFilters.map((filter) => (
+              <BookContentFilterTab
+                key={filter}
+                filter={filter}
+                count={filterCounts[filter]}
+                active={activeFilter === filter}
+                onClick={() => onFilterChange(filter)}
+              />
+            ))}
+          </div>
+          <div className="book-filter-row type">
+            {bookContentTypeFilters.map((filter) => (
+              <BookContentFilterTab
+                key={filter}
+                filter={filter}
+                count={filterCounts[filter]}
+                active={activeFilter === filter}
+                onClick={() => onFilterChange(filter)}
+              />
+            ))}
+          </div>
         </div>
 
         <div className="book-order-controls" aria-label="책 구성 순서">
@@ -6079,6 +6089,31 @@ function BookContentLibrary({
         </div>
       )}
     </section>
+  );
+}
+
+function BookContentFilterTab({
+  filter,
+  count,
+  active,
+  onClick,
+}: {
+  filter: BookContentFilter;
+  count: number;
+  active: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      className={active ? "active" : ""}
+      type="button"
+      role="tab"
+      onClick={onClick}
+      aria-selected={active}
+    >
+      <span>{bookContentFilterLabel(filter)}</span>
+      <b>{count}</b>
+    </button>
   );
 }
 
@@ -7625,6 +7660,7 @@ function filterBookContents(
 ): BookContentCandidate[] {
   if (filter === "ALL") return contents;
   if (filter === "SELECTED") return contents.filter((content) => selectedContentKeys[bookContentKey(content)]);
+  if (filter === "UNSELECTED") return contents.filter((content) => !selectedContentKeys[bookContentKey(content)]);
   return contents.filter((content) => content.type === filter);
 }
 
@@ -7639,12 +7675,14 @@ function buildBookContentFilterCounts(
     LETTER: contents.filter((content) => content.type === "LETTER").length,
     CHAT: contents.filter((content) => content.type === "CHAT").length,
     SELECTED: contents.filter((content) => selectedContentKeys[bookContentKey(content)]).length,
+    UNSELECTED: contents.filter((content) => !selectedContentKeys[bookContentKey(content)]).length,
   };
 }
 
 function bookContentFilterLabel(filter: BookContentFilter): string {
   if (filter === "ALL") return "전체";
   if (filter === "SELECTED") return "선택됨";
+  if (filter === "UNSELECTED") return "미선택";
   if (filter === "MEMORY") return "추억";
   if (filter === "MISSION") return "미션";
   if (filter === "LETTER") return "편지";
