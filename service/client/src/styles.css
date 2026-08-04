@@ -4179,6 +4179,47 @@ dl {
   box-shadow: 0 0 0 3px rgba(12, 159, 168, 0.13);
 }
 
+.book-period-row input:disabled {
+  color: #98a2b3;
+  cursor: wait;
+}
+
+.book-loading-panel {
+  min-height: 144px;
+  display: grid;
+  place-items: center;
+  gap: 8px;
+  margin-top: 20px;
+  border: 1px solid #cbece9;
+  border-radius: 8px;
+  background: #f3fcfb;
+  color: #253248;
+  text-align: center;
+  padding: 22px;
+}
+
+.book-loading-spinner {
+  width: 34px;
+  height: 34px;
+  border: 3px solid rgba(12, 159, 168, 0.18);
+  border-top-color: #0c9fa8;
+  border-radius: 999px;
+  animation: letterSpin 0.75s linear infinite;
+}
+
+.book-loading-panel strong {
+  font-size: 17px;
+  font-weight: 950;
+}
+
+.book-loading-panel p {
+  max-width: 620px;
+  color: #667085;
+  font-size: 14px;
+  font-weight: 850;
+  line-height: 1.6;
+}
+
 .book-quantity-field > span {
   color: #667085;
   font-size: 13px;

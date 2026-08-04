@@ -1855,29 +1855,33 @@ function App() {
     setBookCandidatesLoading(true);
     setBookPreview(null);
 
+    const loadingStartedAt = Date.now();
+    let nextCandidates: BookContentCandidatesResponse;
+    let nextErrorMessage: string | null = null;
+
     try {
       const response = await apiGet<BookContentCandidatesResponse>(
         `/book-archive/content-candidates?roomId=${bookSelectedRoomId}&productUid=${encodeURIComponent(bookSelectedProductUid)}&startDate=${bookPeriod.startDate}&endDate=${bookPeriod.endDate}`,
       );
-      setBookContentCandidates(response);
-      setSelectedBookContentKeys(initialBookSelection(response));
-      setBookTitle((current) => current || `${response.roomName} 기록집`);
-      setBookCreateStep("content");
+      nextCandidates = response;
     } catch (error) {
-      const fallback = buildDemoBookContentCandidates(
+      nextCandidates = buildDemoBookContentCandidates(
         bookSelectedRoomId,
         bookSelectedProductUid,
         bookPeriod,
         selectedDemoMember?.id ?? defaultDemoMember.id,
       );
-      setBookContentCandidates(fallback);
-      setSelectedBookContentKeys(initialBookSelection(fallback));
-      setBookTitle((current) => current || `${fallback.roomName} 기록집`);
-      setBookCreateStep("content");
-      setErrorMessage(toMessage(error));
-    } finally {
-      setBookCandidatesLoading(false);
+      nextErrorMessage = toMessage(error);
     }
+
+    await waitAtLeast(loadingStartedAt, 2000);
+
+    setBookContentCandidates(nextCandidates);
+    setSelectedBookContentKeys(initialBookSelection(nextCandidates));
+    setBookTitle((current) => current || `${nextCandidates.roomName} 기록집`);
+    setBookCreateStep("content");
+    setErrorMessage(nextErrorMessage);
+    setBookCandidatesLoading(false);
   }
 
   function toggleBookContent(content: BookContentCandidate) {
@@ -3268,6 +3272,7 @@ function App() {
             draftPageRange={bookDraftPageRange}
             preview={bookPreview}
             loading={bookProductsLoading || bookCandidatesLoading}
+            candidatesLoading={bookCandidatesLoading}
             previewLoading={bookPreviewLoading}
             onStepChange={setBookCreateStep}
             onSelectRoom={selectBookRoom}
@@ -5613,6 +5618,7 @@ function BookCreateView({
   draftPageRange,
   preview,
   loading,
+  candidatesLoading,
   previewLoading,
   onStepChange,
   onSelectRoom,
@@ -5648,6 +5654,7 @@ function BookCreateView({
   draftPageRange: BookPageRange | null;
   preview: BookPreviewResponse | null;
   loading: boolean;
+  candidatesLoading: boolean;
   previewLoading: boolean;
   onStepChange: (step: BookCreateStep) => void;
   onSelectRoom: (roomId: number) => void;
@@ -5699,6 +5706,9 @@ function BookCreateView({
   };
   const filterCounts = buildBookContentFilterCounts(allContents, selectedContentKeys);
   const visibleContents = filterBookContents(allContents, contentFilter, selectedContentKeys);
+  const loadingPeriodMessage = selectedRoom
+    ? `${selectedRoom.name} 방의 ${formatDateLabel(period.startDate)}부터 ${formatDateLabel(period.endDate)}까지의 정보를 모두 불러오고 있습니다.`
+    : `선택한 방의 ${formatDateLabel(period.startDate)}부터 ${formatDateLabel(period.endDate)}까지의 정보를 모두 불러오고 있습니다.`;
 
   return (
     <>
@@ -5801,16 +5811,24 @@ function BookCreateView({
             <div className="book-period-row">
               <label>
                 시작일
-                <input type="date" value={period.startDate} onChange={(event) => onPeriodChange({ ...period, startDate: event.target.value })} />
+                <input type="date" value={period.startDate} disabled={candidatesLoading} onChange={(event) => onPeriodChange({ ...period, startDate: event.target.value })} />
               </label>
               <label>
                 종료일
-                <input type="date" value={period.endDate} onChange={(event) => onPeriodChange({ ...period, endDate: event.target.value })} />
+                <input type="date" value={period.endDate} disabled={candidatesLoading} onChange={(event) => onPeriodChange({ ...period, endDate: event.target.value })} />
               </label>
               <button className="primary-button" type="button" onClick={onLoadCandidates} disabled={!canLoadCandidates || loading}>
                 {loading ? "불러오는 중" : "기록 불러오기"}
               </button>
             </div>
+
+            {candidatesLoading ? (
+              <div className="book-loading-panel" role="status" aria-live="polite">
+                <span className="book-loading-spinner" aria-hidden="true" />
+                <strong>기록을 불러오는 중입니다</strong>
+                <p>{loadingPeriodMessage}</p>
+              </div>
+            ) : null}
 
           </section>
         ) : null}
@@ -8749,6 +8767,13 @@ async function safeApiRequest<T>(path: string, options: { method: string; body?:
   } catch {
     return null;
   }
+}
+
+async function waitAtLeast(startedAt: number, minimumMs: number): Promise<void> {
+  const remainingMs = minimumMs - (Date.now() - startedAt);
+  if (remainingMs <= 0) return;
+
+  await new Promise<void>((resolve) => window.setTimeout(resolve, remainingMs));
 }
 
 async function apiFormDataRequest<T>(path: string, formData: FormData): Promise<T> {
