@@ -149,6 +149,98 @@ dl {
   font-weight: 700;
 }
 
+.operator-page {
+  min-height: 100vh;
+  background:
+    linear-gradient(90deg, rgba(244, 248, 255, 0.95), rgba(255, 246, 250, 0.9)),
+    #f6f8fc;
+  padding: 42px;
+}
+
+.operator-header {
+  max-width: 1280px;
+  margin: 0 auto 18px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.operator-header h1 {
+  color: #253248;
+  font-size: 34px;
+  line-height: 1.2;
+}
+
+.operator-header p {
+  margin-top: 8px;
+  color: #667085;
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.operator-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.operator-layout {
+  max-width: 1280px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: minmax(320px, 440px) minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.operator-order-list-panel,
+.operator-order-detail-panel {
+  border: 1px solid #dfe7f2;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 18px 48px rgba(49, 70, 107, 0.1);
+  padding: 24px;
+}
+
+.operator-order-detail-panel {
+  display: grid;
+  gap: 18px;
+}
+
+.operator-filter-field {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 14px;
+  color: #667085;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.operator-filter-field select {
+  min-height: 44px;
+  border: 1px solid #dfe7f2;
+  border-radius: 8px;
+  background: #fbfcff;
+  color: #253248;
+  padding: 0 12px;
+  font-weight: 900;
+  outline: none;
+}
+
+.operator-filter-field select:focus {
+  border-color: #0c9fa8;
+  box-shadow: 0 0 0 3px rgba(12, 159, 168, 0.13);
+}
+
+.operator-order-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
 @media (max-width: 760px) {
   .member-select-page {
     padding: 20px;
@@ -5056,6 +5148,7 @@ dl {
   .settings-layout,
   .home-grid,
   .calendar-content,
+  .operator-layout,
   .room-home-content,
   .chat-page,
   .letter-page,
@@ -5104,6 +5197,10 @@ dl {
     align-items: stretch;
   }
 
+  .operator-header {
+    flex-direction: column;
+  }
+
   .row-button {
     width: fit-content;
   }
@@ -5112,6 +5209,16 @@ dl {
 @media (max-width: 760px) {
   .workspace {
     display: block;
+  }
+
+  .operator-page {
+    padding: 24px 16px 40px;
+  }
+
+  .operator-header-actions {
+    width: 100%;
+    align-items: stretch;
+    flex-direction: column;
   }
 
   .sidebar {

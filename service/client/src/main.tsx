@@ -558,6 +558,8 @@ type PrintOrderStatus =
 type PrintOrderSummary = {
   id: number;
   orderNo: string;
+  memberId: number;
+  memberName: string;
   roomId: number;
   roomName: string;
   product: BookProduct;
@@ -629,6 +631,7 @@ type MemoryActionMode = "edit" | "delete" | null;
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8080/api";
 const apiOrigin = apiBaseUrl.replace(/\/api\/?$/, "");
 const selectedMemberStorageKey = "record-room:selected-member-id";
+const operatorDemoMemberId = 100;
 const currentMonth = toDateKey(new Date()).slice(0, 7);
 const memoryPostsPerPage = 6;
 const letterPageSize = 10;
@@ -676,6 +679,16 @@ const demoMemberOptions: DemoMemberOption[] = [
     roleDescription: "프로젝트방 구성원",
     roomHint: "여름 프로젝트반, 4학년 1반",
   },
+  {
+    id: operatorDemoMemberId,
+    displayName: "운영자",
+    username: "operator",
+    email: "operator@example.com",
+    phoneNumber: "010-0000-0100",
+    profileImageUrl: null,
+    roleDescription: "책 주문 확인 담당자",
+    roomHint: "전체 주문 조회, 상태 변경, 취소 처리",
+  },
 ];
 
 const defaultDemoMember = demoMemberOptions[0];
@@ -687,6 +700,10 @@ function readStoredDemoMember(): DemoMemberOption | null {
   const memberId = rawMemberId ? Number(rawMemberId) : NaN;
 
   return demoMemberOptions.find((member) => member.id === memberId) ?? null;
+}
+
+function isOperatorDemoMember(member: DemoMemberOption | null): boolean {
+  return member?.id === operatorDemoMemberId;
 }
 
 function buildMemberHeader(): Record<string, string> {
@@ -1248,6 +1265,13 @@ function App() {
   const [bookOrderCreating, setBookOrderCreating] = useState(false);
   const [bookOrderCancelOpen, setBookOrderCancelOpen] = useState(false);
   const [bookOrderActionLoading, setBookOrderActionLoading] = useState(false);
+  const [operatorOrders, setOperatorOrders] = useState<PrintOrderSummary[]>([]);
+  const [operatorSelectedOrder, setOperatorSelectedOrder] = useState<PrintOrderDetail | null>(null);
+  const [operatorStatusFilter, setOperatorStatusFilter] = useState<PrintOrderStatus | "ALL">("ALL");
+  const [operatorOrdersLoading, setOperatorOrdersLoading] = useState(false);
+  const [operatorOrderDetailLoading, setOperatorOrderDetailLoading] = useState(false);
+  const [operatorOrderActionLoading, setOperatorOrderActionLoading] = useState(false);
+  const [operatorCancelOrderOpen, setOperatorCancelOrderOpen] = useState(false);
   const [profileForm, setProfileForm] = useState<ProfileForm>({ displayName: "", profileImageUrl: "" });
   const [createRoomForm, setCreateRoomForm] = useState<CreateRoomForm>({ name: "", type: "COUPLE", description: "" });
   const [inviteContacts, setInviteContacts] = useState<Record<number, string>>({});
@@ -1304,13 +1328,13 @@ function App() {
   );
 
   useEffect(() => {
-    if (!selectedDemoMember) return;
+    if (!selectedDemoMember || isOperatorDemoMember(selectedDemoMember)) return;
 
     void loadInitialData();
   }, [selectedDemoMember?.id]);
 
   useEffect(() => {
-    if (!selectedDemoMember) return;
+    if (!selectedDemoMember || isOperatorDemoMember(selectedDemoMember)) return;
 
     const pollingTimerId = window.setInterval(() => {
       void refreshSidebarState();
@@ -1375,6 +1399,12 @@ function App() {
     void loadBookOrders("history");
   }, [activeView, selectedDemoMember?.id]);
 
+  useEffect(() => {
+    if (!selectedDemoMember || !isOperatorDemoMember(selectedDemoMember)) return;
+
+    void loadOperatorOrders(operatorStatusFilter);
+  }, [selectedDemoMember?.id, operatorStatusFilter]);
+
   function resetSessionState() {
     setProfile(null);
     setSettings(null);
@@ -1416,6 +1446,10 @@ function App() {
     setBookHistoryOrders([]);
     setSelectedBookOrder(null);
     setBookOrderCancelOpen(false);
+    setOperatorOrders([]);
+    setOperatorSelectedOrder(null);
+    setOperatorStatusFilter("ALL");
+    setOperatorCancelOrderOpen(false);
     setProfileForm({ displayName: "", profileImageUrl: "" });
     setMessage(null);
     setErrorMessage(null);
@@ -1952,6 +1986,97 @@ function App() {
     } finally {
       setBookOrderActionLoading(false);
     }
+  }
+
+  async function loadOperatorOrders(statusFilter: PrintOrderStatus | "ALL" = operatorStatusFilter) {
+    setMessage(null);
+    setErrorMessage(null);
+    setOperatorOrdersLoading(true);
+    try {
+      const query = statusFilter === "ALL" ? "" : `?status=${encodeURIComponent(statusFilter)}`;
+      const response = await apiGet<PrintOrdersResponse>(`/operator/book-orders${query}`);
+      setOperatorOrders(response.orders);
+      setOperatorSelectedOrder((current) =>
+        current && response.orders.some((order) => order.id === current.id)
+          ? current
+          : null,
+      );
+    } catch (error) {
+      setOperatorOrders([]);
+      setOperatorSelectedOrder(null);
+      setErrorMessage(toMessage(error));
+    } finally {
+      setOperatorOrdersLoading(false);
+    }
+  }
+
+  async function openOperatorOrderDetail(orderId: number) {
+    setMessage(null);
+    setErrorMessage(null);
+    setOperatorOrderDetailLoading(true);
+    try {
+      const response = await apiGet<PrintOrderDetail>(`/operator/book-orders/${orderId}`);
+      setOperatorSelectedOrder(response);
+    } catch (error) {
+      setErrorMessage(toMessage(error));
+    } finally {
+      setOperatorOrderDetailLoading(false);
+    }
+  }
+
+  async function advanceOperatorOrderStatus() {
+    if (!operatorSelectedOrder) return;
+
+    setMessage(null);
+    setErrorMessage(null);
+    setOperatorOrderActionLoading(true);
+    try {
+      const response = await apiRequest<PrintOrderActionResponse>(`/operator/book-orders/${operatorSelectedOrder.id}/next-status`, {
+        method: "POST",
+        body: { memo: "운영자가 다음 제작 상태로 변경했습니다." },
+      });
+      applyOperatorOrderUpdate(response.order);
+      setMessage("주문 상태가 다음 단계로 변경되었습니다.");
+    } catch (error) {
+      setErrorMessage(toMessage(error));
+    } finally {
+      setOperatorOrderActionLoading(false);
+    }
+  }
+
+  async function cancelOperatorOrder(reason: string) {
+    if (!operatorSelectedOrder) return;
+
+    setMessage(null);
+    setErrorMessage(null);
+    setOperatorOrderActionLoading(true);
+    try {
+      const response = await apiRequest<PrintOrderActionResponse>(`/operator/book-orders/${operatorSelectedOrder.id}/cancel`, {
+        method: "POST",
+        body: { reason },
+      });
+      applyOperatorOrderUpdate(response.order);
+      setOperatorCancelOrderOpen(false);
+      setMessage("운영자 권한으로 주문을 취소 처리했습니다.");
+    } catch (error) {
+      setErrorMessage(toMessage(error));
+    } finally {
+      setOperatorOrderActionLoading(false);
+    }
+  }
+
+  function applyOperatorOrderUpdate(order: PrintOrderDetail) {
+    setOperatorSelectedOrder(order);
+    setOperatorOrders((current) => {
+      const summary = orderDetailToSummary(order);
+      if (operatorStatusFilter !== "ALL" && summary.status !== operatorStatusFilter) {
+        return current.filter((item) => item.id !== summary.id);
+      }
+      const exists = current.some((item) => item.id === summary.id);
+      return exists
+        ? current.map((item) => (item.id === summary.id ? summary : item))
+        : [summary, ...current];
+    });
   }
 
   async function loadChatMessages(roomId: number, options: { silent?: boolean } = {}) {
@@ -2808,6 +2933,39 @@ function App() {
     return <DemoMemberSelectionView members={demoMemberOptions} onSelect={selectDemoMember} />;
   }
 
+  if (isOperatorDemoMember(selectedDemoMember)) {
+    return (
+      <>
+        <OperatorBookOrdersView
+          operator={selectedDemoMember}
+          orders={operatorOrders}
+          selectedOrder={operatorSelectedOrder}
+          statusFilter={operatorStatusFilter}
+          loading={operatorOrdersLoading}
+          detailLoading={operatorOrderDetailLoading}
+          actionLoading={operatorOrderActionLoading}
+          message={message}
+          errorMessage={errorMessage}
+          onStatusFilterChange={setOperatorStatusFilter}
+          onOpenOrder={openOperatorOrderDetail}
+          onAdvanceStatus={advanceOperatorOrderStatus}
+          onOpenCancel={() => setOperatorCancelOrderOpen(true)}
+          onRefresh={() => loadOperatorOrders(operatorStatusFilter)}
+          onLogout={logoutToMemberSelection}
+        />
+
+        {operatorCancelOrderOpen && operatorSelectedOrder ? (
+          <BookOrderCancelModal
+            order={operatorSelectedOrder}
+            loading={operatorOrderActionLoading}
+            onCancelOrder={cancelOperatorOrder}
+            onClose={() => setOperatorCancelOrderOpen(false)}
+          />
+        ) : null}
+      </>
+    );
+  }
+
   return (
     <main className={`workspace ${sidebarCollapsed ? "sidebar-collapsed" : ""}`}>
       <Sidebar
@@ -3171,6 +3329,228 @@ function DemoMemberSelectionView({
         </div>
       </section>
     </main>
+  );
+}
+
+function OperatorBookOrdersView({
+  operator,
+  orders,
+  selectedOrder,
+  statusFilter,
+  loading,
+  detailLoading,
+  actionLoading,
+  message,
+  errorMessage,
+  onStatusFilterChange,
+  onOpenOrder,
+  onAdvanceStatus,
+  onOpenCancel,
+  onRefresh,
+  onLogout,
+}: {
+  operator: DemoMemberOption;
+  orders: PrintOrderSummary[];
+  selectedOrder: PrintOrderDetail | null;
+  statusFilter: PrintOrderStatus | "ALL";
+  loading: boolean;
+  detailLoading: boolean;
+  actionLoading: boolean;
+  message: string | null;
+  errorMessage: string | null;
+  onStatusFilterChange: (status: PrintOrderStatus | "ALL") => void;
+  onOpenOrder: (orderId: number) => void;
+  onAdvanceStatus: () => void;
+  onOpenCancel: () => void;
+  onRefresh: () => void;
+  onLogout: () => void;
+}) {
+  return (
+    <main className="operator-page">
+      <header className="operator-header">
+        <div>
+          <span className="eyebrow">운영자 주문 확인</span>
+          <h1>책 주문 확인 MVP</h1>
+          <p>{operator.displayName} 캐릭터로 전체 주문과 상태 변경을 확인합니다.</p>
+        </div>
+        <div className="operator-header-actions">
+          <button className="outline-button" type="button" onClick={onRefresh} disabled={loading}>
+            새로고침
+          </button>
+          <button className="danger-button" type="button" onClick={onLogout}>
+            <LogOut size={17} />
+            나가기
+          </button>
+        </div>
+      </header>
+
+      {message ? <div className="success-banner">{message}</div> : null}
+      {errorMessage ? <div className="error-banner">{errorMessage}</div> : null}
+
+      <section className="operator-layout" aria-busy={loading || detailLoading || actionLoading}>
+        <aside className="operator-order-list-panel">
+          <div className="book-section-heading compact">
+            <div>
+              <span>전체 주문</span>
+              <h2>{orders.length}건</h2>
+            </div>
+          </div>
+
+          <label className="operator-filter-field">
+            상태 필터
+            <select value={statusFilter} onChange={(event) => onStatusFilterChange(event.target.value as PrintOrderStatus | "ALL")}>
+              <option value="ALL">전체</option>
+              {printOrderStatusOptions.map((status) => (
+                <option value={status} key={status}>
+                  {printOrderStatusLabel(status)}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          {loading ? (
+            <div className="book-empty-state compact">주문을 불러오는 중입니다.</div>
+          ) : orders.length === 0 ? (
+            <div className="book-empty-state compact">조건에 맞는 주문이 없습니다.</div>
+          ) : (
+            <div className="book-order-list">
+              {orders.map((order) => (
+                <button
+                  className={`book-order-card ${selectedOrder?.id === order.id ? "selected" : ""}`}
+                  type="button"
+                  key={order.id}
+                  onClick={() => onOpenOrder(order.id)}
+                >
+                  <span className={`book-order-status-badge ${printOrderStatusTone(order.status)}`}>{order.statusLabel}</span>
+                  <strong>{order.title}</strong>
+                  <small>{order.orderNo} · 주문자 {order.memberName}</small>
+                  <em>{order.roomName} · {order.product.displayName}</em>
+                  <b>{formatCurrency(order.totalPrice)}</b>
+                </button>
+              ))}
+            </div>
+          )}
+        </aside>
+
+        <OperatorOrderDetailPanel
+          order={selectedOrder}
+          detailLoading={detailLoading}
+          actionLoading={actionLoading}
+          onAdvanceStatus={onAdvanceStatus}
+          onOpenCancel={onOpenCancel}
+        />
+      </section>
+    </main>
+  );
+}
+
+function OperatorOrderDetailPanel({
+  order,
+  detailLoading,
+  actionLoading,
+  onAdvanceStatus,
+  onOpenCancel,
+}: {
+  order: PrintOrderDetail | null;
+  detailLoading: boolean;
+  actionLoading: boolean;
+  onAdvanceStatus: () => void;
+  onOpenCancel: () => void;
+}) {
+  if (detailLoading) {
+    return (
+      <aside className="operator-order-detail-panel">
+        <div className="book-empty-state">주문 상세를 불러오는 중입니다.</div>
+      </aside>
+    );
+  }
+
+  if (!order) {
+    return (
+      <aside className="operator-order-detail-panel">
+        <div className="book-empty-state">주문을 선택하면 상세 스냅샷과 상태 변경 버튼이 표시됩니다.</div>
+      </aside>
+    );
+  }
+
+  const nextStatus = nextPrintOrderStatus(order.status);
+
+  return (
+    <aside className="operator-order-detail-panel">
+      <div className="book-order-detail-header">
+        <span className={`book-order-status-badge ${printOrderStatusTone(order.status)}`}>{order.statusLabel}</span>
+        <h2>{order.title}</h2>
+        <p>{order.orderNo}</p>
+      </div>
+
+      <dl className="book-order-detail-list">
+        <div>
+          <dt>주문자</dt>
+          <dd>{order.memberName}</dd>
+        </div>
+        <div>
+          <dt>방</dt>
+          <dd>{order.roomName}</dd>
+        </div>
+        <div>
+          <dt>상품</dt>
+          <dd>{order.product.displayName}</dd>
+        </div>
+        <div>
+          <dt>기간</dt>
+          <dd>{formatDateLabel(order.period.startDate)} ~ {formatDateLabel(order.period.endDate)}</dd>
+        </div>
+        <div>
+          <dt>페이지/수량</dt>
+          <dd>{order.estimatedPageCount}p · {order.quantity}권</dd>
+        </div>
+        <div className="total">
+          <dt>총액</dt>
+          <dd>{formatCurrency(order.totalPrice)}</dd>
+        </div>
+      </dl>
+
+      <div className="operator-order-actions">
+        <button className="primary-button" type="button" onClick={onAdvanceStatus} disabled={!nextStatus || actionLoading}>
+          {nextStatus ? `다음 상태: ${printOrderStatusLabel(nextStatus)}` : "다음 상태 없음"}
+        </button>
+        <button className="danger-button" type="button" onClick={onOpenCancel} disabled={!canCancelPrintOrder(order.status) || actionLoading}>
+          주문 취소
+        </button>
+      </div>
+
+      {order.cancelReason ? (
+        <div className="book-order-cancel-reason">
+          <strong>취소 사유</strong>
+          <p>{order.cancelReason}</p>
+        </div>
+      ) : null}
+
+      <div className="book-order-subsection">
+        <h3>담긴 콘텐츠</h3>
+        <div className="book-order-content-list">
+          {order.contents.map((content) => (
+            <div key={`${content.type}-${content.sourceId}-${content.sortOrder}`}>
+              <strong>{content.title}</strong>
+              <small>{bookContentTypeLabel(content.type)} · {formatDateLabel(content.occurredDate)} · {content.pageCount}p</small>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="book-order-subsection">
+        <h3>상태 이력</h3>
+        <div className="book-order-history-list">
+          {order.statusHistories.map((history) => (
+            <div key={history.id}>
+              <strong>{history.nextStatusLabel}</strong>
+              <small>{formatDateTimeLabel(history.changedAt)}</small>
+              {history.memo ? <p>{history.memo}</p> : null}
+            </div>
+          ))}
+        </div>
+      </div>
+    </aside>
   );
 }
 
@@ -6901,6 +7281,8 @@ function orderDetailToSummary(order: PrintOrderDetail): PrintOrderSummary {
   return {
     id: order.id,
     orderNo: order.orderNo,
+    memberId: order.memberId,
+    memberName: order.memberName,
     roomId: order.roomId,
     roomName: order.roomName,
     product: order.product,
@@ -6925,6 +7307,40 @@ function printOrderStatusTone(status: PrintOrderStatus): string {
 
 function canCancelPrintOrder(status: PrintOrderStatus): boolean {
   return status === "PAID" || status === "PDF_READY";
+}
+
+const printOrderStatusOptions: PrintOrderStatus[] = [
+  "PAID",
+  "PDF_READY",
+  "CONFIRMED",
+  "IN_PRODUCTION",
+  "PRODUCTION_COMPLETE",
+  "SHIPPED",
+  "DELIVERED",
+  "CANCELLED_REFUND",
+  "ERROR",
+];
+
+function printOrderStatusLabel(status: PrintOrderStatus): string {
+  if (status === "PAID") return "주문 요청";
+  if (status === "PDF_READY") return "제작 파일 준비";
+  if (status === "CONFIRMED") return "주문 확정";
+  if (status === "IN_PRODUCTION") return "제작 중";
+  if (status === "PRODUCTION_COMPLETE") return "제작 완료";
+  if (status === "SHIPPED") return "배송 중";
+  if (status === "DELIVERED") return "배송 완료";
+  if (status === "CANCELLED_REFUND") return "취소/환불";
+  return "오류";
+}
+
+function nextPrintOrderStatus(status: PrintOrderStatus): PrintOrderStatus | null {
+  if (status === "PAID") return "PDF_READY";
+  if (status === "PDF_READY") return "CONFIRMED";
+  if (status === "CONFIRMED") return "IN_PRODUCTION";
+  if (status === "IN_PRODUCTION") return "PRODUCTION_COMPLETE";
+  if (status === "PRODUCTION_COMPLETE") return "SHIPPED";
+  if (status === "SHIPPED") return "DELIVERED";
+  return null;
 }
 
 function coverLabel(coverType: string): string {

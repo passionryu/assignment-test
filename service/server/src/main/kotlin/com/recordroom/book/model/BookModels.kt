@@ -191,6 +191,8 @@ data class PrintOrdersResponse(
 data class PrintOrderSummaryResponse(
     val id: Long,
     val orderNo: String,
+    val memberId: Long,
+    val memberName: String,
     val roomId: Long,
     val roomName: String,
     val product: BookProductResponse,
@@ -207,6 +209,8 @@ data class PrintOrderSummaryResponse(
 data class PrintOrderDetailResponse(
     val id: Long,
     val orderNo: String,
+    val memberId: Long,
+    val memberName: String,
     val roomId: Long,
     val roomName: String,
     val product: BookProductResponse,

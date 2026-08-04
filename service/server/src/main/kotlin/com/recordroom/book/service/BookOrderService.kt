@@ -177,6 +177,66 @@ class BookOrderService(
         return PrintOrderActionResponse(order = order.toDetailResponse())
     }
 
+    // 운영자는 전체 주문을 상태 필터와 함께 확인할 수 있다.
+    @Transactional(readOnly = true)
+    fun getOperatorOrders(operatorMemberId: Long, status: PrintOrderStatus?): PrintOrdersResponse {
+        validateOperator(operatorMemberId)
+
+        val orders = if (status == null) {
+            printOrderJpaRepository.findAllByOrderByRequestedAtDesc()
+        } else {
+            printOrderJpaRepository.findByStatusOrderByRequestedAtDesc(status)
+        }
+
+        return PrintOrdersResponse(orders = orders.map { it.toSummaryResponse() })
+    }
+
+    // 운영자는 주문자와 무관하게 주문 상세 스냅샷을 확인할 수 있다.
+    @Transactional(readOnly = true)
+    fun getOperatorOrderDetail(operatorMemberId: Long, orderId: Long): PrintOrderDetailResponse {
+        validateOperator(operatorMemberId)
+        val order = printOrderJpaRepository.findById(orderId)
+            .orElseThrow { ApiException(HttpStatus.NOT_FOUND, "PRINT_ORDER_NOT_FOUND", "주문을 찾을 수 없습니다.") }
+
+        return order.toDetailResponse()
+    }
+
+    // 운영자만 주문을 다음 제작 상태로 전이할 수 있다.
+    @Transactional
+    fun advanceOrderStatusAsOperator(operatorMemberId: Long, orderId: Long, memo: String?): PrintOrderActionResponse {
+        validateOperator(operatorMemberId)
+
+        return advanceOrderStatus(
+            orderId = orderId,
+            changedByMemberId = operatorMemberId,
+            memo = memo,
+        )
+    }
+
+    // 운영자도 제작 확정 전 상태의 주문만 취소할 수 있다.
+    @Transactional
+    fun cancelOrderAsOperator(operatorMemberId: Long, orderId: Long, request: CancelPrintOrderRequest): PrintOrderActionResponse {
+        validateOperator(operatorMemberId)
+        val order = printOrderJpaRepository.findById(orderId)
+            .orElseThrow { ApiException(HttpStatus.NOT_FOUND, "PRINT_ORDER_NOT_FOUND", "주문을 찾을 수 없습니다.") }
+
+        cancelOrder(
+            order = order,
+            changedByMemberId = operatorMemberId,
+            reason = request.reason,
+            changedAt = OffsetDateTime.now(),
+        )
+
+        return PrintOrderActionResponse(order = order.toDetailResponse())
+    }
+
+    private fun validateOperator(memberId: Long) {
+        memberService.getProfile(memberId)
+        if (memberId != OPERATOR_MEMBER_ID) {
+            throw ApiException(HttpStatus.FORBIDDEN, "OPERATOR_ONLY", "운영자만 주문을 확인할 수 있습니다.")
+        }
+    }
+
     private fun validateRoomAccess(roomId: Long, memberId: Long) {
         val hasRoomAccess = roomRepository.findActiveRoom(roomId) != null &&
             roomRepository.existsActiveRoomMember(roomId, memberId)
@@ -233,6 +293,8 @@ class BookOrderService(
         PrintOrderSummaryResponse(
             id = id,
             orderNo = orderNo,
+            memberId = memberId,
+            memberName = resolveMemberName(memberId),
             roomId = roomId,
             roomName = resolveRoomName(roomId),
             product = bookProductCatalog.getProduct(bookSpecUid),
@@ -250,6 +312,8 @@ class BookOrderService(
         PrintOrderDetailResponse(
             id = id,
             orderNo = orderNo,
+            memberId = memberId,
+            memberName = resolveMemberName(memberId),
             roomId = roomId,
             roomName = resolveRoomName(roomId),
             product = bookProductCatalog.getProduct(bookSpecUid),
@@ -296,10 +360,14 @@ class BookOrderService(
     private fun resolveRoomName(roomId: Long): String =
         roomRepository.findActiveRoom(roomId)?.name ?: "보관된 방"
 
+    private fun resolveMemberName(memberId: Long): String =
+        runCatching { memberService.getProfile(memberId).displayName }.getOrElse { "탈퇴한 사용자" }
+
     private fun badRequest(code: String, message: String): ApiException =
         ApiException(HttpStatus.BAD_REQUEST, code, message)
 
     companion object {
+        private const val OPERATOR_MEMBER_ID = 100L
         private val ACTIVE_STATUSES = listOf(
             PrintOrderStatus.PAID,
             PrintOrderStatus.PDF_READY,
