@@ -6126,6 +6126,7 @@ function BookCompositionOrderPanel({
   orderMode: BookContentOrderMode;
   contentTypeOrder: BookContentType[];
 }) {
+  const [compositionModalOpen, setCompositionModalOpen] = useState(false);
   const orderSummary = orderMode === "TYPE"
     ? contentTypeOrder.map(bookContentTypeLabel).join(" -> ")
     : "오래된 기록 -> 최신 기록";
@@ -6140,23 +6141,76 @@ function BookCompositionOrderPanel({
       {selectedContents.length === 0 ? (
         <div className="book-empty-state compact">선택한 기록이 없습니다.</div>
       ) : (
-        <ol>
-          {selectedContents.slice(0, 12).map((content, index) => (
-            <li key={bookContentKey(content)}>
-              <span>{index + 1}</span>
-              <div>
-                <strong>{content.title}</strong>
-                <small>{content.sourceLabel} · {formatDateLabel(content.occurredDate)} · {content.pageCount}p 할당</small>
-              </div>
-            </li>
-          ))}
-        </ol>
+        <button className="book-composition-open-button" type="button" onClick={() => setCompositionModalOpen(true)}>
+          전체 순서 보기
+          <span>{selectedContents.length}개</span>
+        </button>
       )}
-      {selectedContents.length > 12 ? <em>외 {selectedContents.length - 12}개 기록이 같은 기준으로 이어집니다.</em> : null}
+      {compositionModalOpen ? (
+        <BookCompositionOrderModal
+          selectedContents={selectedContents}
+          orderMode={orderMode}
+          orderSummary={orderSummary}
+          onClose={() => setCompositionModalOpen(false)}
+        />
+      ) : null}
     </section>
   );
 }
 
+function BookCompositionOrderModal({
+  selectedContents,
+  orderMode,
+  orderSummary,
+  onClose,
+}: {
+  selectedContents: BookContentCandidate[];
+  orderMode: BookContentOrderMode;
+  orderSummary: string;
+  onClose: () => void;
+}) {
+  const titleId = "book-composition-order-modal-title";
+
+  return (
+    <div className="modal-backdrop" role="presentation">
+      <section className="modal book-composition-modal" role="dialog" aria-modal="true" aria-labelledby={titleId}>
+        <div className="modal-title-row">
+          <div>
+            <span>{orderMode === "DATE" ? "날짜 순" : "콘텐츠 순"}</span>
+            <h2 id={titleId}>책 구성 순서</h2>
+            <p>{orderSummary}</p>
+          </div>
+          <button className="modal-icon-button" type="button" onClick={onClose} aria-label="책 구성 순서 닫기">
+            <X size={20} />
+          </button>
+        </div>
+
+        <div className="book-composition-modal-list">
+          {selectedContents.length === 0 ? (
+            <div className="book-empty-state compact">선택한 기록이 없습니다.</div>
+          ) : (
+            <ol>
+              {selectedContents.map((content, index) => (
+                <li key={bookContentKey(content)}>
+                  <span>{index + 1}</span>
+                  <div>
+                    <strong>{content.title}</strong>
+                    <small>{content.sourceLabel} · {formatDateLabel(content.occurredDate)} · {content.authorName} · {content.pageCount}p 할당</small>
+                    <em>{content.description}</em>
+                  </div>
+                </li>
+              ))}
+            </ol>
+          )}
+        </div>
+
+        <div className="modal-actions">
+          <button className="primary-button" type="button" onClick={onClose}>확인</button>
+        </div>
+      </section>
+    </div>
+  );
+}
 function BookContentDetailModal({
   detail,
   onClose,
