@@ -5785,9 +5785,6 @@ function BookCreateView({
               ))}
             </div>
 
-            <div className="book-wizard-actions">
-              <button className="secondary-button" type="button" onClick={() => onStepChange("room")}>이전</button>
-            </div>
           </section>
         ) : null}
 
@@ -5815,9 +5812,6 @@ function BookCreateView({
               </button>
             </div>
 
-            <div className="book-wizard-actions">
-              <button className="secondary-button" type="button" onClick={() => onStepChange("product")}>이전</button>
-            </div>
           </section>
         ) : null}
 
@@ -5885,7 +5879,6 @@ function BookCreateView({
               />
 
               <div className="book-wizard-actions stacked">
-                <button className="secondary-button" type="button" onClick={() => onStepChange("period")}>이전</button>
                 <button className="primary-button" type="button" onClick={onCreatePreview} disabled={!canPreview || previewLoading}>
                   {previewLoading ? "계산 중" : "미리보기/견적 계산"}
                 </button>
@@ -5896,9 +5889,6 @@ function BookCreateView({
 
         {activeStep === "preview" ? (
           <div className="book-wizard-preview-step">
-            <div className="book-wizard-actions">
-              <button className="secondary-button" type="button" onClick={() => onStepChange("content")}>이전</button>
-            </div>
             {preview ? <BookPreviewPanel preview={preview} onOpenOrderConfirm={onOpenOrderConfirm} /> : (
               <section className="book-section book-wizard-panel">
                 <div className="book-empty-state">콘텐츠 선택 단계에서 미리보기와 견적을 먼저 계산해 주세요.</div>
