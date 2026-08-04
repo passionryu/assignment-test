@@ -4419,6 +4419,28 @@ dl {
   font-size: 17px;
 }
 
+.book-order-cancel-reason {
+  display: grid;
+  gap: 6px;
+  border: 1px solid #ffd1d1;
+  border-radius: 8px;
+  background: #fff7f7;
+  padding: 12px;
+}
+
+.book-order-cancel-reason strong {
+  color: #d64545;
+  font-size: 13px;
+}
+
+.book-order-cancel-reason p {
+  margin: 0;
+  color: #667085;
+  font-size: 13px;
+  font-weight: 850;
+  line-height: 1.45;
+}
+
 .book-order-content-list,
 .book-order-history-list {
   display: grid;
@@ -4457,6 +4479,47 @@ dl {
 
 .book-order-confirm-list {
   margin-top: 18px;
+}
+
+.book-order-actions {
+  display: grid;
+  gap: 8px;
+  justify-items: start;
+  border-top: 1px solid #edf2f8;
+  padding-top: 2px;
+}
+
+.book-order-actions p {
+  margin: 0;
+  color: #667085;
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.book-order-cancel-field {
+  display: grid;
+  gap: 8px;
+  margin-top: 18px;
+  color: #667085;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.book-order-cancel-field textarea {
+  width: 100%;
+  border: 1px solid #dfe7f2;
+  border-radius: 8px;
+  background: #fbfcff;
+  color: #253248;
+  padding: 12px;
+  font: inherit;
+  resize: vertical;
+  outline: none;
+}
+
+.book-order-cancel-field textarea:focus {
+  border-color: #f04f95;
+  box-shadow: 0 0 0 3px rgba(240, 79, 149, 0.13);
 }
 
 .row-button {

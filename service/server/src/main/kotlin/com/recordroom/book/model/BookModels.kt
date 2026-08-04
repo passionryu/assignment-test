@@ -172,6 +172,18 @@ data class CreatePrintOrderResponse(
     val order: PrintOrderDetailResponse,
 )
 
+data class CancelPrintOrderRequest(
+    val reason: String?,
+)
+
+data class PrintOrderStatusChangeRequest(
+    val memo: String?,
+)
+
+data class PrintOrderActionResponse(
+    val order: PrintOrderDetailResponse,
+)
+
 data class PrintOrdersResponse(
     val orders: List<PrintOrderSummaryResponse>,
 )

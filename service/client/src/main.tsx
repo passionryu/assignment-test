@@ -610,6 +610,10 @@ type CreatePrintOrderResponse = {
   order: PrintOrderDetail;
 };
 
+type PrintOrderActionResponse = {
+  order: PrintOrderDetail;
+};
+
 type ApiError = {
   code: string;
   message: string;
@@ -1242,6 +1246,8 @@ function App() {
   const [bookOrdersLoading, setBookOrdersLoading] = useState(false);
   const [bookOrderDetailLoading, setBookOrderDetailLoading] = useState(false);
   const [bookOrderCreating, setBookOrderCreating] = useState(false);
+  const [bookOrderCancelOpen, setBookOrderCancelOpen] = useState(false);
+  const [bookOrderActionLoading, setBookOrderActionLoading] = useState(false);
   const [profileForm, setProfileForm] = useState<ProfileForm>({ displayName: "", profileImageUrl: "" });
   const [createRoomForm, setCreateRoomForm] = useState<CreateRoomForm>({ name: "", type: "COUPLE", description: "" });
   const [inviteContacts, setInviteContacts] = useState<Record<number, string>>({});
@@ -1409,6 +1415,7 @@ function App() {
     setBookStatusOrders([]);
     setBookHistoryOrders([]);
     setSelectedBookOrder(null);
+    setBookOrderCancelOpen(false);
     setProfileForm({ displayName: "", profileImageUrl: "" });
     setMessage(null);
     setErrorMessage(null);
@@ -1916,6 +1923,34 @@ function App() {
       setErrorMessage(toMessage(error));
     } finally {
       setBookOrderDetailLoading(false);
+    }
+  }
+
+  async function cancelPrintOrder(reason: string) {
+    if (!selectedBookOrder) return;
+
+    setMessage(null);
+    setErrorMessage(null);
+    setBookOrderActionLoading(true);
+    try {
+      const response = await apiRequest<PrintOrderActionResponse>(`/book-archive/orders/${selectedBookOrder.id}/cancel`, {
+        method: "POST",
+        body: { reason },
+      });
+      setSelectedBookOrder(response.order);
+      setBookStatusOrders((current) => current.filter((order) => order.id !== response.order.id));
+      setBookHistoryOrders((current) => [
+        orderDetailToSummary(response.order),
+        ...current.filter((order) => order.id !== response.order.id),
+      ]);
+      setBookOrderCancelOpen(false);
+      setBookMenuExpanded(true);
+      setActiveView("bookHistory");
+      setMessage("주문이 취소되어 주문 내역으로 이동했습니다.");
+    } catch (error) {
+      setErrorMessage(toMessage(error));
+    } finally {
+      setBookOrderActionLoading(false);
     }
   }
 
@@ -2987,6 +3022,7 @@ function App() {
             loading={bookOrdersLoading}
             detailLoading={bookOrderDetailLoading}
             onOpenOrder={openBookOrderDetail}
+            onOpenCancel={() => setBookOrderCancelOpen(true)}
           />
         ) : null}
         {activeView === "bookHistory" ? (
@@ -3027,6 +3063,15 @@ function App() {
           creating={bookOrderCreating}
           onCreateOrder={createPrintOrder}
           onClose={() => setBookOrderConfirmOpen(false)}
+        />
+      ) : null}
+
+      {bookOrderCancelOpen && selectedBookOrder ? (
+        <BookOrderCancelModal
+          order={selectedBookOrder}
+          loading={bookOrderActionLoading}
+          onCancelOrder={cancelPrintOrder}
+          onClose={() => setBookOrderCancelOpen(false)}
         />
       ) : null}
 
@@ -5401,6 +5446,7 @@ function BookOrdersView({
   loading,
   detailLoading,
   onOpenOrder,
+  onOpenCancel,
 }: {
   mode: "status" | "history";
   orders: PrintOrderSummary[];
@@ -5408,6 +5454,7 @@ function BookOrdersView({
   loading: boolean;
   detailLoading: boolean;
   onOpenOrder: (orderId: number) => void;
+  onOpenCancel?: () => void;
 }) {
   const isStatusMode = mode === "status";
 
@@ -5455,13 +5502,21 @@ function BookOrdersView({
           )}
         </div>
 
-        <BookOrderDetailPanel order={selectedOrder} loading={detailLoading} />
+        <BookOrderDetailPanel order={selectedOrder} loading={detailLoading} onOpenCancel={isStatusMode ? onOpenCancel : undefined} />
       </section>
     </>
   );
 }
 
-function BookOrderDetailPanel({ order, loading }: { order: PrintOrderDetail | null; loading: boolean }) {
+function BookOrderDetailPanel({
+  order,
+  loading,
+  onOpenCancel,
+}: {
+  order: PrintOrderDetail | null;
+  loading: boolean;
+  onOpenCancel?: () => void;
+}) {
   if (loading) {
     return (
       <aside className="book-order-detail-panel">
@@ -5509,6 +5564,13 @@ function BookOrderDetailPanel({ order, loading }: { order: PrintOrderDetail | nu
         </div>
       </dl>
 
+      {order.cancelReason ? (
+        <div className="book-order-cancel-reason">
+          <strong>취소 사유</strong>
+          <p>{order.cancelReason}</p>
+        </div>
+      ) : null}
+
       <div className="book-order-subsection">
         <h3>담긴 콘텐츠</h3>
         <div className="book-order-content-list">
@@ -5533,6 +5595,15 @@ function BookOrderDetailPanel({ order, loading }: { order: PrintOrderDetail | nu
           ))}
         </div>
       </div>
+
+      {onOpenCancel ? (
+        <div className="book-order-actions">
+          <button className="outline-button danger-button" type="button" onClick={onOpenCancel} disabled={!canCancelPrintOrder(order.status)}>
+            주문 취소
+          </button>
+          {!canCancelPrintOrder(order.status) ? <p>주문 확정 이후에는 이 화면에서 취소할 수 없습니다.</p> : null}
+        </div>
+      ) : null}
     </aside>
   );
 }
@@ -5590,6 +5661,71 @@ function BookOrderConfirmModal({
           </button>
           <button className="primary-button" type="button" onClick={onCreateOrder} disabled={creating}>
             {creating ? "주문 요청 중" : "주문 요청 생성"}
+          </button>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function BookOrderCancelModal({
+  order,
+  loading,
+  onCancelOrder,
+  onClose,
+}: {
+  order: PrintOrderDetail;
+  loading: boolean;
+  onCancelOrder: (reason: string) => void;
+  onClose: () => void;
+}) {
+  const [reason, setReason] = useState("");
+
+  return (
+    <div className="modal-backdrop" role="presentation">
+      <section className="modal book-order-confirm-modal" role="dialog" aria-modal="true" aria-labelledby="book-order-cancel-title">
+        <div className="modal-title-row">
+          <div>
+            <h2 id="book-order-cancel-title">주문 취소</h2>
+            <p>{order.orderNo} 주문을 취소 처리합니다.</p>
+          </div>
+          <button className="icon-button" type="button" onClick={onClose} aria-label="닫기" disabled={loading}>
+            <X size={18} />
+          </button>
+        </div>
+
+        <dl className="book-order-confirm-list">
+          <div>
+            <dt>상품</dt>
+            <dd>{order.product.displayName}</dd>
+          </div>
+          <div>
+            <dt>현재 상태</dt>
+            <dd>{order.statusLabel}</dd>
+          </div>
+          <div className="total">
+            <dt>주문 금액</dt>
+            <dd>{formatCurrency(order.totalPrice)}</dd>
+          </div>
+        </dl>
+
+        <label className="book-order-cancel-field">
+          취소 사유
+          <textarea
+            rows={4}
+            maxLength={255}
+            value={reason}
+            onChange={(event) => setReason(event.target.value)}
+            placeholder="예: 제작 요청 전 다시 구성하고 싶습니다."
+          />
+        </label>
+
+        <div className="modal-actions">
+          <button className="outline-button" type="button" onClick={onClose} disabled={loading}>
+            닫기
+          </button>
+          <button className="primary-button" type="button" onClick={() => onCancelOrder(reason)} disabled={loading}>
+            {loading ? "취소 처리 중" : "취소 처리"}
           </button>
         </div>
       </section>
@@ -6785,6 +6921,10 @@ function printOrderStatusTone(status: PrintOrderStatus): string {
   if (status === "DELIVERED") return "done";
   if (status === "CANCELLED_REFUND") return "cancelled";
   return "error";
+}
+
+function canCancelPrintOrder(status: PrintOrderStatus): boolean {
+  return status === "PAID" || status === "PDF_READY";
 }
 
 function coverLabel(coverType: string): string {

@@ -4,8 +4,10 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.recordroom.book.model.BookContentCandidateResponse
 import com.recordroom.book.model.BookPeriodResponse
+import com.recordroom.book.model.CancelPrintOrderRequest
 import com.recordroom.book.model.CreatePrintOrderRequest
 import com.recordroom.book.model.CreatePrintOrderResponse
+import com.recordroom.book.model.PrintOrderActionResponse
 import com.recordroom.book.model.PrintOrderContentEntity
 import com.recordroom.book.model.PrintOrderContentSnapshotResponse
 import com.recordroom.book.model.PrintOrderDetailResponse
@@ -139,12 +141,92 @@ class BookOrderService(
         return order.toDetailResponse()
     }
 
+    // 사용자는 제작 확정 전 상태의 본인 주문만 취소할 수 있다.
+    @Transactional
+    fun cancelMyOrder(memberId: Long, orderId: Long, request: CancelPrintOrderRequest): PrintOrderActionResponse {
+        memberService.getProfile(memberId)
+        val order = printOrderJpaRepository.findByIdAndMemberId(orderId, memberId)
+            ?: throw ApiException(HttpStatus.NOT_FOUND, "PRINT_ORDER_NOT_FOUND", "주문을 찾을 수 없습니다.")
+
+        cancelOrder(
+            order = order,
+            changedByMemberId = memberId,
+            reason = request.reason,
+            changedAt = OffsetDateTime.now(),
+        )
+
+        return PrintOrderActionResponse(order = order.toDetailResponse())
+    }
+
+    // 운영자 흐름에서 주문을 다음 제작 상태로 한 단계 전이한다.
+    @Transactional
+    fun advanceOrderStatus(orderId: Long, changedByMemberId: Long, memo: String?): PrintOrderActionResponse {
+        val order = printOrderJpaRepository.findById(orderId)
+            .orElseThrow { ApiException(HttpStatus.NOT_FOUND, "PRINT_ORDER_NOT_FOUND", "주문을 찾을 수 없습니다.") }
+        val nextStatus = NEXT_STATUSES[order.status]
+            ?: throw badRequest("ORDER_STATUS_TRANSITION_NOT_ALLOWED", "현재 주문 상태에서는 다음 단계로 변경할 수 없습니다.")
+
+        changeOrderStatus(
+            order = order,
+            nextStatus = nextStatus,
+            changedByMemberId = changedByMemberId,
+            memo = memo?.trim()?.takeIf { it.isNotBlank() } ?: "${order.status.toKoreanLabel()}에서 ${nextStatus.toKoreanLabel()} 상태로 변경했습니다.",
+            changedAt = OffsetDateTime.now(),
+        )
+
+        return PrintOrderActionResponse(order = order.toDetailResponse())
+    }
+
     private fun validateRoomAccess(roomId: Long, memberId: Long) {
         val hasRoomAccess = roomRepository.findActiveRoom(roomId) != null &&
             roomRepository.existsActiveRoomMember(roomId, memberId)
         if (!hasRoomAccess) {
             throw ApiException(HttpStatus.FORBIDDEN, "ROOM_ACCESS_DENIED", "참여 중인 방의 주문만 생성할 수 있습니다.")
         }
+    }
+
+    private fun cancelOrder(
+        order: PrintOrderEntity,
+        changedByMemberId: Long,
+        reason: String?,
+        changedAt: OffsetDateTime,
+    ) {
+        if (order.status !in CANCELLABLE_STATUSES) {
+            throw badRequest("ORDER_CANCEL_NOT_ALLOWED", "주문 요청 또는 제작 파일 준비 상태에서만 취소할 수 있습니다.")
+        }
+
+        val normalizedReason = reason?.trim()?.take(255)?.takeIf { it.isNotBlank() }
+        changeOrderStatus(
+            order = order,
+            nextStatus = PrintOrderStatus.CANCELLED_REFUND,
+            changedByMemberId = changedByMemberId,
+            memo = normalizedReason?.let { "취소 사유: $it" } ?: "사용자가 주문을 취소했습니다.",
+            changedAt = changedAt,
+        )
+        order.cancelledAt = changedAt
+        order.cancelReason = normalizedReason
+    }
+
+    private fun changeOrderStatus(
+        order: PrintOrderEntity,
+        nextStatus: PrintOrderStatus,
+        changedByMemberId: Long,
+        memo: String,
+        changedAt: OffsetDateTime,
+    ) {
+        val previousStatus = order.status
+        order.status = nextStatus
+        order.updatedAt = changedAt
+        printOrderStatusHistoryJpaRepository.save(
+            PrintOrderStatusHistoryEntity(
+                orderId = order.id,
+                previousStatus = previousStatus,
+                nextStatus = nextStatus,
+                changedByMemberId = changedByMemberId,
+                memo = memo,
+                changedAt = changedAt,
+            ),
+        )
     }
 
     private fun PrintOrderEntity.toSummaryResponse(): PrintOrderSummaryResponse =
@@ -230,6 +312,18 @@ class BookOrderService(
             PrintOrderStatus.DELIVERED,
             PrintOrderStatus.CANCELLED_REFUND,
             PrintOrderStatus.ERROR,
+        )
+        private val CANCELLABLE_STATUSES = setOf(
+            PrintOrderStatus.PAID,
+            PrintOrderStatus.PDF_READY,
+        )
+        private val NEXT_STATUSES = mapOf(
+            PrintOrderStatus.PAID to PrintOrderStatus.PDF_READY,
+            PrintOrderStatus.PDF_READY to PrintOrderStatus.CONFIRMED,
+            PrintOrderStatus.CONFIRMED to PrintOrderStatus.IN_PRODUCTION,
+            PrintOrderStatus.IN_PRODUCTION to PrintOrderStatus.PRODUCTION_COMPLETE,
+            PrintOrderStatus.PRODUCTION_COMPLETE to PrintOrderStatus.SHIPPED,
+            PrintOrderStatus.SHIPPED to PrintOrderStatus.DELIVERED,
         )
     }
 }
