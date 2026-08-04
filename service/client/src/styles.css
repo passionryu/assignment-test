@@ -4315,7 +4315,7 @@ dl {
 }
 
 .book-range-day.in-range {
-  background: #f3fcfb;
+  background: #e7f7f4;
 }
 
 .book-range-day.range-start,
@@ -4453,6 +4453,13 @@ dl {
 .book-candidate-loading-modal h2 {
   color: #253248;
   font-size: 22px;
+}
+
+.book-loading-modal-description {
+  color: #667085;
+  font-size: 14px;
+  font-weight: 850;
+  line-height: 1.55;
 }
 
 .book-candidate-loading-modal dl {

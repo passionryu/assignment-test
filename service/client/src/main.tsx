@@ -1993,6 +1993,7 @@ function App() {
 
     setMessage(null);
     setErrorMessage(null);
+    const loadingStartedAt = Date.now();
     setBookPreviewLoading(true);
 
     try {
@@ -2008,6 +2009,7 @@ function App() {
           contents: selectedBookContents.map((content) => ({ type: content.type, sourceId: content.sourceId })),
         },
       });
+      await waitAtLeast(loadingStartedAt, 3000);
       setBookPreview(response);
       setBookCreateStep("preview");
       setRoomFeedbackModal({
@@ -6068,6 +6070,17 @@ function BookCreateView({
             )}
           </div>
         ) : null}
+
+        {previewLoading ? (
+          <BookPreviewLoadingModal
+            roomName={selectedRoom?.name ?? "선택한 방"}
+            productName={selectedProduct?.displayName ?? "선택한 상품"}
+            title={title}
+            quantity={quantity}
+            selectedCount={selectedContents.length}
+            estimatedPageCount={draftPageRange?.estimatedPageCount ?? 0}
+          />
+        ) : null}
       </section>
     </>
   );
@@ -6139,6 +6152,46 @@ function BookCandidateLoadingModal({
           <div>
             <dt>선택한 콘텐츠</dt>
             <dd>{contentTypeLabel}</dd>
+          </div>
+        </dl>
+      </section>
+    </div>
+  );
+}
+
+function BookPreviewLoadingModal({
+  roomName,
+  productName,
+  title,
+  quantity,
+  selectedCount,
+  estimatedPageCount,
+}: {
+  roomName: string;
+  productName: string;
+  title: string;
+  quantity: number;
+  selectedCount: number;
+  estimatedPageCount: number;
+}) {
+  return (
+    <div className="modal-backdrop" role="presentation">
+      <section className="modal book-candidate-loading-modal" role="dialog" aria-modal="true" aria-labelledby="book-preview-loading-title">
+        <span className="book-loading-spinner" aria-hidden="true" />
+        <h2 id="book-preview-loading-title">잠시만 기다려 주세요</h2>
+        <p className="book-loading-modal-description">템플릿 기반 책 미리보기와 예상 견적을 계산하고 있습니다.</p>
+        <dl>
+          <div>
+            <dt>선택한 방</dt>
+            <dd>{roomName}</dd>
+          </div>
+          <div>
+            <dt>선택한 상품</dt>
+            <dd>{productName}</dd>
+          </div>
+          <div>
+            <dt>책 구성</dt>
+            <dd>{title} · {selectedCount}개 · {estimatedPageCount}p · {quantity}권</dd>
           </div>
         </dl>
       </section>
