@@ -4251,6 +4251,214 @@ dl {
   line-height: 1.5;
 }
 
+.book-orders-page {
+  grid-template-columns: minmax(320px, 440px) minmax(0, 1fr);
+  align-items: start;
+}
+
+.book-order-list-panel,
+.book-order-detail-panel {
+  border: 1px solid #dfe7f2;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 18px 48px rgba(49, 70, 107, 0.1);
+  padding: 24px;
+}
+
+.book-order-list {
+  display: grid;
+  gap: 12px;
+}
+
+.book-order-card {
+  width: 100%;
+  min-width: 0;
+  display: grid;
+  gap: 7px;
+  border: 1px solid #e4ebf5;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #253248;
+  padding: 16px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.book-order-card:hover,
+.book-order-card:focus-visible,
+.book-order-card.selected {
+  border-color: #0c9fa8;
+  box-shadow: 0 0 0 4px rgba(12, 159, 168, 0.1);
+  outline: none;
+}
+
+.book-order-card.selected {
+  background: #f3fcfb;
+}
+
+.book-order-card strong,
+.book-order-detail-header h2 {
+  color: #253248;
+  line-height: 1.3;
+}
+
+.book-order-card small,
+.book-order-card em,
+.book-order-detail-header p {
+  color: #667085;
+  font-size: 13px;
+  font-style: normal;
+  font-weight: 850;
+  line-height: 1.45;
+}
+
+.book-order-card b {
+  color: #f04f95;
+  font-size: 17px;
+}
+
+.book-order-status-badge {
+  width: fit-content;
+  min-height: 28px;
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 0 11px;
+  font-size: 12px;
+  font-weight: 950;
+}
+
+.book-order-status-badge.ready {
+  background: #eaf7ff;
+  color: #1671b7;
+}
+
+.book-order-status-badge.working {
+  background: #f3fcfb;
+  color: #0c7f86;
+}
+
+.book-order-status-badge.done {
+  background: #eef8ee;
+  color: #287a34;
+}
+
+.book-order-status-badge.cancelled {
+  background: #f2f4f7;
+  color: #667085;
+}
+
+.book-order-status-badge.error {
+  background: #fff0f0;
+  color: #c73737;
+}
+
+.book-order-detail-panel {
+  display: grid;
+  gap: 18px;
+}
+
+.book-order-detail-header {
+  display: grid;
+  gap: 8px;
+}
+
+.book-order-detail-header h2 {
+  font-size: 24px;
+}
+
+.book-order-detail-list,
+.book-order-confirm-list {
+  display: grid;
+  gap: 10px;
+}
+
+.book-order-detail-list div,
+.book-order-confirm-list div {
+  display: grid;
+  grid-template-columns: 94px minmax(0, 1fr);
+  gap: 12px;
+  border-bottom: 1px solid #edf2f8;
+  padding-bottom: 10px;
+}
+
+.book-order-detail-list dt,
+.book-order-confirm-list dt {
+  color: #667085;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.book-order-detail-list dd,
+.book-order-confirm-list dd {
+  margin: 0;
+  color: #253248;
+  font-size: 14px;
+  font-weight: 900;
+  line-height: 1.5;
+}
+
+.book-order-detail-list .total,
+.book-order-confirm-list .total {
+  border-bottom: 0;
+}
+
+.book-order-detail-list .total dd,
+.book-order-confirm-list .total dd {
+  color: #f04f95;
+  font-size: 18px;
+}
+
+.book-order-subsection {
+  display: grid;
+  gap: 10px;
+}
+
+.book-order-subsection h3 {
+  color: #253248;
+  font-size: 17px;
+}
+
+.book-order-content-list,
+.book-order-history-list {
+  display: grid;
+  gap: 8px;
+}
+
+.book-order-content-list div,
+.book-order-history-list div {
+  display: grid;
+  gap: 4px;
+  border: 1px solid #e4ebf5;
+  border-radius: 8px;
+  background: #fbfcff;
+  padding: 12px;
+}
+
+.book-order-content-list strong,
+.book-order-history-list strong {
+  color: #253248;
+  font-size: 14px;
+}
+
+.book-order-content-list small,
+.book-order-history-list small,
+.book-order-history-list p {
+  margin: 0;
+  color: #667085;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.45;
+}
+
+.book-order-confirm-modal {
+  max-width: 560px;
+}
+
+.book-order-confirm-list {
+  margin-top: 18px;
+}
+
 .row-button {
   min-width: 82px;
 }
@@ -4790,6 +4998,7 @@ dl {
   .letter-page,
   .book-content-layout,
   .book-preview-layout,
+  .book-orders-page,
   .settings-row,
   .settings-row:not(.password-row) {
     grid-template-columns: 1fr;
