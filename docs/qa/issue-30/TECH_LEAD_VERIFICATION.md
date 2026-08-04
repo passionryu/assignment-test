@@ -35,6 +35,8 @@
 - Human QA 피드백에 따라 `BookPeriodRangeCalendar`를 추가해 캘린더의 두 날짜 클릭으로 책 생성 기간을 설정할 수 있게 했다.
 - Human QA 피드백에 따라 책 기간 캘린더는 선택 방 기준 활동만 표시하도록 `buildBookPeriodCalendar`에서 캘린더 데이터를 방 기준으로 필터링한다.
 - Human QA 피드백에 따라 콘텐츠 타입 선택 UI를 4열 카드형으로 확대하고, `기록 불러오기` CTA를 기간 선택 카드 하단으로 이동했다.
+- Human QA 피드백에 따라 `createBookPreview`에 최소 3초 보장 로딩을 추가하고, `BookPreviewLoadingModal`에서 방/상품/책 구성 요약을 표시한다.
+- Human QA 피드백에 따라 캘린더 기간 범위 배경색을 `#f3fcfb`에서 `#e7f7f4`로 조정해 식별성을 높였다.
 
 ## 검증 명령
 
@@ -82,6 +84,7 @@ curl -I http://127.0.0.1:5173
 - 최신 추가 피드백 반영 후 `npm run build`, `git diff --check`, `curl -I http://127.0.0.1:5173`를 재수행했다.
 - 콘텐츠 타입 선택 및 3초 로딩 modal 추가 후 `npm run build`, `./gradlew test`, `git diff --check`, `curl -I http://127.0.0.1:5173`를 재수행했다.
 - 캘린더 기간 선택, 콘텐츠 타입 카드 확대, 하단 CTA 이동, 방 선택 1열 목록화 반영 후 `npm run build`, `./gradlew test`, `git diff --check`를 재수행했다.
+- 미리보기 계산 3초 spinner modal과 캘린더 범위 색상 조정 후 `npm run build`, `./gradlew test`, `git diff --check`를 재수행했다.
 - 최신 추가 피드백에 대한 in-app browser 직접 클릭 검증은 browser URL 정책이 `localhost:5173` 이동을 차단해 수행하지 못했다. 앱 서버는 정상 응답 상태이며, 사용자가 화면에서 Human QA로 확인해야 한다.
 
 ## 상태
