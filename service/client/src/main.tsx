@@ -624,6 +624,7 @@ type ApiError = {
 
 type RoomFeatureKind = "chat" | "memories" | "missions" | "letters";
 type BookArchiveView = "bookProducts" | "bookCreate" | "bookStatus" | "bookHistory";
+type BookCreateStep = "room" | "product" | "period" | "content" | "preview";
 type AppView = "home" | "rooms" | "room" | "settings" | RoomFeatureKind | BookArchiveView;
 type RoomSettingsMode = "menu" | "info" | "edit" | "delete" | null;
 type MemoryActionMode = "edit" | "delete" | null;
@@ -1247,6 +1248,7 @@ function App() {
   const [bookRooms, setBookRooms] = useState<BookCreateRoom[]>([]);
   const [bookSelectedRoomId, setBookSelectedRoomId] = useState<number | null>(null);
   const [bookSelectedProductUid, setBookSelectedProductUid] = useState<string | null>(null);
+  const [bookCreateStep, setBookCreateStep] = useState<BookCreateStep>("room");
   const [bookPeriod, setBookPeriod] = useState<BookPeriod>(() => ({ startDate: offsetDateKey(-30), endDate: todayDateKey() }));
   const [bookTitle, setBookTitle] = useState("");
   const [bookQuantity, setBookQuantity] = useState(1);
@@ -1435,6 +1437,7 @@ function App() {
     setBookRooms([]);
     setBookSelectedRoomId(null);
     setBookSelectedProductUid(null);
+    setBookCreateStep("room");
     setBookPeriod({ startDate: offsetDateKey(-30), endDate: todayDateKey() });
     setBookTitle("");
     setBookQuantity(1);
@@ -1775,16 +1778,19 @@ function App() {
     setBookSelectedRoomId(roomId);
     setBookTitle((current) => current || `${room?.name ?? "선택한 방"} 기록집`);
     clearBookComposition();
+    setBookCreateStep("product");
   }
 
   function selectBookProduct(productUid: string) {
     setBookSelectedProductUid(productUid);
     clearBookComposition();
+    setBookCreateStep("period");
   }
 
   function updateBookPeriod(nextPeriod: BookPeriod) {
     setBookPeriod(nextPeriod);
     clearBookComposition();
+    setBookCreateStep("period");
   }
 
   function clearBookComposition() {
@@ -1821,6 +1827,7 @@ function App() {
       setBookContentCandidates(response);
       setSelectedBookContentKeys(initialBookSelection(response));
       setBookTitle((current) => current || `${response.roomName} 기록집`);
+      setBookCreateStep("content");
     } catch (error) {
       const fallback = buildDemoBookContentCandidates(
         bookSelectedRoomId,
@@ -1831,6 +1838,7 @@ function App() {
       setBookContentCandidates(fallback);
       setSelectedBookContentKeys(initialBookSelection(fallback));
       setBookTitle((current) => current || `${fallback.roomName} 기록집`);
+      setBookCreateStep("content");
       setErrorMessage(toMessage(error));
     } finally {
       setBookCandidatesLoading(false);
@@ -1879,6 +1887,7 @@ function App() {
         },
       });
       setBookPreview(response);
+      setBookCreateStep("preview");
       setMessage("템플릿 기반 책 미리보기와 예상 견적을 계산했습니다.");
     } catch (error) {
       setErrorMessage(toMessage(error));
@@ -3150,6 +3159,7 @@ function App() {
             products={bookProducts}
             selectedRoomId={bookSelectedRoomId}
             selectedProductUid={bookSelectedProductUid}
+            activeStep={bookCreateStep}
             period={bookPeriod}
             title={bookTitle}
             quantity={bookQuantity}
@@ -3161,6 +3171,7 @@ function App() {
             preview={bookPreview}
             loading={bookProductsLoading || bookCandidatesLoading}
             previewLoading={bookPreviewLoading}
+            onStepChange={setBookCreateStep}
             onSelectRoom={selectBookRoom}
             onSelectProduct={selectBookProduct}
             onPeriodChange={updateBookPeriod}
@@ -5475,6 +5486,7 @@ function BookCreateView({
   products,
   selectedRoomId,
   selectedProductUid,
+  activeStep,
   period,
   title,
   quantity,
@@ -5486,6 +5498,7 @@ function BookCreateView({
   preview,
   loading,
   previewLoading,
+  onStepChange,
   onSelectRoom,
   onSelectProduct,
   onPeriodChange,
@@ -5500,6 +5513,7 @@ function BookCreateView({
   products: BookProduct[];
   selectedRoomId: number | null;
   selectedProductUid: string | null;
+  activeStep: BookCreateStep;
   period: BookPeriod;
   title: string;
   quantity: number;
@@ -5511,6 +5525,7 @@ function BookCreateView({
   preview: BookPreviewResponse | null;
   loading: boolean;
   previewLoading: boolean;
+  onStepChange: (step: BookCreateStep) => void;
   onSelectRoom: (roomId: number) => void;
   onSelectProduct: (productUid: string) => void;
   onPeriodChange: (period: BookPeriod) => void;
@@ -5525,6 +5540,35 @@ function BookCreateView({
   const selectedRoom = rooms.find((room) => room.id === selectedRoomId) ?? null;
   const canLoadCandidates = Boolean(selectedRoom && selectedProduct && period.startDate && period.endDate && period.startDate <= period.endDate);
   const canPreview = Boolean(selectedRoom && selectedProduct && selectedContents.length > 0 && draftPageRange?.status !== "OVER_MAX");
+  const steps: Array<{ key: BookCreateStep; label: string }> = [
+    { key: "room", label: "방 선택" },
+    { key: "product", label: "상품 선택" },
+    { key: "period", label: "기간 선택" },
+    { key: "content", label: "기록 선택" },
+    { key: "preview", label: "미리보기" },
+  ];
+
+  const canEnterStep = (step: BookCreateStep) => {
+    if (step === "room") return true;
+    if (step === "product") return Boolean(selectedRoom);
+    if (step === "period") return Boolean(selectedRoom && selectedProduct);
+    if (step === "content") return Boolean(selectedRoom && selectedProduct && contentCandidates);
+    return Boolean(preview);
+  };
+  const isStepCompleted = (step: BookCreateStep) => {
+    if (step === "room") return Boolean(selectedRoom);
+    if (step === "product") return Boolean(selectedProduct);
+    if (step === "period") return Boolean(contentCandidates);
+    if (step === "content") return canPreview;
+    return Boolean(preview);
+  };
+  const stepSummary = (step: BookCreateStep) => {
+    if (step === "room") return selectedRoom?.name ?? "선택 전";
+    if (step === "product") return selectedProduct?.displayName ?? "선택 전";
+    if (step === "period") return `${formatDateLabel(period.startDate)} ~ ${formatDateLabel(period.endDate)}`;
+    if (step === "content") return contentCandidates ? `${selectedContents.length}개 · ${draftPageRange?.estimatedPageCount ?? 0}p` : "불러오기 전";
+    return preview ? `${preview.pageRange.estimatedPageCount}p · ${formatCurrency(preview.estimate.totalPrice)}` : "계산 전";
+  };
 
   return (
     <>
@@ -5535,162 +5579,220 @@ function BookCreateView({
         </div>
       </header>
 
-      <section className="book-page">
+      <section className="book-page book-wizard-page">
         <ol className="book-stepper" aria-label="책 만들기 진행 단계">
-          {["방", "상품", "기간", "콘텐츠", "미리보기"].map((step, index) => (
-            <li className={bookStepActive(index + 1, selectedRoom, selectedProduct, contentCandidates, preview) ? "active" : ""} key={step}>
-              <span>{index + 1}</span>
-              {step}
-            </li>
-          ))}
+          {steps.map((step, index) => {
+            const current = activeStep === step.key;
+            const completed = isStepCompleted(step.key);
+            const disabled = !canEnterStep(step.key);
+
+            return (
+              <li className={`${current ? "active" : ""} ${completed ? "completed" : ""}`} key={step.key}>
+                <button type="button" onClick={() => onStepChange(step.key)} disabled={disabled} aria-current={current ? "step" : undefined}>
+                  <span>{completed ? <CheckCircle2 size={15} /> : index + 1}</span>
+                  <b>{step.label}</b>
+                  <small>{stepSummary(step.key)}</small>
+                </button>
+              </li>
+            );
+          })}
         </ol>
 
-        <section className="book-section" aria-labelledby="book-room-step">
-          <div className="book-section-heading">
-            <div>
-              <span>1. 방 선택</span>
-              <h2 id="book-room-step">책으로 만들 방</h2>
-            </div>
-            <UsersRound size={24} />
+        <div className="book-wizard-summary" aria-label="책 만들기 선택 요약">
+          <div>
+            <span>방</span>
+            <strong>{selectedRoom?.name ?? "아직 선택하지 않음"}</strong>
           </div>
-
-          <div className="book-room-grid" aria-busy={loading}>
-            {rooms.map((room) => (
-              <button className={`book-option-card ${selectedRoomId === room.id ? "selected" : ""}`} type="button" key={room.id} onClick={() => onSelectRoom(room.id)}>
-                <strong>{room.name}</strong>
-                <span>{roomTypeLabel(room.type)} · 구성원 {room.memberCount}명</span>
-                <small>책 후보 기록 {room.bookableRecordCount}개</small>
-              </button>
-            ))}
+          <div>
+            <span>상품</span>
+            <strong>{selectedProduct?.displayName ?? "아직 선택하지 않음"}</strong>
           </div>
-        </section>
-
-        <section className="book-section" aria-labelledby="book-product-step">
-          <div className="book-section-heading">
-            <div>
-              <span>2. 상품 선택</span>
-              <h2 id="book-product-step">인쇄 상품</h2>
-            </div>
-            <BookOpen size={24} />
+          <div>
+            <span>기간</span>
+            <strong>{formatDateLabel(period.startDate)} ~ {formatDateLabel(period.endDate)}</strong>
           </div>
-
-          <div className="book-product-grid">
-            {products.map((product) => (
-              <button className={`book-product-card selectable ${selectedProductUid === product.uid ? "selected" : ""}`} type="button" key={product.uid} onClick={() => onSelectProduct(product.uid)}>
-                <div className="book-product-card-title">
-                  <BookOpen size={22} />
-                  <h3>{product.displayName}</h3>
-                </div>
-                <dl className="book-spec-list compact">
-                  <div>
-                    <dt>판형</dt>
-                    <dd>{product.widthMm} x {product.heightMm}mm</dd>
-                  </div>
-                  <div>
-                    <dt>제본</dt>
-                    <dd>{coverLabel(product.coverType)} · {product.bindingType}</dd>
-                  </div>
-                  <div>
-                    <dt>페이지</dt>
-                    <dd>{product.minPage}~{product.maxPage}p</dd>
-                  </div>
-                </dl>
-              </button>
-            ))}
+          <div>
+            <span>구성</span>
+            <strong>{selectedContents.length}개 · {draftPageRange?.estimatedPageCount ?? 0}p</strong>
           </div>
-        </section>
+        </div>
 
-        <section className="book-section" aria-labelledby="book-period-step">
-          <div className="book-section-heading">
-            <div>
-              <span>3. 기간 선택</span>
-              <h2 id="book-period-step">자동으로 불러올 기록 기간</h2>
-            </div>
-            <CalendarDays size={24} />
-          </div>
-
-          <div className="book-period-row">
-            <label>
-              시작일
-              <input type="date" value={period.startDate} onChange={(event) => onPeriodChange({ ...period, startDate: event.target.value })} />
-            </label>
-            <label>
-              종료일
-              <input type="date" value={period.endDate} onChange={(event) => onPeriodChange({ ...period, endDate: event.target.value })} />
-            </label>
-            <button className="primary-button" type="button" onClick={onLoadCandidates} disabled={!canLoadCandidates || loading}>
-              {loading ? "불러오는 중" : "기록 불러오기"}
-            </button>
-          </div>
-        </section>
-
-        <section className="book-content-layout" aria-labelledby="book-content-step">
-          <div className="book-section">
+        {activeStep === "room" ? (
+          <section className="book-section book-wizard-panel" aria-labelledby="book-room-step">
             <div className="book-section-heading">
               <div>
-                <span>4. 콘텐츠 커스텀</span>
-                <h2 id="book-content-step">책에 담을 기록</h2>
+                <span>1. 방 선택</span>
+                <h2 id="book-room-step">책으로 만들 방을 선택하세요</h2>
               </div>
-              <CheckCircle2 size={24} />
+              <UsersRound size={24} />
             </div>
 
-            {!contentCandidates ? (
-              <div className="book-empty-state">기간을 선택하고 기록을 불러오면 추억 게시글, 미션 인증, 편지가 자동으로 선택됩니다.</div>
-            ) : (
-              <div className="book-content-columns">
-                <BookContentSelectionGroup
-                  title="기간 안에서 자동으로 불러온 기록"
-                  contents={contentCandidates.defaultContents}
-                  selectedContentKeys={selectedContentKeys}
-                  onToggleContent={onToggleContent}
-                />
-                <BookContentSelectionGroup
-                  title="다른 기간에서 추가할 수 있는 기록"
-                  contents={contentCandidates.additionalContents}
-                  selectedContentKeys={selectedContentKeys}
-                  onToggleContent={onToggleContent}
-                />
+            <div className="book-room-grid" aria-busy={loading}>
+              {rooms.map((room) => (
+                <button className={`book-option-card ${selectedRoomId === room.id ? "selected" : ""}`} type="button" key={room.id} onClick={() => onSelectRoom(room.id)}>
+                  <strong>{room.name}</strong>
+                  <span>{roomTypeLabel(room.type)} · 구성원 {room.memberCount}명</span>
+                  <small>책 후보 기록 {room.bookableRecordCount}개</small>
+                </button>
+              ))}
+            </div>
+          </section>
+        ) : null}
+
+        {activeStep === "product" ? (
+          <section className="book-section book-wizard-panel" aria-labelledby="book-product-step">
+            <div className="book-section-heading">
+              <div>
+                <span>2. 상품 선택</span>
+                <h2 id="book-product-step">인쇄 상품을 선택하세요</h2>
               </div>
+              <BookOpen size={24} />
+            </div>
+
+            <div className="book-product-grid">
+              {products.map((product) => (
+                <button className={`book-product-card selectable ${selectedProductUid === product.uid ? "selected" : ""}`} type="button" key={product.uid} onClick={() => onSelectProduct(product.uid)}>
+                  <div className="book-product-card-title">
+                    <BookOpen size={22} />
+                    <h3>{product.displayName}</h3>
+                  </div>
+                  <dl className="book-spec-list compact">
+                    <div>
+                      <dt>판형</dt>
+                      <dd>{product.widthMm} x {product.heightMm}mm</dd>
+                    </div>
+                    <div>
+                      <dt>제본</dt>
+                      <dd>{coverLabel(product.coverType)} · {product.bindingType}</dd>
+                    </div>
+                    <div>
+                      <dt>페이지</dt>
+                      <dd>{product.minPage}~{product.maxPage}p</dd>
+                    </div>
+                  </dl>
+                </button>
+              ))}
+            </div>
+
+            <div className="book-wizard-actions">
+              <button className="secondary-button" type="button" onClick={() => onStepChange("room")}>이전</button>
+            </div>
+          </section>
+        ) : null}
+
+        {activeStep === "period" ? (
+          <section className="book-section book-wizard-panel" aria-labelledby="book-period-step">
+            <div className="book-section-heading">
+              <div>
+                <span>3. 기간 선택</span>
+                <h2 id="book-period-step">자동으로 불러올 기록 기간을 정하세요</h2>
+              </div>
+              <CalendarDays size={24} />
+            </div>
+
+            <div className="book-period-row">
+              <label>
+                시작일
+                <input type="date" value={period.startDate} onChange={(event) => onPeriodChange({ ...period, startDate: event.target.value })} />
+              </label>
+              <label>
+                종료일
+                <input type="date" value={period.endDate} onChange={(event) => onPeriodChange({ ...period, endDate: event.target.value })} />
+              </label>
+              <button className="primary-button" type="button" onClick={onLoadCandidates} disabled={!canLoadCandidates || loading}>
+                {loading ? "불러오는 중" : "기록 불러오기"}
+              </button>
+            </div>
+
+            <div className="book-wizard-actions">
+              <button className="secondary-button" type="button" onClick={() => onStepChange("product")}>이전</button>
+            </div>
+          </section>
+        ) : null}
+
+        {activeStep === "content" ? (
+          <section className="book-content-layout book-wizard-content-step" aria-labelledby="book-content-step">
+            <div className="book-section book-wizard-panel">
+              <div className="book-section-heading">
+                <div>
+                  <span>4. 콘텐츠 커스텀</span>
+                  <h2 id="book-content-step">책에 담을 기록을 고르세요</h2>
+                </div>
+                <CheckCircle2 size={24} />
+              </div>
+
+              {!contentCandidates ? (
+                <div className="book-empty-state">기간을 선택하고 기록을 불러오면 추억 게시글, 미션 인증, 편지가 자동으로 선택됩니다.</div>
+              ) : (
+                <div className="book-content-columns">
+                  <BookContentSelectionGroup
+                    title="기간 안에서 자동으로 불러온 기록"
+                    contents={contentCandidates.defaultContents}
+                    selectedContentKeys={selectedContentKeys}
+                    onToggleContent={onToggleContent}
+                  />
+                  <BookContentSelectionGroup
+                    title="다른 기간에서 추가할 수 있는 기록"
+                    contents={contentCandidates.additionalContents}
+                    selectedContentKeys={selectedContentKeys}
+                    onToggleContent={onToggleContent}
+                  />
+                </div>
+              )}
+            </div>
+
+            <aside className="book-summary-panel">
+              <div className="book-section-heading compact">
+                <div>
+                  <span>선택 요약</span>
+                  <h2>미리보기 입력</h2>
+                </div>
+              </div>
+
+              <label className="book-input-field">
+                책 제목
+                <input value={title} maxLength={120} onChange={(event) => onTitleChange(event.target.value)} placeholder={selectedRoom ? `${selectedRoom.name} 기록집` : "방을 먼저 선택하세요"} />
+              </label>
+              <label className="book-input-field">
+                수량
+                <input type="number" min={1} max={20} value={quantity} onChange={(event) => onQuantityChange(clampNumber(Number(event.target.value), 1, 20))} />
+              </label>
+
+              <BookSummaryMetrics summary={draftSummary} />
+
+              {draftPageRange ? (
+                <div className={`book-page-meter ${draftPageRange.status === "OVER_MAX" ? "danger" : ""}`}>
+                  <div>
+                    <strong>{draftPageRange.estimatedPageCount}p</strong>
+                    <span>{draftPageRange.minPage}~{draftPageRange.maxPage}p</span>
+                  </div>
+                  <meter min={0} max={draftPageRange.maxPage} value={Math.min(draftPageRange.estimatedPageCount, draftPageRange.maxPage)} />
+                  <p>{draftPageRange.message}</p>
+                </div>
+              ) : null}
+
+              <div className="book-wizard-actions stacked">
+                <button className="secondary-button" type="button" onClick={() => onStepChange("period")}>이전</button>
+                <button className="primary-button" type="button" onClick={onCreatePreview} disabled={!canPreview || previewLoading}>
+                  {previewLoading ? "계산 중" : "미리보기/견적 계산"}
+                </button>
+              </div>
+            </aside>
+          </section>
+        ) : null}
+
+        {activeStep === "preview" ? (
+          <div className="book-wizard-preview-step">
+            <div className="book-wizard-actions">
+              <button className="secondary-button" type="button" onClick={() => onStepChange("content")}>이전</button>
+            </div>
+            {preview ? <BookPreviewPanel preview={preview} onOpenOrderConfirm={onOpenOrderConfirm} /> : (
+              <section className="book-section book-wizard-panel">
+                <div className="book-empty-state">콘텐츠 선택 단계에서 미리보기와 견적을 먼저 계산해 주세요.</div>
+              </section>
             )}
           </div>
-
-          <aside className="book-summary-panel">
-            <div className="book-section-heading compact">
-              <div>
-                <span>선택 요약</span>
-                <h2>페이지와 견적 입력</h2>
-              </div>
-            </div>
-
-            <label className="book-input-field">
-              책 제목
-              <input value={title} maxLength={120} onChange={(event) => onTitleChange(event.target.value)} placeholder={selectedRoom ? `${selectedRoom.name} 기록집` : "방을 먼저 선택하세요"} />
-            </label>
-            <label className="book-input-field">
-              수량
-              <input type="number" min={1} max={20} value={quantity} onChange={(event) => onQuantityChange(clampNumber(Number(event.target.value), 1, 20))} />
-            </label>
-
-            <BookSummaryMetrics summary={draftSummary} />
-
-            {draftPageRange ? (
-              <div className={`book-page-meter ${draftPageRange.status === "OVER_MAX" ? "danger" : ""}`}>
-                <div>
-                  <strong>{draftPageRange.estimatedPageCount}p</strong>
-                  <span>{draftPageRange.minPage}~{draftPageRange.maxPage}p</span>
-                </div>
-                <meter min={0} max={draftPageRange.maxPage} value={Math.min(draftPageRange.estimatedPageCount, draftPageRange.maxPage)} />
-                <p>{draftPageRange.message}</p>
-              </div>
-            ) : null}
-
-            <button className="primary-button full-width" type="button" onClick={onCreatePreview} disabled={!canPreview || previewLoading}>
-              {previewLoading ? "계산 중" : "미리보기/견적 계산"}
-            </button>
-          </aside>
-        </section>
-
-        {preview ? <BookPreviewPanel preview={preview} onOpenOrderConfirm={onOpenOrderConfirm} /> : null}
+        ) : null}
       </section>
     </>
   );
@@ -6999,20 +7101,6 @@ function roomFeatureCopy(kind: RoomFeatureKind) {
 
 function isBookArchiveView(view: AppView): view is BookArchiveView {
   return view === "bookProducts" || view === "bookCreate" || view === "bookStatus" || view === "bookHistory";
-}
-
-function bookStepActive(
-  step: number,
-  selectedRoom: BookCreateRoom | null,
-  selectedProduct: BookProduct | null,
-  contentCandidates: BookContentCandidatesResponse | null,
-  preview: BookPreviewResponse | null,
-): boolean {
-  if (step === 1) return true;
-  if (step === 2) return Boolean(selectedRoom);
-  if (step === 3) return Boolean(selectedRoom && selectedProduct);
-  if (step === 4) return Boolean(contentCandidates);
-  return Boolean(preview);
 }
 
 function bookContentKey(content: Pick<BookContentCandidate, "type" | "sourceId">): string {
