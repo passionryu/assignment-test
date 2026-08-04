@@ -17,6 +17,7 @@
 - `BookTemplateVisual`은 콘텐츠 타입별 아이콘/색상 블록을 제공한다.
 - 뷰어는 좌우 이동 버튼과 하단 썸네일 버튼으로 active slide를 변경한다.
 - 예상 견적 패널과 주문 요청 CTA는 기존 `BookPreviewResponse` 기반 흐름을 유지한다.
+- Human QA 피드백에 따라 `BookPreviewPanel` 상단에 현재/전체 페이지 위치를 표시하고, 뷰어 패널/책 페이지/썸네일/견적 카드의 여백과 크기를 조정했다.
 
 ## 검증 명령
 
@@ -45,6 +46,7 @@ curl -I http://127.0.0.1:5173
 - `git diff --check` 통과.
 - `curl -I http://127.0.0.1:5173` 기준 `200 OK` 응답 확인.
 - 서버 preview API 계약은 변경하지 않았고, 클라이언트 표시 방식만 변경했다.
+- 최종 미리보기 UI polish 후 `npm run build`, `./gradlew test`, `git diff --check`, `curl -I http://127.0.0.1:5173`를 재수행했다.
 
 ## 상태
 
