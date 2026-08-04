@@ -3282,6 +3282,7 @@ function App() {
           <BookCreateView
             rooms={bookRooms}
             products={bookProducts}
+            calendar={calendar}
             selectedRoomId={bookSelectedRoomId}
             selectedProductUid={bookSelectedProductUid}
             activeStep={bookCreateStep}
@@ -4154,6 +4155,76 @@ function ActivityIcon({ type }: { type: "chat" | "mission" | "memory" | "letter"
   if (type === "memory") return <ImageIcon className={className} size={16} aria-hidden="true" />;
 
   return <Mail className={className} size={16} aria-hidden="true" />;
+}
+
+function BookPeriodRangeCalendar({
+  calendar,
+  period,
+  rangeAnchor,
+  disabled,
+  onDateSelect,
+}: {
+  calendar: CalendarResponse;
+  period: BookPeriod;
+  rangeAnchor: string | null;
+  disabled: boolean;
+  onDateSelect: (date: string) => void;
+}) {
+  const days = useMemo(() => buildCalendarCells(calendar.month), [calendar.month]);
+  const activityByDate = useMemo(() => new Map(calendar.days.map((day) => [day.date, day])), [calendar.days]);
+  const rangeStart = period.startDate <= period.endDate ? period.startDate : period.endDate;
+  const rangeEnd = period.startDate <= period.endDate ? period.endDate : period.startDate;
+
+  return (
+    <div className="book-range-calendar" aria-label="책에 담을 기록 기간 캘린더">
+      <div className="book-range-calendar-header">
+        <div>
+          <strong>{formatMonthLabel(calendar.month)}</strong>
+          <p>{rangeAnchor ? `${formatDateLabel(rangeAnchor)}부터 끝 날짜를 선택하세요.` : "캘린더에서 시작일과 종료일을 차례로 선택하세요."}</p>
+        </div>
+        <div className="calendar-legend" aria-label="기록 유형 범례">
+          <span><ActivityIcon type="chat" />채팅</span>
+          <span><ActivityIcon type="mission" />미션</span>
+          <span><ActivityIcon type="memory" />추억</span>
+          <span><ActivityIcon type="letter" />편지</span>
+        </div>
+      </div>
+
+      <div className="book-range-weekdays" aria-hidden="true">
+        {["일", "월", "화", "수", "목", "금", "토"].map((weekday) => (
+          <span key={weekday}>{weekday}</span>
+        ))}
+      </div>
+      <div className="book-range-grid">
+        {days.map((cell, index) => {
+          const cellDate = cell.date;
+          if (!cellDate) {
+            return <span className="book-range-day empty" key={`book-empty-${index}`} />;
+          }
+
+          const activity = activityByDate.get(cellDate) ?? null;
+          const isStart = cellDate === rangeStart;
+          const isEnd = cellDate === rangeEnd;
+          const isInRange = cellDate >= rangeStart && cellDate <= rangeEnd;
+          const isAnchor = cellDate === rangeAnchor;
+
+          return (
+            <button
+              className={`book-range-day ${activity ? "has-activity" : ""} ${isInRange ? "in-range" : ""} ${isStart ? "range-start" : ""} ${isEnd ? "range-end" : ""} ${isAnchor ? "range-anchor" : ""}`}
+              type="button"
+              key={cellDate}
+              onClick={() => onDateSelect(cellDate)}
+              disabled={disabled}
+              aria-pressed={isInRange}
+            >
+              <span>{cell.dayNumber}</span>
+              {activity ? <ActivityDots activity={activity} /> : null}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
 }
 
 function isInteractiveTarget(target: EventTarget | null) {
@@ -5630,6 +5701,7 @@ function BookProductGuideView({
 function BookCreateView({
   rooms,
   products,
+  calendar,
   selectedRoomId,
   selectedProductUid,
   activeStep,
@@ -5668,6 +5740,7 @@ function BookCreateView({
 }: {
   rooms: BookCreateRoom[];
   products: BookProduct[];
+  calendar: CalendarResponse | null;
   selectedRoomId: number | null;
   selectedProductUid: string | null;
   activeStep: BookCreateStep;
@@ -5706,6 +5779,8 @@ function BookCreateView({
 }) {
   const selectedProduct = products.find((product) => product.uid === selectedProductUid) ?? null;
   const selectedRoom = rooms.find((room) => room.id === selectedRoomId) ?? null;
+  const periodCalendar = useMemo(() => buildBookPeriodCalendar(calendar, selectedRoomId), [calendar, selectedRoomId]);
+  const [periodRangeAnchor, setPeriodRangeAnchor] = useState<string | null>(null);
   const canLoadCandidates = Boolean(selectedRoom && selectedProduct && period.startDate && period.endDate && period.startDate <= period.endDate && candidateContentTypes.length > 0);
   const canPreview = Boolean(selectedRoom && selectedProduct && selectedContents.length > 0 && draftPageRange?.status !== "OVER_MAX");
   const steps: Array<{ key: BookCreateStep; label: string }> = [
@@ -5740,6 +5815,23 @@ function BookCreateView({
   const filterCounts = buildBookContentFilterCounts(allContents, selectedContentKeys);
   const visibleContents = filterBookContents(allContents, contentFilter, selectedContentKeys);
   const selectedCandidateContentLabel = candidateContentTypes.map(bookContentTypeLabel).join(", ");
+  const selectPeriodDateFromCalendar = (date: string) => {
+    if (!periodRangeAnchor) {
+      setPeriodRangeAnchor(date);
+      onPeriodChange({ startDate: date, endDate: date });
+      return;
+    }
+
+    const nextPeriod = date < periodRangeAnchor
+      ? { startDate: date, endDate: periodRangeAnchor }
+      : { startDate: periodRangeAnchor, endDate: date };
+    setPeriodRangeAnchor(null);
+    onPeriodChange(nextPeriod);
+  };
+
+  useEffect(() => {
+    setPeriodRangeAnchor(null);
+  }, [selectedRoomId]);
 
   return (
     <>
@@ -5782,8 +5874,11 @@ function BookCreateView({
             <div className="book-room-grid" aria-busy={loading}>
               {rooms.map((room) => (
                 <button className={`book-option-card ${selectedRoomId === room.id ? "selected" : ""}`} type="button" key={room.id} onClick={() => onSelectRoom(room.id)}>
-                  <strong>{room.name}</strong>
-                  <span>{roomTypeLabel(room.type)} · 구성원 {room.memberCount}명</span>
+                  <div className="book-room-card-main">
+                    <span>{roomTypeLabel(room.type)}</span>
+                    <strong>{room.name}</strong>
+                  </div>
+                  <small>구성원 {room.memberCount}명</small>
                   <small>책 후보 기록 {room.bookableRecordCount}개</small>
                 </button>
               ))}
@@ -5848,10 +5943,15 @@ function BookCreateView({
                 종료일
                 <input type="date" value={period.endDate} disabled={candidatesLoading} onChange={(event) => onPeriodChange({ ...period, endDate: event.target.value })} />
               </label>
-              <button className="primary-button" type="button" onClick={onLoadCandidates} disabled={!canLoadCandidates || loading}>
-                {loading ? "불러오는 중" : "기록 불러오기"}
-              </button>
             </div>
+
+            <BookPeriodRangeCalendar
+              calendar={periodCalendar}
+              period={period}
+              rangeAnchor={periodRangeAnchor}
+              disabled={candidatesLoading}
+              onDateSelect={selectPeriodDateFromCalendar}
+            />
 
             <div className="book-candidate-type-picker" aria-label="불러올 콘텐츠 선택">
               <span>불러올 콘텐츠</span>
@@ -5868,13 +5968,19 @@ function BookCreateView({
                       disabled={candidatesLoading}
                       aria-pressed={selected}
                     >
-                      {bookContentTypeLabel(type)}
+                      <ActivityIcon type={bookContentTypeActivityKind(type)} />
+                      <strong>{bookContentTypeLabel(type)}</strong>
+                      <small>{selected ? "불러오기 포함" : "제외됨"}</small>
                     </button>
                   );
                 })}
               </div>
               <p>{candidateContentTypes.length > 0 ? `${selectedCandidateContentLabel} 기록을 불러옵니다.` : "콘텐츠를 1개 이상 선택해야 기록을 불러올 수 있습니다."}</p>
             </div>
+
+            <button className="primary-button book-load-candidates-button" type="button" onClick={onLoadCandidates} disabled={!canLoadCandidates || loading}>
+              {loading ? "불러오는 중" : "기록 불러오기"}
+            </button>
 
             {candidatesLoading ? <BookCandidateLoadingModal roomName={selectedRoom?.name ?? "선택한 방"} period={period} contentTypes={candidateContentTypes} /> : null}
 
@@ -8192,6 +8298,13 @@ function bookContentTypeLabel(type: BookContentType): string {
   return "채팅";
 }
 
+function bookContentTypeActivityKind(type: BookContentType): "memory" | "mission" | "letter" | "chat" {
+  if (type === "MEMORY") return "memory";
+  if (type === "MISSION") return "mission";
+  if (type === "LETTER") return "letter";
+  return "chat";
+}
+
 function orderDetailToSummary(order: PrintOrderDetail): PrintOrderSummary {
   return {
     id: order.id,
@@ -8822,6 +8935,43 @@ function calendarTarget(day: CalendarDayActivity, roomId?: number): { roomId: nu
   if (room.letterCount > 0) return { roomId: room.roomId, view: "letters" };
 
   return null;
+}
+
+function buildBookPeriodCalendar(calendar: CalendarResponse | null, roomId: number | null): CalendarResponse {
+  const source = calendar ?? demoCalendar;
+  if (!roomId) {
+    return source;
+  }
+
+  const days = source.days
+    .map((day) => {
+      const rooms = day.rooms.filter((room) => room.roomId === roomId);
+      const chatCount = sumCalendarRooms(rooms, "chatCount");
+      const memoryCount = sumCalendarRooms(rooms, "memoryCount");
+      const missionCount = sumCalendarRooms(rooms, "missionCount");
+      const letterCount = sumCalendarRooms(rooms, "letterCount");
+
+      return {
+        ...day,
+        rooms,
+        chatCount,
+        memoryCount,
+        missionCount,
+        letterCount,
+        totalCount: chatCount + memoryCount + missionCount + letterCount,
+      };
+    })
+    .filter((day) => day.totalCount > 0);
+
+  if (days.length === 0 && calendar) {
+    return filterDemoCalendar(roomId);
+  }
+
+  return {
+    month: source.month,
+    selectedDate: days[0]?.date ?? null,
+    days,
+  };
 }
 
 function filterDemoCalendar(roomId: number | null): CalendarResponse {

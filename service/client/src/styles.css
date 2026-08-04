@@ -4046,7 +4046,12 @@ dl {
   flex: 0 0 auto;
 }
 
-.book-room-grid,
+.book-room-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
 .book-product-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -4087,6 +4092,14 @@ dl {
   background: #f3fcfb;
 }
 
+.book-room-grid .book-option-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(96px, auto) minmax(120px, auto);
+  align-items: center;
+  gap: 18px;
+  min-height: 104px;
+}
+
 .book-option-card strong {
   display: block;
   font-size: 18px;
@@ -4100,6 +4113,34 @@ dl {
   color: #667085;
   font-size: 13px;
   font-weight: 850;
+}
+
+.book-room-grid .book-option-card span,
+.book-room-grid .book-option-card small {
+  margin-top: 0;
+}
+
+.book-room-card-main {
+  display: grid;
+  gap: 8px;
+}
+
+.book-room-grid .book-option-card span {
+  color: #ef4b96;
+}
+
+.book-room-grid .book-option-card strong {
+  font-size: 22px;
+}
+
+.book-room-grid .book-option-card small {
+  min-height: 48px;
+  display: grid;
+  place-items: center;
+  border: 1px solid #e4ebf5;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #253248;
 }
 
 .book-product-card-title {
@@ -4147,7 +4188,7 @@ dl {
 
 .book-period-row {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr)) auto;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   align-items: end;
   gap: 12px;
 }
@@ -4184,10 +4225,114 @@ dl {
   cursor: wait;
 }
 
+.book-range-calendar {
+  display: grid;
+  gap: 12px;
+  margin-top: 18px;
+  border: 1px solid #e4ebf5;
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 18px;
+}
+
+.book-range-calendar-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.book-range-calendar-header strong {
+  color: #253248;
+  font-size: 22px;
+  line-height: 1.25;
+}
+
+.book-range-calendar-header p {
+  margin-top: 5px;
+  color: #667085;
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.book-range-weekdays,
+.book-range-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+
+.book-range-weekdays span {
+  color: #98a2b3;
+  font-size: 13px;
+  font-weight: 950;
+  text-align: center;
+  padding: 8px 0;
+}
+
+.book-range-grid {
+  border: 1px solid #e4ebf5;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.book-range-day {
+  min-height: 82px;
+  border: 0;
+  border-right: 1px solid #edf2f7;
+  border-bottom: 1px solid #edf2f7;
+  background: #fbfcff;
+  color: #253248;
+  padding: 12px;
+  text-align: left;
+}
+
+.book-range-day:not(.empty) {
+  cursor: pointer;
+}
+
+.book-range-day:not(.empty):hover {
+  background: #f3fcfb;
+  box-shadow: inset 0 0 0 2px rgba(12, 159, 168, 0.18);
+}
+
+.book-range-day:nth-child(7n) {
+  border-right: 0;
+}
+
+.book-range-day.empty {
+  background: #f8fafc;
+}
+
+.book-range-day > span:first-child {
+  display: block;
+  color: #253248;
+  font-size: 18px;
+  font-weight: 950;
+}
+
+.book-range-day .activity-dots {
+  margin-top: 12px;
+}
+
+.book-range-day.in-range {
+  background: #f3fcfb;
+}
+
+.book-range-day.range-start,
+.book-range-day.range-end,
+.book-range-day.range-anchor {
+  box-shadow: inset 0 0 0 3px #0c9fa8;
+}
+
+.book-range-day:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+
 .book-candidate-type-picker {
   display: grid;
   gap: 10px;
-  margin-top: 18px;
+  margin-top: 22px;
 }
 
 .book-candidate-type-picker > span {
@@ -4197,22 +4342,43 @@ dl {
 }
 
 .book-candidate-type-picker > div {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
 }
 
 .book-candidate-type-picker button {
-  min-height: 40px;
+  display: grid;
+  align-content: center;
+  justify-items: start;
+  gap: 8px;
+  min-height: 96px;
   border: 1px solid #dfe7f2;
   border-radius: 8px;
   background: #ffffff;
   color: #667085;
-  padding: 0 14px;
+  padding: 16px;
   font-size: 14px;
   font-weight: 950;
   cursor: pointer;
+  text-align: left;
+}
+
+.book-candidate-type-picker button svg {
+  width: 22px;
+  height: 22px;
+}
+
+.book-candidate-type-picker button strong {
+  color: #253248;
+  font-size: 16px;
+  line-height: 1.25;
+}
+
+.book-candidate-type-picker button small {
+  color: #667085;
+  font-size: 12px;
+  font-weight: 850;
 }
 
 .book-candidate-type-picker button.selected {
@@ -4231,6 +4397,13 @@ dl {
   color: #667085;
   font-size: 13px;
   font-weight: 850;
+}
+
+.book-load-candidates-button {
+  width: 100%;
+  min-height: 54px;
+  margin-top: 18px;
+  font-size: 16px;
 }
 
 .book-loading-panel {
@@ -5959,10 +6132,17 @@ dl {
   .notification-grid,
   .metric-grid,
   .room-hub-grid,
-  .book-room-grid,
   .book-product-grid,
   .book-preview-grid,
   .settings-scope-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .book-room-grid .book-option-card {
+    grid-template-columns: minmax(0, 1fr) repeat(2, minmax(96px, auto));
+  }
+
+  .book-candidate-type-picker > div {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
@@ -6057,7 +6237,6 @@ dl {
   .metric-grid,
   .room-hub-grid,
   .book-stepper,
-  .book-room-grid,
   .book-product-grid,
   .book-period-row,
   .book-content-row,
@@ -6070,6 +6249,24 @@ dl {
   .chat-input-row,
   .chat-search-form,
   .notification-item {
+    grid-template-columns: 1fr;
+  }
+
+  .book-room-grid .book-option-card {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+
+  .book-range-calendar-header {
+    flex-direction: column;
+  }
+
+  .book-range-day {
+    min-height: 64px;
+    padding: 9px;
+  }
+
+  .book-candidate-type-picker > div {
     grid-template-columns: 1fr;
   }
 
