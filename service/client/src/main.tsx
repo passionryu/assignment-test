@@ -797,7 +797,7 @@ const demoRooms: RoomSummary[] = [
   {
     id: 1,
     name: "우리 둘의 100일",
-    description: "둘이 함께 남기는 100일 기록방",
+    description: "둘이 함께 남기는 100일 방",
     type: "COUPLE",
     role: "OWNER",
     memberCount: 2,
@@ -821,7 +821,7 @@ const demoRooms: RoomSummary[] = [
   {
     id: 3,
     name: "여름 프로젝트반",
-    description: "프로젝트반 활동과 미션 인증 기록방",
+    description: "프로젝트반 활동과 미션 인증 방",
     type: "GROUP",
     role: "MEMBER",
     memberCount: 12,
@@ -3066,7 +3066,7 @@ function App() {
         setExpandedRoomId(response.roomId);
         setRoomFeedbackModal({
           title: "초대 수락 완료",
-          message: "초대를 수락했습니다. 기록방 목록에 새 방이 추가되었습니다.",
+          message: "초대를 수락했습니다. Room 목록에 새 방이 추가되었습니다.",
         });
       } else {
         setRoomFeedbackModal({ title: "초대 거절 완료", message: "초대를 거절했습니다." });
@@ -3152,7 +3152,7 @@ function App() {
       setRoomSettingsMode(null);
       setRoomDetail(null);
       setRoomDeleteConfirmName("");
-      setRoomFeedbackModal({ title: "방 삭제 완료", message: "방장 확인 절차를 거쳐 기록방을 삭제했습니다." });
+      setRoomFeedbackModal({ title: "방 삭제 완료", message: "방장 확인 절차를 거쳐 방을 삭제했습니다." });
     } catch (error) {
       setRoomSettingsMode(null);
       setRoomFeedbackModal({ title: "방 삭제 실패", message: toMessage(error) });
@@ -3639,14 +3639,14 @@ function DemoMemberSelectionView({
             </span>
           </div>
           <h1 id="member-select-title">사용자 유형을 선택하세요</h1>
-          <p>일반 사용자는 기록방을 사용하고 책을 주문합니다. 운영자는 전체 책 주문을 확인하고 상태를 관리합니다.</p>
+          <p>일반 사용자는 Roomory에서 방을 사용하고 책을 주문합니다. 운영자는 전체 책 주문을 확인하고 상태를 관리합니다.</p>
         </div>
 
         <div className="member-select-groups">
           <section className="member-select-group" aria-labelledby="member-user-group-title">
             <div className="member-select-group-heading">
               <strong id="member-user-group-title">일반 사용자</strong>
-              <span>기록방 작성, 참여, 책 만들기와 주문 흐름 확인</span>
+              <span>방 작성, 참여, 책 만들기와 주문 흐름 확인</span>
             </div>
             <div className="member-select-grid">
               {userMembers.map((member) => renderMemberCard(member, "user"))}
@@ -3982,15 +3982,15 @@ function Sidebar({
     activeView === "room" || activeView === "chat" || activeView === "memories" || activeView === "missions" || activeView === "letters";
 
   return (
-    <aside className={`sidebar ${collapsed ? "is-collapsed" : ""}`} aria-label="기록방 메뉴">
+    <aside className={`sidebar ${collapsed ? "is-collapsed" : ""}`} aria-label="Roomory 메뉴">
       <div>
         <div className="sidebar-brand">
           <div className="sidebar-brand-text">
-            <strong>기록방</strong>
+            <strong>Roomory</strong>
             <span>방 기준 메뉴</span>
           </div>
           <span className="sidebar-brand-mark" aria-hidden="true">
-            기
+            R
           </span>
           <button className="sidebar-toggle" type="button" aria-label={collapsed ? "사이드바 펼치기" : "사이드바 접기"} onClick={onToggleSidebar}>
             {collapsed ? <PanelLeftOpen size={20} /> : <PanelLeftClose size={20} />}
@@ -4003,16 +4003,16 @@ function Sidebar({
             <span className="nav-label">홈</span>
           </button>
           <div className={`nav-item-combo ${activeView === "rooms" ? "active" : ""} ${roomListExpanded ? "is-expanded" : ""}`}>
-            <button className="nav-item room-list-nav" type="button" aria-label={roomListExpanded ? "기록방 목록 접기" : "기록방 목록 펼치기"} aria-expanded={roomListExpanded} onClick={onToggleRoomList}>
+            <button className="nav-item room-list-nav" type="button" aria-label={roomListExpanded ? "Room 목록 접기" : "Room 목록 펼치기"} aria-expanded={roomListExpanded} onClick={onToggleRoomList}>
               <List size={18} />
-              <span className="nav-label">기록방</span>
+              <span className="nav-label">Room</span>
               {pendingInvitationCount > 0 ? (
                 <span className="count-badge" aria-label={`대기 중인 초대 ${pendingInvitationCount}개`}>
                   {pendingInvitationCount}
                 </span>
               ) : null}
             </button>
-            <button className="nav-icon-toggle" type="button" aria-label={roomListExpanded ? "기록방 목록 접기" : "기록방 목록 펼치기"} aria-expanded={roomListExpanded} onClick={onToggleRoomList}>
+            <button className="nav-icon-toggle" type="button" aria-label={roomListExpanded ? "Room 목록 접기" : "Room 목록 펼치기"} aria-expanded={roomListExpanded} onClick={onToggleRoomList}>
               <ChevronDown size={16} />
             </button>
           </div>
@@ -4251,8 +4251,8 @@ function HomeView({
         <article className="dashboard-card wide-card home-rooms-card">
           <div className="panel-heading compact-heading">
             <div>
-              <span>내 기록방</span>
-              <h2>참여 중인 기록방</h2>
+              <span>내 방</span>
+              <h2>참여 중인 방</h2>
             </div>
             <button className="text-button" type="button" onClick={onOpenRoomList}>
               전체 보기
@@ -4263,7 +4263,7 @@ function HomeView({
               <button className="home-room-card" type="button" key={room.id} onClick={() => onOpenRoom(room.id)}>
                 <span className="home-room-type">{roomTypeLabel(room.type)}</span>
                 <strong>{room.name}</strong>
-                <span>{room.description ?? "함께 쓰는 기록방"}</span>
+                <span>{room.description ?? "함께 쓰는 방"}</span>
                 <div className="home-room-meta">
                   <span>구성원 {room.memberCount}명</span>
                   <span>알림 {room.unreadChatCount + room.unreadMemoryCount + room.unreadLetterCount + room.pendingMissionCount}개</span>
@@ -4271,7 +4271,7 @@ function HomeView({
               </button>
             ))}
           </div>
-          {hiddenRoomCount > 0 ? <p className="home-room-more">외 {hiddenRoomCount}개 기록방은 방 관리 대시보드에서 확인할 수 있습니다.</p> : null}
+          {hiddenRoomCount > 0 ? <p className="home-room-more">외 {hiddenRoomCount}개 방은 방 관리 대시보드에서 확인할 수 있습니다.</p> : null}
         </article>
 
         <article className="dashboard-card wide-card">
@@ -4889,7 +4889,7 @@ function RoomsView({
         <article className="hub-card room-create-card">
           <div className="room-create-heading">
             <span>새 방 만들기</span>
-            <p>방장이 되어 새로운 기록방을 만들어보세요</p>
+            <p>방장이 되어 새로운 방을 만들어보세요</p>
           </div>
           <div className="room-form-grid">
             <label className="field compact-field">
@@ -5753,7 +5753,7 @@ function MissionBoardView({
       <section className="mission-page">
         <article className="mission-room-card">
           <div>
-            <span>{selectedRoom ? roomTypeLabel(selectedRoom.type) : "기록방"}</span>
+            <span>{selectedRoom ? roomTypeLabel(selectedRoom.type) : "방"}</span>
             <h2>{selectedRoom?.name ?? "방을 선택하세요"}</h2>
             <p>{missionList?.completionRule ?? "커플은 상대 동의, 가족/학급/동아리는 방장 승인 또는 과반 동의로 완료된다."}</p>
           </div>
@@ -8888,7 +8888,7 @@ function RoomSettingsModal({
             <>
               <div className="delete-warning">
                 <strong>{room.name}</strong>
-                <span>방장이 나가면 이 기록방이 삭제되고 모든 멤버가 더 이상 접근할 수 없습니다.</span>
+                <span>방장이 나가면 이 방이 삭제되고 모든 멤버가 더 이상 접근할 수 없습니다.</span>
                 <span>실수로 방 전체가 사라지는 일을 막기 위해 방 제목을 정확히 입력해야 합니다.</span>
               </div>
               <label className="field">
@@ -9024,7 +9024,7 @@ function NotificationList({
             {notificationTypeLabel(notification.type)}
           </span>
           <span className="notification-body">
-            <strong>{notification.roomName ?? "기록방"}</strong>
+            <strong>{notification.roomName ?? "방"}</strong>
             <span>
               {notification.actorName} · {notification.summary}
             </span>
