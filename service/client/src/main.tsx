@@ -3977,6 +3977,8 @@ function Sidebar({
 }) {
   const selectedRoom = rooms.find((room) => room.id === selectedRoomId) ?? rooms[0] ?? null;
   const bookMenuActive = isBookArchiveView(activeView);
+  const roomMenuActive =
+    activeView === "room" || activeView === "chat" || activeView === "memories" || activeView === "missions" || activeView === "letters";
 
   return (
     <aside className={`sidebar ${collapsed ? "is-collapsed" : ""}`} aria-label="기록방 메뉴">
@@ -4020,8 +4022,7 @@ function Sidebar({
               <span className="nav-label">방 관리 대시보드</span>
             </button>
             {rooms.map((room) => {
-              const isRoomContext = activeView !== "home" && activeView !== "rooms";
-              const isSelected = isRoomContext && room.id === selectedRoom?.id;
+              const isSelected = roomMenuActive && room.id === selectedRoom?.id;
               const isExpanded = isSelected && roomListExpanded && room.id === expandedRoomId && !collapsed;
 
               return (
