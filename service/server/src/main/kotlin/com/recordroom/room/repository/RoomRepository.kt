@@ -89,6 +89,9 @@ class RoomRepository(
     fun saveRoomMember(roomMember: RoomMemberEntity): RoomMemberEntity =
         roomMemberJpaRepository.save(roomMember)
 
+    fun markRoomMemberLeft(roomId: Long, memberId: Long, leftAt: OffsetDateTime): Int =
+        roomMemberJpaRepository.markMemberLeft(roomId, memberId, leftAt)
+
     fun saveRoomInvitation(invitation: RoomInvitationEntity): RoomInvitationEntity =
         roomInvitationJpaRepository.save(invitation)
 

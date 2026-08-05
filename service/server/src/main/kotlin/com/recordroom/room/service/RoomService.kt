@@ -196,8 +196,15 @@ class RoomService(
             throw ApiException(HttpStatus.BAD_REQUEST, "ROOM_OWNER_MUST_DELETE_ROOM", "방장은 방 나가기 대신 방 삭제를 진행해야 합니다.")
         }
 
-        membership.leftAt = OffsetDateTime.now()
-        roomRepository.saveRoomMember(membership)
+        val updatedCount = roomRepository.markRoomMemberLeft(
+            roomId = roomId,
+            memberId = memberId,
+            leftAt = OffsetDateTime.now(),
+        )
+
+        if (updatedCount == 0) {
+            memberNotJoinedRoom(memberId, roomId, "RoomService.leaveRoom")
+        }
 
         return LeaveRoomResponse(id = roomId, left = true)
     }
