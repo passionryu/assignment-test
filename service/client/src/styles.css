@@ -3633,6 +3633,7 @@ dl {
 .room-hub-grid {
   display: grid;
   grid-template-columns: minmax(360px, 0.9fr) minmax(0, 1.55fr);
+  align-items: start;
   gap: 16px;
   margin-bottom: 18px;
 }
@@ -3664,17 +3665,18 @@ dl {
 
 .room-create-card,
 .invitation-card {
-  min-height: 250px;
+  min-height: 0;
+  padding: 18px 20px;
 }
 
 .room-create-card {
-  gap: 14px;
+  gap: 8px;
 }
 
 .room-create-heading {
   display: grid;
-  gap: 4px;
-  margin-bottom: 4px;
+  gap: 2px;
+  margin-bottom: 0;
 }
 
 .room-create-heading p {
@@ -3684,7 +3686,18 @@ dl {
 .room-form-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 150px;
-  gap: 10px;
+  gap: 8px;
+}
+
+.room-create-card .field {
+  gap: 6px;
+  margin-top: 0;
+}
+
+.room-create-card .field input,
+.room-create-card .field select,
+.room-create-card .primary-button {
+  min-height: 38px;
 }
 
 .compact-field {
@@ -3692,7 +3705,7 @@ dl {
 }
 
 .compact-submit {
-  margin-top: 2px;
+  margin-top: 0;
 }
 
 .field select {
@@ -3714,19 +3727,19 @@ dl {
 
 .pending-invitation-list {
   display: grid;
-  gap: 10px;
+  gap: 6px;
 }
 
 .pending-invitation-item {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  align-items: stretch;
+  align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: 10px;
   border: 1px solid #e4ebf5;
   border-radius: 8px;
   background: #fbfcff;
-  padding: 12px;
+  padding: 8px 10px;
 }
 
 .pending-invitation-item strong {
@@ -3749,7 +3762,7 @@ dl {
 }
 
 .pending-invitation-item .inline-actions {
-  align-items: stretch;
+  align-items: center;
 }
 
 .invite-inline-form {
