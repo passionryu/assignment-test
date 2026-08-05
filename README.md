@@ -1,9 +1,3 @@
-# Assignment Test
-
-여러 사람이 함께 쓰는 기록방 서비스입니다. 사용자는 준비된 체험 계정을 선택해 방에 들어가고, 채팅, 추억 게시글, 미션 인증, 편지를 남긴 뒤 선택한 기록을 템플릿 기반 책 주문 요청으로 이어갈 수 있습니다.
-
-> 제출 문서 초안: [docs/submission.md](docs/submission.md)
-
 ## 1. 서비스 소개
 
 ### 어떤 서비스인가
@@ -21,17 +15,19 @@
 
 ### 주요 기능
 
-| 기능 | 설명 |
-| --- | --- |
-| 사용자 선택 | 로그인 없이 준비된 일반 사용자 4명과 운영자 1명 중 선택 |
-| 기록방 | 방 생성, 초대 수락/거절, 방 관리, 방 나가기/삭제 보호 |
-| 채팅 | 방별 메시지 작성과 polling 기반 새 메시지 확인 |
-| 추억 게시판 | 사진 업로드, 본문 작성, 댓글 |
-| 미션 인증 | 기본/커스텀 미션, 사진 인증, 승인/동의, 댓글 |
-| 편지 | 방 구성원 1명에게만 보이는 비공개 편지 |
-| 전체 기록 캘린더 | 날짜별 채팅, 미션, 추억, 편지 흐름 확인 |
-| 책 만들기 | 방, 상품, 기간, 콘텐츠를 선택해 템플릿 기반 미리보기와 예상 견적 생성 |
-| 주문 관리 | 사용자 주문 상태/내역 조회, 운영자 주문 확인과 상태 변경 |
+작성 예정: API별 Swagger 문서를 붙인 뒤 각 기능의 Swagger 링크를 연결합니다.
+
+| 기능 | 설명 | API 문서 |
+| --- | --- | --- |
+| 사용자 선택 | 로그인 없이 준비된 일반 사용자 4명과 운영자 1명 중 선택 | Swagger 링크 예정 |
+| 기록방 | 방 생성, 초대 수락/거절, 방 관리, 방 나가기/삭제 보호 | Swagger 링크 예정 |
+| 채팅 | 방별 메시지 작성과 polling 기반 새 메시지 확인 | Swagger 링크 예정 |
+| 추억 게시판 | 사진 업로드, 본문 작성, 댓글 | Swagger 링크 예정 |
+| 미션 인증 | 기본/커스텀 미션, 사진 인증, 승인/동의, 댓글 | Swagger 링크 예정 |
+| 편지 | 방 구성원 1명에게만 보이는 비공개 편지 | Swagger 링크 예정 |
+| 전체 기록 캘린더 | 날짜별 채팅, 미션, 추억, 편지 흐름 확인 | Swagger 링크 예정 |
+| 책 만들기 | 방, 상품, 기간, 콘텐츠를 선택해 템플릿 기반 미리보기와 예상 견적 생성 | Swagger 링크 예정 |
+| 주문 관리 | 사용자 주문 상태/내역 조회, 운영자 주문 확인과 상태 변경 | Swagger 링크 예정 |
 
 ## 2. 실행 방법 (Docker)
 
@@ -81,7 +77,8 @@ docker compose -f service/infra/docker-compose.yml down
 | Lv2 | 완료 | 템플릿 기반 책 만들기, 상품 선택, 미리보기/견적, 주문 생성, 주문 상태/내역, 운영자 주문 관리 |
 | Lv3 | 진행 중 | 거시적 UI/UX 개선과 README 정리 진행. 모바일 대응, 최종 E2E, 최종 제출 문서 보강 예정 |
 
-### Lv1 상세
+<details>
+<summary>Lv1 상세</summary>
 
 - 로그인 대신 고정 체험 사용자 선택
 - 방 생성, 초대 수락/거절, 방 관리 대시보드
@@ -92,7 +89,10 @@ docker compose -f service/infra/docker-compose.yml down
 - 구성원 1명에게만 보내는 비공개 편지
 - 날짜별 기록 흐름을 확인하는 전체 기록 캘린더
 
-### Lv2 상세
+</details>
+
+<details>
+<summary>Lv2 상세</summary>
 
 Lv2는 사용자가 기록방 콘텐츠를 골라 책 주문 요청에 가까운 흐름을 만드는 데 초점을 두었습니다. 실제 제작, 결제, 배송은 구현하지 않고 로컬 데이터로 상태를 관리합니다.
 
@@ -121,10 +121,15 @@ Lv2는 사용자가 기록방 콘텐츠를 골라 책 주문 요청에 가까운
 - 전체 주문 조회, 필터/정렬, 페이지네이션, CSV 다운로드, 주문 상세 조회, 다음 상태 변경, 주문 취소를 지원합니다.
 - 운영자 기능은 일반 사용자 사이드바에 노출하지 않습니다.
 
-### Lv3 상세
+</details>
+
+<details>
+<summary>Lv3 상세</summary>
 
 - 작성 예정: 최종 Lv3 완료 후 실제 반영 범위를 정리합니다.
 - 작성 예정: 모바일 대응 결과와 최종 E2E 결과를 반영합니다.
+
+</details>
 
 ## 4. 사용자 경험(UI/UX) 설계
 
@@ -135,6 +140,13 @@ Lv2는 사용자가 기록방 콘텐츠를 골라 책 주문 요청에 가까운
 - 책 주문 요청과 상태 관리를 확인해야 하는 운영자 역할 사용자
 
 ### 핵심 화면/흐름
+
+화면 정의서는 GitHub에서 바로 확인할 수 있도록 PDF 링크를 연결했습니다.
+
+| 구분 | 문서 |
+| --- | --- |
+| Lv1 화면 정의서 | [SCREEN-001-main-page-screen-spec.pdf](docs/plan/screen-spec/v1.0/SCREEN-001-main-page-screen-spec.pdf) |
+| Lv2 책 주문 화면 정의서 | [SCREEN-004-lv2-book-order-screen-spec.pdf](docs/plan/screen-spec/v2.0/SCREEN-004-lv2-book-order-screen-spec.pdf) |
 
 | 화면 | 설계 방향 |
 | --- | --- |
@@ -195,16 +207,71 @@ Lv2는 사용자가 기록방 콘텐츠를 골라 책 주문 요청에 가까운
 
 ```text
 assignment-test
+├── README.md
+├── .env.example
 ├── docs
+│   ├── agents
+│   │   └── assets
+│   │       └── agent-system-architecture.png
+│   ├── conventions
+│   │   └── ...
+│   ├── dev-spec
+│   │   └── ...
+│   ├── plan
+│   │   └── screen-spec
+│   │       ├── v1.0
+│   │       │   ├── SCREEN-001-main-page-screen-spec.pdf
+│   │       │   ├── screen-spec.md
+│   │       │   ├── user-flow.md
+│   │       │   ├── approval-log.md
+│   │       │   └── screens/
+│   │       ├── v2.0
+│   │       │   ├── SCREEN-004-lv2-book-order-screen-spec.pdf
+│   │       │   ├── screen-spec.md
+│   │       │   ├── user-flow.md
+│   │       │   └── approval-log.md
+│   │       └── v3.0
+│   │           ├── screen-spec.md
+│   │           ├── user-flow.md
+│   │           └── approval-log.md
 │   ├── qa
+│   │   ├── issue-3/
+│   │   ├── issue-4/
+│   │   ├── ...
+│   │   ├── issue-27/
+│   │   │   ├── AI_QA_REPORT.html
+│   │   │   ├── HUMAN_QA.md
+│   │   │   └── TECH_LEAD_VERIFICATION.md
+│   │   └── issue-32/
 │   └── submission.md
 ├── service
 │   ├── client
+│   │   ├── src
+│   │   ├── package.json
+│   │   └── vite.config.ts
 │   ├── server
+│   │   ├── src
+│   │   ├── build.gradle.kts
+│   │   └── gradlew
 │   └── infra
+│       └── docker-compose.yml
 ├── test-results
-└── README.md
+│   └── playwright
 ```
+
+산출물 관리 기준:
+
+| 위치 | 목적 |
+| --- | --- |
+| `docs/plan/screen-spec/v1.0` | Lv1 화면 정의, 사용자 흐름, 승인 로그, 화면 후보/최종안 보관 |
+| `docs/plan/screen-spec/v2.0` | Lv2 책 제작/주문 화면 정의, 사용자 흐름, 승인 로그 보관 |
+| `docs/plan/screen-spec/v3.0` | Lv3 UI/UX 개선 방향, 사용자 흐름, 승인 로그 보관 |
+| `docs/dev-spec` | 구현 전후 기능 단위 개발 명세 보관 |
+| `docs/qa/issue-{number}` | 이슈별 Human QA, Tech Lead 검증, AI QA 리포트, 증적 이미지/HTML 보관 |
+| `docs/agents` | AI 에이전트 운영 방식과 산출물 구조 설명 자료 보관 |
+| `test-results/playwright` | Playwright 실행 결과, 스크린샷, trace 등 원시 테스트 증적 보관 |
+
+AI 에이전트 산출물은 화면 기획, 구현 검증, Human QA, Tech Lead 검증을 이슈 단위로 분리해 남겼습니다. 최종 제출 README에서는 대표 산출물만 링크하고, 상세 증적은 `docs/qa/issue-{number}` 하위에서 확인하도록 구성했습니다.
 
 ### Book Print API 대응 정책
 
