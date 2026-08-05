@@ -548,6 +548,7 @@ dl {
   display: grid;
   flex: 1 1 auto;
   gap: 8px;
+  align-content: start;
   min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
@@ -4358,9 +4359,10 @@ dl {
 
 .book-nav-combo {
   margin-top: 0;
-  border: 1px solid rgba(240, 79, 149, 0.2);
   background: linear-gradient(135deg, rgba(240, 79, 149, 0.14), rgba(12, 159, 168, 0.08));
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.03);
+  box-shadow:
+    inset 0 0 0 1px rgba(240, 79, 149, 0.22),
+    inset 0 0 0 999px rgba(255, 255, 255, 0.01);
 }
 
 .book-nav-combo .nav-item {
@@ -4374,8 +4376,10 @@ dl {
 
 .book-nav-combo:hover,
 .book-nav-combo.active {
-  border-color: rgba(240, 79, 149, 0.32);
   background: linear-gradient(135deg, rgba(240, 79, 149, 0.2), rgba(12, 159, 168, 0.12));
+  box-shadow:
+    inset 0 0 0 1px rgba(240, 79, 149, 0.34),
+    inset 0 0 0 999px rgba(255, 255, 255, 0.02);
 }
 
 .book-submenu {
