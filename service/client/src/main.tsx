@@ -5061,6 +5061,8 @@ function ChatView({
   onSearch: () => void;
   onMoveToMessage: (messageId: number) => void;
 }) {
+  const [searchOpen, setSearchOpen] = useState(false);
+
   return (
     <>
       <header className="page-header">
@@ -5076,7 +5078,13 @@ function ChatView({
               <span>{selectedRoom ? roomTypeLabel(selectedRoom.type) : "방 없음"}</span>
               <h2>{selectedRoom?.name ?? "참여 방 없음"}</h2>
             </div>
-            <MessageCircle size={24} />
+            <div className="chat-header-actions">
+              <button className="chat-search-trigger" type="button" onClick={() => setSearchOpen(true)}>
+                <Search size={16} />
+                대화 검색
+              </button>
+              <MessageCircle size={24} />
+            </div>
           </div>
 
           <ChatMessageTimeline messages={messages} loading={loading} />
@@ -5098,39 +5106,66 @@ function ChatView({
             </button>
           </div>
         </article>
-
-        <aside className="chat-search-panel">
-          <div className="room-section-heading">
-            <div className="heading-help-row">
-              <h2>대화 검색</h2>
-              <HelpButton title="대화 검색" message="검색 결과를 선택하면 해당 메시지 위치로 이동합니다." />
-            </div>
-          </div>
-          <div className="chat-search-form">
-            <input
-              value={searchKeyword}
-              onChange={(event) => onSearchKeywordChange(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key !== "Enter") return;
-                onSearch();
-              }}
-              placeholder="검색어 입력"
-            />
-            <button className="outline-button" type="button" onClick={onSearch}>
-              검색
-            </button>
-          </div>
-          <div className="chat-search-results">
-            {searchResults.map((result) => (
-              <button type="button" key={result.messageId} onClick={() => onMoveToMessage(result.messageId)}>
-                <strong>{result.senderName}</strong>
-                <span>{formatDateLabel(result.occurredDate)} · {formatChatTime(result.sentAt)}</span>
-                <p>{result.body}</p>
-              </button>
-            ))}
-          </div>
-        </aside>
       </section>
+
+      {searchOpen ? (
+        <div
+          className="modal-backdrop"
+          role="presentation"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) setSearchOpen(false);
+          }}
+        >
+          <section className="modal chat-search-modal" role="dialog" aria-modal="true" aria-labelledby="chat-search-title">
+            <div className="modal-title-row">
+              <div>
+                <span className="modal-kicker">대화 검색</span>
+                <h2 id="chat-search-title">채팅 메시지 찾기</h2>
+                <p>검색 결과를 선택하면 해당 메시지 위치로 이동합니다.</p>
+              </div>
+              <button className="icon-button" type="button" onClick={() => setSearchOpen(false)} aria-label="닫기">
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="chat-search-form">
+              <input
+                value={searchKeyword}
+                onChange={(event) => onSearchKeywordChange(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key !== "Enter") return;
+                  onSearch();
+                }}
+                placeholder="검색어 입력"
+                autoFocus
+              />
+              <button className="outline-button" type="button" onClick={onSearch}>
+                검색
+              </button>
+            </div>
+
+            <div className="chat-search-results">
+              {searchResults.map((result) => (
+                <button
+                  type="button"
+                  key={result.messageId}
+                  onClick={() => {
+                    onMoveToMessage(result.messageId);
+                    setSearchOpen(false);
+                  }}
+                >
+                  <strong>{result.senderName}</strong>
+                  <span>
+                    {formatDateLabel(result.occurredDate)} · {formatChatTime(result.sentAt)}
+                  </span>
+                  <p>{result.body}</p>
+                </button>
+              ))}
+              {searchKeyword.trim() && searchResults.length === 0 ? <p>검색 결과가 없습니다.</p> : null}
+            </div>
+          </section>
+        </div>
+      ) : null}
     </>
   );
 }
