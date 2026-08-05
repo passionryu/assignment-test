@@ -14,6 +14,7 @@ import {
   ChevronRight,
   Clock,
   CircleHelp,
+  Download,
   FileText,
   Home,
   Image as ImageIcon,
@@ -28,6 +29,7 @@ import {
   Phone,
   Pencil,
   Plus,
+  Search,
   Settings,
   ShieldAlert,
   Trash2,
@@ -636,6 +638,36 @@ type CreatePrintOrderResponse = {
 
 type PrintOrderActionResponse = {
   order: PrintOrderDetail;
+};
+
+type OrderSortKey = "REQUESTED_DESC" | "REQUESTED_ASC" | "UPDATED_DESC" | "PRICE_DESC" | "PRICE_ASC";
+
+type OrderTableFilters = {
+  startDate: string;
+  endDate: string;
+  query: string;
+  status: PrintOrderStatus | "ALL";
+  sort: OrderSortKey;
+  limit: number;
+  onlyCancelable: boolean;
+};
+
+type OrderTablePagination = {
+  page: number;
+  totalPages: number;
+  startItem: number;
+  endItem: number;
+  totalItems: number;
+  canPrevious: boolean;
+  canNext: boolean;
+  onPrevious: () => void;
+  onNext: () => void;
+  onPageChange: (page: number) => void;
+};
+
+type OrderActionFilter = {
+  label: string;
+  predicate: (order: PrintOrderSummary) => boolean;
 };
 
 type ApiError = {
@@ -2182,6 +2214,36 @@ function App() {
     }
   }
 
+  async function advanceSelectedOperatorOrderStatuses(orderIds: number[]) {
+    const processableIds = orderIds.filter((orderId) => {
+      const order = operatorOrders.find((item) => item.id === orderId);
+      return Boolean(order && nextPrintOrderStatus(order.status));
+    });
+
+    if (processableIds.length === 0) {
+      setErrorMessage("다음 상태로 변경할 수 있는 선택 주문이 없습니다.");
+      return;
+    }
+
+    setMessage(null);
+    setErrorMessage(null);
+    setOperatorOrderActionLoading(true);
+    try {
+      for (const orderId of processableIds) {
+        const response = await apiRequest<PrintOrderActionResponse>(`/operator/book-orders/${orderId}/next-status`, {
+          method: "POST",
+          body: { memo: "운영자가 선택 주문을 일괄 상태 변경했습니다." },
+        });
+        applyOperatorOrderUpdate(response.order);
+      }
+      setMessage(`${processableIds.length}건의 주문 상태를 다음 단계로 변경했습니다.`);
+    } catch (error) {
+      setErrorMessage(toMessage(error));
+    } finally {
+      setOperatorOrderActionLoading(false);
+    }
+  }
+
   async function cancelOperatorOrder(reason: string) {
     if (!operatorSelectedOrder) return;
 
@@ -3087,8 +3149,9 @@ function App() {
           onStatusFilterChange={setOperatorStatusFilter}
           onOpenOrder={openOperatorOrderDetail}
           onAdvanceStatus={advanceOperatorOrderStatus}
+          onAdvanceSelectedStatuses={advanceSelectedOperatorOrderStatuses}
           onOpenCancel={() => setOperatorCancelOrderOpen(true)}
-          onRefresh={() => loadOperatorOrders(operatorStatusFilter)}
+          onCloseOrderDetail={() => setOperatorSelectedOrder(null)}
           onLogout={logoutToMemberSelection}
         />
 
@@ -3334,8 +3397,10 @@ function App() {
             selectedOrder={selectedBookOrder}
             loading={bookOrdersLoading}
             detailLoading={bookOrderDetailLoading}
+            actionLoading={bookOrderActionLoading}
             onOpenOrder={openBookOrderDetail}
             onOpenCancel={() => setBookOrderCancelOpen(true)}
+            onCloseOrderDetail={() => setSelectedBookOrder(null)}
           />
         ) : null}
         {activeView === "bookHistory" ? (
@@ -3345,7 +3410,9 @@ function App() {
             selectedOrder={selectedBookOrder}
             loading={bookOrdersLoading}
             detailLoading={bookOrderDetailLoading}
+            actionLoading={bookOrderActionLoading}
             onOpenOrder={openBookOrderDetail}
+            onCloseOrderDetail={() => setSelectedBookOrder(null)}
           />
         ) : null}
         {activeView === "settings" ? (
@@ -3507,8 +3574,9 @@ function OperatorBookOrdersView({
   onStatusFilterChange,
   onOpenOrder,
   onAdvanceStatus,
+  onAdvanceSelectedStatuses,
   onOpenCancel,
-  onRefresh,
+  onCloseOrderDetail,
   onLogout,
 }: {
   operator: DemoMemberOption;
@@ -3523,25 +3591,39 @@ function OperatorBookOrdersView({
   onStatusFilterChange: (status: PrintOrderStatus | "ALL") => void;
   onOpenOrder: (orderId: number) => void;
   onAdvanceStatus: () => void;
+  onAdvanceSelectedStatuses: (orderIds: number[]) => void;
   onOpenCancel: () => void;
-  onRefresh: () => void;
+  onCloseOrderDetail: () => void;
   onLogout: () => void;
 }) {
+  const table = useOrderTableState(orders, statusFilter, operatorOrderActionFilter);
+  const processableSelectedIds = table.selectedOrders
+    .filter((order) => nextPrintOrderStatus(order.status))
+    .map((order) => order.id);
+
+  useEffect(() => {
+    table.updateFilter("status", statusFilter);
+  }, [statusFilter]);
+
+  const changeFilter = <K extends keyof OrderTableFilters>(key: K, value: OrderTableFilters[K]) => {
+    table.updateFilter(key, value);
+    if (key === "status") {
+      onStatusFilterChange(value as PrintOrderStatus | "ALL");
+    }
+  };
+
   return (
     <main className="operator-page">
       <header className="operator-header">
         <div>
           <span className="eyebrow">운영자 주문 확인</span>
-          <h1>책 주문 확인 MVP</h1>
-          <p>{operator.displayName} 캐릭터로 전체 주문과 상태 변경을 확인합니다.</p>
+          <h1>책 주문 관리</h1>
+          <p>{operator.displayName} 캐릭터로 전체 주문을 필터링하고 CSV 추출, 상세 조회, 상태 변경을 처리합니다.</p>
         </div>
         <div className="operator-header-actions">
-          <button className="outline-button" type="button" onClick={onRefresh} disabled={loading}>
-            새로고침
-          </button>
           <button className="danger-button" type="button" onClick={onLogout}>
             <LogOut size={17} />
-            나가기
+            로그아웃
           </button>
         </div>
       </header>
@@ -3550,169 +3632,205 @@ function OperatorBookOrdersView({
       {errorMessage ? <div className="error-banner">{errorMessage}</div> : null}
 
       <section className="operator-layout" aria-busy={loading || detailLoading || actionLoading}>
-        <aside className="operator-order-list-panel">
+        <aside className="operator-order-list-panel order-table-panel">
           <div className="book-section-heading compact">
             <div>
               <span>전체 주문</span>
-              <h2>{orders.length}건</h2>
+              <h2>{table.filteredOrders.length}건</h2>
             </div>
           </div>
 
-          <label className="operator-filter-field">
-            상태 필터
-            <select value={statusFilter} onChange={(event) => onStatusFilterChange(event.target.value as PrintOrderStatus | "ALL")}>
-              <option value="ALL">전체</option>
-              {printOrderStatusOptions.map((status) => (
-                <option value={status} key={status}>
-                  {printOrderStatusLabel(status)}
-                </option>
-              ))}
-            </select>
-          </label>
+          <OrderTableToolbar
+            filters={table.filters}
+            actionFilterLabel={table.actionFilterLabel}
+            showActionFilter={false}
+            resultCount={table.filteredOrders.length}
+            selectedCount={table.selectedOrders.length}
+            allCsvDisabled={orders.length === 0}
+            filteredCsvDisabled={table.filteredOrders.length === 0}
+            onFilterChange={changeFilter}
+            onReset={() => {
+              table.resetFilters("ALL");
+              onStatusFilterChange("ALL");
+            }}
+            onDownloadAll={() => downloadPrintOrdersCsv("operator-orders-all.csv", orders)}
+            onDownloadFiltered={() => downloadPrintOrdersCsv("operator-orders-filtered.csv", table.filteredOrders)}
+            onDownloadSelected={() => downloadPrintOrdersCsv("operator-orders-selected.csv", table.selectedOrders)}
+          />
 
-          {loading ? (
-            <div className="book-empty-state compact">주문을 불러오는 중입니다.</div>
-          ) : orders.length === 0 ? (
-            <div className="book-empty-state compact">조건에 맞는 주문이 없습니다.</div>
-          ) : (
-            <div className="book-order-list">
-              {orders.map((order) => (
-                <button
-                  className={`book-order-card ${selectedOrder?.id === order.id ? "selected" : ""}`}
-                  type="button"
-                  key={order.id}
-                  onClick={() => onOpenOrder(order.id)}
-                >
-                  <span className={`book-order-status-badge ${printOrderStatusTone(order.status)}`}>{order.statusLabel}</span>
-                  <strong>{order.title}</strong>
-                  <small>{order.orderNo} · 주문자 {order.memberName}</small>
-                  <em>{order.roomName} · {order.product.displayName}</em>
-                  <b>{formatCurrency(order.totalPrice)}</b>
-                </button>
-              ))}
+          {table.selectedOrders.length > 0 ? (
+            <div className="order-batch-bar">
+              <strong>{table.selectedOrders.length}건 선택됨</strong>
+              <button
+                className="primary-button"
+                type="button"
+                onClick={() => onAdvanceSelectedStatuses(processableSelectedIds)}
+                disabled={processableSelectedIds.length === 0 || actionLoading}
+              >
+                {processableSelectedIds.length}건 다음 상태로
+              </button>
+              <button className="outline-button" type="button" onClick={() => downloadPrintOrdersCsv("operator-orders-selected.csv", table.selectedOrders)}>
+                선택한 데이터 CSV
+              </button>
+              <button className="outline-button" type="button" onClick={() => table.setSelectedIds([])}>
+                선택 해제
+              </button>
             </div>
-          )}
-        </aside>
+          ) : null}
 
-        <OperatorOrderDetailPanel
+          <PrintOrderDataTable
+            orders={table.visibleOrders}
+            selectedOrderId={selectedOrder?.id ?? null}
+            selectedIds={table.selectedIds}
+            pagination={table.pagination}
+            loading={loading}
+            emptyMessage="조건에 맞는 주문이 없습니다."
+            onToggleOrder={table.toggleOrder}
+            onToggleVisibleOrders={table.toggleVisibleOrders}
+            onOpenOrder={onOpenOrder}
+          />
+        </aside>
+      </section>
+
+      {detailLoading || selectedOrder ? (
+        <PrintOrderDetailModal
           order={selectedOrder}
           detailLoading={detailLoading}
           actionLoading={actionLoading}
           onAdvanceStatus={onAdvanceStatus}
           onOpenCancel={onOpenCancel}
+          onClose={onCloseOrderDetail}
         />
-      </section>
+      ) : null}
     </main>
   );
 }
 
-function OperatorOrderDetailPanel({
+function PrintOrderDetailModal({
   order,
   detailLoading,
   actionLoading,
   onAdvanceStatus,
   onOpenCancel,
+  onClose,
 }: {
   order: PrintOrderDetail | null;
   detailLoading: boolean;
   actionLoading: boolean;
-  onAdvanceStatus: () => void;
-  onOpenCancel: () => void;
+  onAdvanceStatus?: () => void;
+  onOpenCancel?: () => void;
+  onClose: () => void;
 }) {
   if (detailLoading) {
     return (
-      <aside className="operator-order-detail-panel">
-        <div className="book-empty-state">주문 상세를 불러오는 중입니다.</div>
-      </aside>
+      <div className="modal-backdrop" role="presentation">
+        <section className="modal print-order-detail-modal" role="dialog" aria-modal="true" aria-labelledby="print-order-detail-title">
+          <div className="modal-title-row">
+            <div>
+              <h2 id="print-order-detail-title">주문 상세</h2>
+              <p>주문 상세를 불러오는 중입니다.</p>
+            </div>
+            <button className="icon-button" type="button" onClick={onClose} aria-label="닫기">
+              <X size={18} />
+            </button>
+          </div>
+          <div className="book-empty-state">주문 상세를 불러오는 중입니다.</div>
+        </section>
+      </div>
     );
   }
 
   if (!order) {
-    return (
-      <aside className="operator-order-detail-panel">
-        <div className="book-empty-state">주문을 선택하면 상세 스냅샷과 상태 변경 버튼이 표시됩니다.</div>
-      </aside>
-    );
+    return null;
   }
 
   const nextStatus = nextPrintOrderStatus(order.status);
+  const preview = buildPrintOrderPreview(order);
+  const hasActions = Boolean(onAdvanceStatus || onOpenCancel);
 
   return (
-    <aside className="operator-order-detail-panel">
-      <div className="book-order-detail-header">
-        <span className={`book-order-status-badge ${printOrderStatusTone(order.status)}`}>{order.statusLabel}</span>
-        <h2>{order.title}</h2>
-        <p>{order.orderNo}</p>
-      </div>
+    <div className="modal-backdrop" role="presentation">
+      <section className="modal print-order-detail-modal" role="dialog" aria-modal="true" aria-labelledby="print-order-detail-title">
+        <div className="modal-title-row">
+          <div>
+            <span className={`book-order-status-badge ${printOrderStatusTone(order.status)}`}>{order.statusLabel}</span>
+            <h2 id="print-order-detail-title">{order.title}</h2>
+            <p>{order.orderNo}</p>
+          </div>
+          <button className="icon-button" type="button" onClick={onClose} aria-label="닫기" disabled={actionLoading}>
+            <X size={18} />
+          </button>
+        </div>
 
-      <dl className="book-order-detail-list">
-        <div>
-          <dt>주문자</dt>
-          <dd>{order.memberName}</dd>
-        </div>
-        <div>
-          <dt>방</dt>
-          <dd>{order.roomName}</dd>
-        </div>
-        <div>
-          <dt>상품</dt>
-          <dd>{order.product.displayName}</dd>
-        </div>
-        <div>
-          <dt>기간</dt>
-          <dd>{formatDateLabel(order.period.startDate)} ~ {formatDateLabel(order.period.endDate)}</dd>
-        </div>
-        <div>
-          <dt>페이지/수량</dt>
-          <dd>{order.estimatedPageCount}p · {order.quantity}권</dd>
-        </div>
-        <div className="total">
-          <dt>총액</dt>
-          <dd>{formatCurrency(order.totalPrice)}</dd>
-        </div>
-      </dl>
-
-      <div className="operator-order-actions">
-        <button className="primary-button" type="button" onClick={onAdvanceStatus} disabled={!nextStatus || actionLoading}>
-          {nextStatus ? `다음 상태: ${printOrderStatusLabel(nextStatus)}` : "다음 상태 없음"}
-        </button>
-        <button className="danger-button" type="button" onClick={onOpenCancel} disabled={!canCancelPrintOrder(order.status) || actionLoading}>
-          주문 취소
-        </button>
-      </div>
-
-      {order.cancelReason ? (
-        <div className="book-order-cancel-reason">
-          <strong>취소 사유</strong>
-          <p>{order.cancelReason}</p>
-        </div>
-      ) : null}
-
-      <div className="book-order-subsection">
-        <h3>담긴 콘텐츠</h3>
-        <div className="book-order-content-list">
-          {order.contents.map((content) => (
-            <div key={`${content.type}-${content.sourceId}-${content.sortOrder}`}>
-              <strong>{content.title}</strong>
-              <small>{bookContentTypeLabel(content.type)} · {formatDateLabel(content.occurredDate)} · {content.pageCount}p</small>
+        <div className="print-order-detail-body">
+          <section className="print-order-detail-summary" aria-labelledby="print-order-summary-title">
+            <div className="order-detail-section-heading">
+              <h3 id="print-order-summary-title">주문 정보</h3>
             </div>
-          ))}
-        </div>
-      </div>
+            <dl className="book-order-detail-list">
+              <div>
+                <dt>주문자</dt>
+                <dd>{order.memberName}</dd>
+              </div>
+              <div>
+                <dt>방</dt>
+                <dd>{order.roomName}</dd>
+              </div>
+              <div>
+                <dt>상품</dt>
+                <dd>{order.product.displayName}</dd>
+              </div>
+              <div>
+                <dt>기간</dt>
+                <dd>{formatDateLabel(order.period.startDate)} ~ {formatDateLabel(order.period.endDate)}</dd>
+              </div>
+              <div>
+                <dt>페이지/수량</dt>
+                <dd>{order.estimatedPageCount}p · {order.quantity}권</dd>
+              </div>
+              <div className="total">
+                <dt>총액</dt>
+                <dd>{formatCurrency(order.totalPrice)}</dd>
+              </div>
+            </dl>
 
-      <div className="book-order-subsection">
-        <h3>상태 이력</h3>
-        <div className="book-order-history-list">
-          {order.statusHistories.map((history) => (
-            <div key={history.id}>
-              <strong>{history.nextStatusLabel}</strong>
-              <small>{formatDateTimeLabel(history.changedAt)}</small>
-              {history.memo ? <p>{history.memo}</p> : null}
+            {hasActions ? (
+              <div className="operator-order-actions">
+                {onAdvanceStatus ? (
+                  <button className="primary-button" type="button" onClick={onAdvanceStatus} disabled={!nextStatus || actionLoading}>
+                    {nextStatus ? `다음 상태: ${printOrderStatusLabel(nextStatus)}` : "다음 상태 없음"}
+                  </button>
+                ) : null}
+                {onOpenCancel ? (
+                  <button className="danger-button" type="button" onClick={onOpenCancel} disabled={!canCancelPrintOrder(order.status) || actionLoading}>
+                    주문 취소
+                  </button>
+                ) : null}
+              </div>
+            ) : null}
+
+            {order.cancelReason ? (
+              <div className="book-order-cancel-reason">
+                <strong>취소 사유</strong>
+                <p>{order.cancelReason}</p>
+              </div>
+            ) : null}
+          </section>
+
+          <OrderStatusProgress order={order} />
+
+          <OrderStatusEventList histories={order.statusHistories} />
+
+          <div className="book-order-subsection">
+            <div className="order-detail-section-heading">
+              <h3>담긴 콘텐츠 미리보기</h3>
+              <span>{order.contents.length}개 · {order.estimatedPageCount}p</span>
             </div>
-          ))}
+            <BookTemplatePreviewViewer preview={preview} className="print-order-preview-viewer" />
+          </div>
         </div>
-      </div>
-    </aside>
+      </section>
+    </div>
   );
 }
 
@@ -6226,6 +6344,29 @@ function BookContentLibrary({
   onToggleContent: (content: BookContentCandidate) => void;
   onOpenContentDetail: (content: BookContentCandidate) => void;
 }) {
+  const orderControlsRef = useRef<HTMLDivElement | null>(null);
+  const [typeOrderPopoverOpen, setTypeOrderPopoverOpen] = useState(false);
+  const typeOrderPopoverId = "book-type-order-popover";
+
+  useEffect(() => {
+    if (!typeOrderPopoverOpen) return;
+
+    const handlePointerDown = (event: PointerEvent) => {
+      const target = event.target;
+      if (target instanceof Node && orderControlsRef.current?.contains(target)) return;
+      setTypeOrderPopoverOpen(false);
+    };
+
+    document.addEventListener("pointerdown", handlePointerDown);
+    return () => document.removeEventListener("pointerdown", handlePointerDown);
+  }, [typeOrderPopoverOpen]);
+
+  useEffect(() => {
+    if (orderMode !== "TYPE") {
+      setTypeOrderPopoverOpen(false);
+    }
+  }, [orderMode]);
+
   return (
     <section className="book-content-library" aria-label="책 기록 라이브러리">
       <div className="book-content-toolbar">
@@ -6254,7 +6395,7 @@ function BookContentLibrary({
           </div>
         </div>
 
-        <div className="book-order-controls" aria-label="책 구성 순서">
+        <div className="book-order-controls" ref={orderControlsRef} aria-label="책 구성 순서">
           <span>책 구성 순서</span>
           <div className="segmented-control">
             <button
@@ -6262,6 +6403,7 @@ function BookContentLibrary({
               type="button"
               onClick={() => {
                 onOrderModeChange("DATE");
+                setTypeOrderPopoverOpen(false);
               }}
             >
               날짜 순
@@ -6269,13 +6411,24 @@ function BookContentLibrary({
             <button
               className={orderMode === "TYPE" ? "active" : ""}
               type="button"
-              onClick={() => onOrderModeChange("TYPE")}
+              aria-controls={typeOrderPopoverId}
+              aria-expanded={orderMode === "TYPE" && typeOrderPopoverOpen}
+              aria-haspopup="true"
+              onClick={() => {
+                if (orderMode !== "TYPE") {
+                  onOrderModeChange("TYPE");
+                  setTypeOrderPopoverOpen(true);
+                  return;
+                }
+
+                setTypeOrderPopoverOpen((open) => !open);
+              }}
             >
               콘텐츠 순
             </button>
           </div>
-          {orderMode === "TYPE" ? (
-            <div className="book-type-order-inline" aria-label="콘텐츠 타입 순서 설정">
+          {orderMode === "TYPE" && typeOrderPopoverOpen ? (
+            <div className="book-type-order-inline" id={typeOrderPopoverId} aria-label="콘텐츠 타입 순서 설정">
               <div className="book-type-order-list">
                 {contentTypeOrder.map((type, index) => (
                   <div className="book-type-order-item" key={type}>
@@ -6787,12 +6940,556 @@ function BookTemplateVisual({ slide, compact = false }: { slide: BookTemplatePre
   );
 }
 
-function BookPreviewPanel({
+const printOrderProgressStatuses: PrintOrderStatus[] = [
+  "PAID",
+  "PDF_READY",
+  "CONFIRMED",
+  "IN_PRODUCTION",
+  "PRODUCTION_COMPLETE",
+  "SHIPPED",
+  "DELIVERED",
+];
+
+function buildPrintOrderPreview(order: PrintOrderDetail): BookPreviewResponse {
+  const contents = [...order.contents]
+    .sort((first, second) => first.sortOrder - second.sortOrder)
+    .map((content) => ({
+      type: content.type,
+      sourceId: content.sourceId,
+      title: content.title,
+      description: content.snapshot?.description ?? `${bookContentTypeLabel(content.type)} 기록을 템플릿 페이지에 배치합니다.`,
+      occurredDate: content.occurredDate,
+      authorName: content.snapshot?.authorName ?? order.memberName,
+      imageCount: content.snapshot?.imageCount ?? 0,
+      commentCount: content.snapshot?.commentCount ?? 0,
+      pageCount: content.pageCount,
+      selectedByDefault: true,
+      sourceLabel: content.snapshot?.sourceLabel ?? `${bookContentTypeLabel(content.type)} · ${formatDateLabel(content.occurredDate)}`,
+    }));
+  const summary = buildPrintOrderContentSummary(contents);
+  const additionalPageCount = Math.max(order.estimatedPageCount - order.product.includedPageCount, 0);
+
+  return {
+    previewId: order.id,
+    creationType: order.creationType,
+    roomId: order.roomId,
+    roomName: order.roomName,
+    product: order.product,
+    title: order.title,
+    period: order.period,
+    contents,
+    summary,
+    pageRange: {
+      minPage: order.product.minPage,
+      maxPage: order.product.maxPage,
+      estimatedPageCount: order.estimatedPageCount,
+      status: "AVAILABLE",
+      message: "주문 당시 저장된 템플릿 구성입니다.",
+    },
+    estimate: {
+      basePrice: order.basePrice,
+      includedPageCount: order.product.includedPageCount,
+      additionalPageCount,
+      additionalPagePrice: order.additionalPagePrice,
+      shippingPrice: order.shippingPrice,
+      quantity: order.quantity,
+      subtotalPrice: Math.max(order.totalPrice - order.shippingPrice, 0),
+      totalPrice: order.totalPrice,
+    },
+    pages: [],
+    warnings: [],
+  };
+}
+
+function buildPrintOrderContentSummary(contents: BookContentCandidate[]): BookContentSummary {
+  return contents.reduce<BookContentSummary>((summary, content) => {
+    if (content.type === "MEMORY") summary.memoryCount += 1;
+    if (content.type === "MISSION") summary.missionCount += 1;
+    if (content.type === "LETTER") summary.letterCount += 1;
+    if (content.type === "CHAT") summary.chatCount += 1;
+    summary.estimatedPageCount += content.pageCount;
+    return summary;
+  }, {
+    memoryCount: 0,
+    missionCount: 0,
+    letterCount: 0,
+    chatCount: 0,
+    estimatedPageCount: 0,
+  });
+}
+
+function completedPrintOrderStatusSet(order: PrintOrderDetail): Set<PrintOrderStatus> {
+  return new Set(order.statusHistories.map((history) => history.nextStatus));
+}
+
+function printOrderProgressIndex(order: PrintOrderDetail): number {
+  const completedStatuses = completedPrintOrderStatusSet(order);
+  const currentIndex = printOrderProgressStatuses.indexOf(order.status);
+  if (currentIndex >= 0) return currentIndex;
+
+  for (let index = printOrderProgressStatuses.length - 1; index >= 0; index -= 1) {
+    if (completedStatuses.has(printOrderProgressStatuses[index])) return index;
+  }
+
+  return 0;
+}
+
+function OrderStatusProgress({ order }: { order: PrintOrderDetail }) {
+  const completedStatuses = completedPrintOrderStatusSet(order);
+  const progressIndex = printOrderProgressIndex(order);
+  const progressPercent = printOrderProgressStatuses.length <= 1
+    ? 0
+    : (progressIndex / (printOrderProgressStatuses.length - 1)) * 100;
+
+  return (
+    <section className="order-status-progress-section" aria-labelledby="order-status-progress-title">
+      <div className="order-detail-section-heading">
+        <h3 id="order-status-progress-title">진행 상태</h3>
+        <span>{order.statusLabel}</span>
+      </div>
+      <div className={`order-status-progress ${printOrderStatusTone(order.status)}`}>
+        <div className="order-status-progress-track" aria-hidden="true">
+          <span style={{ width: `${progressPercent}%` }} />
+        </div>
+        {printOrderProgressStatuses.map((status, index) => {
+          const completed = index <= progressIndex || completedStatuses.has(status);
+          const current = status === order.status;
+
+          return (
+            <div className={`order-status-step ${completed ? "completed" : ""} ${current ? "current" : ""}`} key={status}>
+              <span>{completed ? <CheckCircle2 size={18} /> : index + 1}</span>
+              <strong>{printOrderStatusLabel(status)}</strong>
+            </div>
+          );
+        })}
+      </div>
+      {order.status === "CANCELLED_REFUND" || order.status === "ERROR" ? (
+        <p className="order-status-terminal-note">{order.statusLabel} 상태로 종료된 주문입니다.</p>
+      ) : null}
+    </section>
+  );
+}
+
+function OrderStatusEventList({ histories }: { histories: PrintOrderStatusHistory[] }) {
+  return (
+    <section className="order-status-events" aria-labelledby="order-status-events-title">
+      <div className="order-detail-section-heading">
+        <h3 id="order-status-events-title">상태 이력</h3>
+      </div>
+      <div className="order-status-event-list">
+        {histories.map((history) => (
+          <div key={history.id}>
+            <time>{formatDateTimeLabel(history.changedAt)}</time>
+            <strong>{history.nextStatusLabel}</strong>
+            {history.memo ? <span>{history.memo}</span> : null}
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+const orderSortOptions: Array<{ value: OrderSortKey; label: string }> = [
+  { value: "REQUESTED_DESC", label: "주문일 최신순" },
+  { value: "REQUESTED_ASC", label: "주문일 오래된순" },
+  { value: "UPDATED_DESC", label: "최근 변경순" },
+  { value: "PRICE_DESC", label: "금액 높은순" },
+  { value: "PRICE_ASC", label: "금액 낮은순" },
+];
+
+const orderLimitOptions = [10, 20, 50];
+
+const customerOrderActionFilter: OrderActionFilter = {
+  label: "취소 가능만",
+  predicate: (order) => canCancelPrintOrder(order.status),
+};
+
+const operatorOrderActionFilter: OrderActionFilter = {
+  label: "처리 가능만",
+  predicate: (order) => Boolean(nextPrintOrderStatus(order.status)),
+};
+
+function defaultOrderTableFilters(status: PrintOrderStatus | "ALL" = "ALL"): OrderTableFilters {
+  return {
+    startDate: "",
+    endDate: "",
+    query: "",
+    status,
+    sort: "REQUESTED_DESC",
+    limit: 20,
+    onlyCancelable: false,
+  };
+}
+
+function useOrderTableState(
+  orders: PrintOrderSummary[],
+  initialStatus: PrintOrderStatus | "ALL" = "ALL",
+  actionFilter: OrderActionFilter = customerOrderActionFilter,
+) {
+  const [filters, setFilters] = useState<OrderTableFilters>(() => defaultOrderTableFilters(initialStatus));
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [page, setPage] = useState(1);
+  const filteredOrders = useMemo(() => filterAndSortPrintOrders(orders, filters, actionFilter.predicate), [orders, filters, actionFilter]);
+  const totalPages = Math.max(1, Math.ceil(filteredOrders.length / filters.limit));
+  const safePage = Math.min(page, totalPages);
+  const startIndex = filteredOrders.length === 0 ? 0 : (safePage - 1) * filters.limit;
+  const endIndex = Math.min(startIndex + filters.limit, filteredOrders.length);
+  const visibleOrders = useMemo(() => filteredOrders.slice(startIndex, endIndex), [filteredOrders, startIndex, endIndex]);
+  const selectedOrders = useMemo(() => filteredOrders.filter((order) => selectedIds.includes(order.id)), [filteredOrders, selectedIds]);
+
+  useEffect(() => {
+    setSelectedIds((current) => current.filter((orderId) => orders.some((order) => order.id === orderId)));
+  }, [orders]);
+
+  useEffect(() => {
+    setPage((current) => Math.min(current, totalPages));
+  }, [totalPages]);
+
+  const updateFilter = <K extends keyof OrderTableFilters>(key: K, value: OrderTableFilters[K]) => {
+    setFilters((current) => ({ ...current, [key]: value }));
+    setPage(1);
+  };
+  const resetFilters = (status: PrintOrderStatus | "ALL" = initialStatus) => {
+    setFilters(defaultOrderTableFilters(status));
+    setSelectedIds([]);
+    setPage(1);
+  };
+  const toggleOrder = (orderId: number) => {
+    setSelectedIds((current) => current.includes(orderId)
+      ? current.filter((id) => id !== orderId)
+      : [...current, orderId]);
+  };
+  const toggleVisibleOrders = () => {
+    const visibleIds = visibleOrders.map((order) => order.id);
+    const allVisibleSelected = visibleIds.length > 0 && visibleIds.every((orderId) => selectedIds.includes(orderId));
+    setSelectedIds((current) => allVisibleSelected
+      ? current.filter((orderId) => !visibleIds.includes(orderId))
+      : Array.from(new Set([...current, ...visibleIds])));
+  };
+  const goToPage = (nextPage: number) => {
+    setPage(Math.min(Math.max(nextPage, 1), totalPages));
+  };
+  const pagination: OrderTablePagination = {
+    page: safePage,
+    totalPages,
+    startItem: filteredOrders.length === 0 ? 0 : startIndex + 1,
+    endItem: endIndex,
+    totalItems: filteredOrders.length,
+    canPrevious: safePage > 1,
+    canNext: safePage < totalPages,
+    onPrevious: () => goToPage(safePage - 1),
+    onNext: () => goToPage(safePage + 1),
+    onPageChange: goToPage,
+  };
+
+  return {
+    filters,
+    actionFilterLabel: actionFilter.label,
+    setFilters,
+    updateFilter,
+    resetFilters,
+    selectedIds,
+    setSelectedIds,
+    selectedOrders,
+    filteredOrders,
+    visibleOrders,
+    pagination,
+    toggleOrder,
+    toggleVisibleOrders,
+  };
+}
+
+function filterAndSortPrintOrders(
+  orders: PrintOrderSummary[],
+  filters: OrderTableFilters,
+  actionFilterPredicate: (order: PrintOrderSummary) => boolean,
+): PrintOrderSummary[] {
+  const query = filters.query.trim().toLowerCase();
+  const filtered = orders.filter((order) => {
+    const requestedDate = order.requestedAt.slice(0, 10);
+    if (filters.startDate && requestedDate < filters.startDate) return false;
+    if (filters.endDate && requestedDate > filters.endDate) return false;
+    if (filters.status !== "ALL" && order.status !== filters.status) return false;
+    if (filters.onlyCancelable && !actionFilterPredicate(order)) return false;
+    if (!query) return true;
+
+    return [
+      order.orderNo,
+      order.title,
+      order.memberName,
+      order.roomName,
+      order.product.displayName,
+      order.statusLabel,
+    ].some((value) => value.toLowerCase().includes(query));
+  });
+
+  return [...filtered].sort((first, second) => {
+    if (filters.sort === "REQUESTED_ASC") return first.requestedAt.localeCompare(second.requestedAt);
+    if (filters.sort === "UPDATED_DESC") return second.updatedAt.localeCompare(first.updatedAt);
+    if (filters.sort === "PRICE_DESC") return second.totalPrice - first.totalPrice;
+    if (filters.sort === "PRICE_ASC") return first.totalPrice - second.totalPrice;
+    return second.requestedAt.localeCompare(first.requestedAt);
+  });
+}
+
+function OrderTableToolbar({
+  filters,
+  actionFilterLabel,
+  showActionFilter = true,
+  resultCount,
+  selectedCount,
+  allCsvDisabled,
+  filteredCsvDisabled,
+  onFilterChange,
+  onReset,
+  onDownloadAll,
+  onDownloadFiltered,
+  onDownloadSelected,
+}: {
+  filters: OrderTableFilters;
+  actionFilterLabel: string;
+  showActionFilter?: boolean;
+  resultCount: number;
+  selectedCount: number;
+  allCsvDisabled: boolean;
+  filteredCsvDisabled: boolean;
+  onFilterChange: <K extends keyof OrderTableFilters>(key: K, value: OrderTableFilters[K]) => void;
+  onReset: () => void;
+  onDownloadAll: () => void;
+  onDownloadFiltered: () => void;
+  onDownloadSelected: () => void;
+}) {
+  return (
+    <div className="order-table-toolbar">
+      <div className="order-table-csv-row">
+        <button type="button" onClick={onDownloadAll} disabled={allCsvDisabled}>
+          <Download size={16} />
+          전체 데이터 CSV
+        </button>
+        <button type="button" onClick={onDownloadFiltered} disabled={filteredCsvDisabled}>
+          <Download size={16} />
+          필터링 데이터 CSV
+        </button>
+        <button type="button" onClick={onDownloadSelected} disabled={selectedCount === 0}>
+          <Download size={16} />
+          선택한 데이터 CSV
+        </button>
+      </div>
+
+      <div className="order-table-filter-grid">
+        <label>
+          주문일 시작
+          <input type="date" value={filters.startDate} onChange={(event) => onFilterChange("startDate", event.target.value)} />
+        </label>
+        <label>
+          주문일 종료
+          <input type="date" value={filters.endDate} onChange={(event) => onFilterChange("endDate", event.target.value)} />
+        </label>
+        <label>
+          정렬
+          <select value={filters.sort} onChange={(event) => onFilterChange("sort", event.target.value as OrderSortKey)}>
+            {orderSortOptions.map((option) => (
+              <option value={option.value} key={option.value}>{option.label}</option>
+            ))}
+          </select>
+        </label>
+        <label>
+          표시 개수
+          <select value={filters.limit} onChange={(event) => onFilterChange("limit", Number(event.target.value))}>
+            {orderLimitOptions.map((limit) => (
+              <option value={limit} key={limit}>{limit}건씩</option>
+            ))}
+          </select>
+        </label>
+        <label className="wide">
+          검색
+          <span className="order-search-field">
+            <Search size={16} />
+            <input
+              type="search"
+              value={filters.query}
+              onChange={(event) => onFilterChange("query", event.target.value)}
+              placeholder="제목, 주문번호, 주문자, 방, 상품 검색"
+            />
+          </span>
+        </label>
+        <label>
+          상태
+          <select value={filters.status} onChange={(event) => onFilterChange("status", event.target.value as PrintOrderStatus | "ALL")}>
+            <option value="ALL">전체 상태</option>
+            {printOrderStatusOptions.map((status) => (
+              <option value={status} key={status}>{printOrderStatusLabel(status)}</option>
+            ))}
+          </select>
+        </label>
+        {showActionFilter ? (
+          <label className="order-toggle-field">
+            <input
+              type="checkbox"
+              checked={filters.onlyCancelable}
+              onChange={(event) => onFilterChange("onlyCancelable", event.target.checked)}
+            />
+            {actionFilterLabel}
+          </label>
+        ) : null}
+        <button className="outline-button order-filter-reset-button" type="button" onClick={onReset}>
+          필터 초기화
+        </button>
+      </div>
+
+      <div className="order-table-result-row">
+        <span>{resultCount}건 조회</span>
+        {selectedCount > 0 ? <strong>{selectedCount}건 선택됨</strong> : null}
+      </div>
+    </div>
+  );
+}
+
+function PrintOrderDataTable({
+  orders,
+  selectedOrderId,
+  selectedIds,
+  pagination,
+  loading,
+  emptyMessage,
+  onToggleOrder,
+  onToggleVisibleOrders,
+  onOpenOrder,
+}: {
+  orders: PrintOrderSummary[];
+  selectedOrderId: number | null;
+  selectedIds: number[];
+  pagination: OrderTablePagination;
+  loading: boolean;
+  emptyMessage: string;
+  onToggleOrder: (orderId: number) => void;
+  onToggleVisibleOrders: () => void;
+  onOpenOrder: (orderId: number) => void;
+}) {
+  const allVisibleSelected = orders.length > 0 && orders.every((order) => selectedIds.includes(order.id));
+  const pageNumbers = Array.from({ length: pagination.totalPages }, (_, index) => index + 1);
+
+  if (loading) {
+    return <div className="book-empty-state compact">주문을 불러오는 중입니다.</div>;
+  }
+
+  if (orders.length === 0) {
+    return <div className="book-empty-state compact">{emptyMessage}</div>;
+  }
+
+  return (
+    <>
+      <div className="order-table-scroll" tabIndex={0} aria-label="주문 테이블 가로 스크롤 영역">
+        <table className="order-data-table">
+          <thead>
+            <tr>
+              <th scope="col">
+                <input type="checkbox" checked={allVisibleSelected} onChange={onToggleVisibleOrders} aria-label="현재 화면 주문 전체 선택" />
+              </th>
+              <th scope="col">주문일시</th>
+              <th scope="col">최근 변경</th>
+              <th scope="col">주문번호</th>
+              <th scope="col">상태</th>
+              <th scope="col">주문자</th>
+              <th scope="col">방</th>
+              <th scope="col">상품/페이지</th>
+              <th scope="col">수량</th>
+              <th scope="col">금액</th>
+            </tr>
+          </thead>
+          <tbody>
+            {orders.map((order) => (
+              <tr
+                className={selectedOrderId === order.id ? "selected" : ""}
+                key={order.id}
+                onClick={(event) => {
+                  if (isInteractiveTarget(event.target)) return;
+                  onOpenOrder(order.id);
+                }}
+              >
+                <td>
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.includes(order.id)}
+                    onChange={() => onToggleOrder(order.id)}
+                    aria-label={`${order.orderNo} 선택`}
+                  />
+                </td>
+                <td>{formatDateTimeLabel(order.requestedAt)}</td>
+                <td>{formatDateTimeLabel(order.updatedAt)}</td>
+                <td><strong>{order.orderNo}</strong></td>
+                <td><span className={`book-order-status-badge ${printOrderStatusTone(order.status)}`}>{order.statusLabel}</span></td>
+                <td>{order.memberName}</td>
+                <td>{order.roomName}</td>
+                <td>{order.product.displayName} · {order.estimatedPageCount}p</td>
+                <td>{order.quantity}권</td>
+                <td><b>{formatCurrency(order.totalPrice)}</b></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <nav className="order-pagination" aria-label="주문 목록 페이지">
+        <span>{pagination.startItem}-{pagination.endItem} / {pagination.totalItems}건</span>
+        <div>
+          <button type="button" onClick={pagination.onPrevious} disabled={!pagination.canPrevious}>
+            이전
+          </button>
+          {pageNumbers.map((pageNumber) => (
+            <button
+              className={pageNumber === pagination.page ? "active" : ""}
+              type="button"
+              key={pageNumber}
+              onClick={() => pagination.onPageChange(pageNumber)}
+              aria-current={pageNumber === pagination.page ? "page" : undefined}
+            >
+              {pageNumber}
+            </button>
+          ))}
+          <button type="button" onClick={pagination.onNext} disabled={!pagination.canNext}>
+            다음
+          </button>
+        </div>
+      </nav>
+    </>
+  );
+}
+
+function downloadPrintOrdersCsv(filename: string, orders: PrintOrderSummary[]) {
+  const headers = ["주문일시", "최근 변경", "주문번호", "상태", "주문자", "방", "상품", "페이지", "수량", "금액"];
+  const rows = orders.map((order) => [
+    formatDateTimeLabel(order.requestedAt),
+    formatDateTimeLabel(order.updatedAt),
+    order.orderNo,
+    order.statusLabel,
+    order.memberName,
+    order.roomName,
+    order.product.displayName,
+    `${order.estimatedPageCount}p`,
+    `${order.quantity}권`,
+    `${order.totalPrice}`,
+  ]);
+  const csv = [headers, ...rows].map((row) => row.map(escapeCsvCell).join(",")).join("\n");
+  const blob = new Blob([`\uFEFF${csv}`], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename;
+  anchor.click();
+  URL.revokeObjectURL(url);
+}
+
+function escapeCsvCell(value: string): string {
+  const escaped = value.replace(/"/g, "\"\"");
+  return /[",\n]/.test(escaped) ? `"${escaped}"` : escaped;
+}
+
+function BookTemplatePreviewViewer({
   preview,
-  onOpenOrderConfirm,
+  className = "",
 }: {
   preview: BookPreviewResponse;
-  onOpenOrderConfirm: () => void;
+  className?: string;
 }) {
   const slides = useMemo(() => buildBookTemplatePreviewSlides(preview), [preview]);
   const [activeSlideIndex, setActiveSlideIndex] = useState(0);
@@ -6808,6 +7505,82 @@ function BookPreviewPanel({
   };
 
   return (
+    <div className={`book-preview-viewer ${className}`}>
+      <div className="book-preview-viewer-top">
+        <div>
+          <strong>{activeSlide.title}</strong>
+          <span>{activeSlide.kicker}</span>
+        </div>
+        <em>{activeSlide.pageRangeLabel} · {activeSlideIndex + 1}/{slides.length}</em>
+      </div>
+
+      <div className="book-preview-stage">
+        <button className="book-preview-nav previous" type="button" onClick={() => moveSlide("PREVIOUS")} disabled={!canMovePrevious} aria-label="이전 미리보기 페이지">
+          <ChevronLeft size={28} />
+        </button>
+
+        <article className={`book-template-page ${activeSlide.kind}`}>
+          <div className="book-template-page-inner">
+            <span className="book-template-kicker">{activeSlide.kicker}</span>
+            <h3>{activeSlide.title}</h3>
+            {activeSlide.subtitle ? <strong>{activeSlide.subtitle}</strong> : null}
+            <p>{activeSlide.description}</p>
+            {activeSlide.content ? (
+              <div className="book-template-content">
+                <BookTemplateVisual slide={activeSlide} />
+                <div>
+                  {activeSlide.occurredDate ? <small>{formatDateLabel(activeSlide.occurredDate)}</small> : null}
+                  {activeSlide.authorName ? <small>{activeSlide.authorName}</small> : null}
+                  {activeSlide.contentType ? <small>{bookContentTypeLabel(activeSlide.contentType)}</small> : null}
+                </div>
+              </div>
+            ) : null}
+            {activeSlide.summaryItems.length > 0 ? (
+              <div className="book-template-summary-grid">
+                {activeSlide.summaryItems.map((item) => (
+                  <div key={item.label}>
+                    <span>{item.label}</span>
+                    <strong>{item.value}</strong>
+                  </div>
+                ))}
+              </div>
+            ) : null}
+          </div>
+        </article>
+
+        <button className="book-preview-nav next" type="button" onClick={() => moveSlide("NEXT")} disabled={!canMoveNext} aria-label="다음 미리보기 페이지">
+          <ChevronRight size={28} />
+        </button>
+      </div>
+
+      <div className="book-preview-thumbnails" aria-label="템플릿 미리보기 페이지 목록">
+        {slides.map((slide, index) => (
+          <button
+            className={index === activeSlideIndex ? "active" : ""}
+            type="button"
+            key={slide.id}
+            onClick={() => setActiveSlideIndex(index)}
+            aria-current={index === activeSlideIndex ? "true" : undefined}
+          >
+            <span className={`book-preview-thumb ${slide.kind}`}>
+              <BookTemplateVisual slide={slide} compact />
+            </span>
+            <small>{slide.thumbnailLabel}</small>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function BookPreviewPanel({
+  preview,
+  onOpenOrderConfirm,
+}: {
+  preview: BookPreviewResponse;
+  onOpenOrderConfirm: () => void;
+}) {
+  return (
     <section className="book-section book-preview-section" aria-labelledby="book-preview-title">
       <div className="book-section-heading">
         <div>
@@ -6819,71 +7592,7 @@ function BookPreviewPanel({
       </div>
 
       <div className="book-preview-layout">
-        <div className="book-preview-viewer">
-          <div className="book-preview-viewer-top">
-            <div>
-              <strong>{activeSlide.title}</strong>
-              <span>{activeSlide.kicker}</span>
-            </div>
-            <em>{activeSlide.pageRangeLabel} · {activeSlideIndex + 1}/{slides.length}</em>
-          </div>
-
-          <div className="book-preview-stage">
-            <button className="book-preview-nav previous" type="button" onClick={() => moveSlide("PREVIOUS")} disabled={!canMovePrevious} aria-label="이전 미리보기 페이지">
-              <ChevronLeft size={28} />
-            </button>
-
-            <article className={`book-template-page ${activeSlide.kind}`}>
-              <div className="book-template-page-inner">
-                <span className="book-template-kicker">{activeSlide.kicker}</span>
-                <h3>{activeSlide.title}</h3>
-                {activeSlide.subtitle ? <strong>{activeSlide.subtitle}</strong> : null}
-                <p>{activeSlide.description}</p>
-                {activeSlide.content ? (
-                  <div className="book-template-content">
-                    <BookTemplateVisual slide={activeSlide} />
-                    <div>
-                      {activeSlide.occurredDate ? <small>{formatDateLabel(activeSlide.occurredDate)}</small> : null}
-                      {activeSlide.authorName ? <small>{activeSlide.authorName}</small> : null}
-                      {activeSlide.contentType ? <small>{bookContentTypeLabel(activeSlide.contentType)}</small> : null}
-                    </div>
-                  </div>
-                ) : null}
-                {activeSlide.summaryItems.length > 0 ? (
-                  <div className="book-template-summary-grid">
-                    {activeSlide.summaryItems.map((item) => (
-                      <div key={item.label}>
-                        <span>{item.label}</span>
-                        <strong>{item.value}</strong>
-                      </div>
-                    ))}
-                  </div>
-                ) : null}
-              </div>
-            </article>
-
-            <button className="book-preview-nav next" type="button" onClick={() => moveSlide("NEXT")} disabled={!canMoveNext} aria-label="다음 미리보기 페이지">
-              <ChevronRight size={28} />
-            </button>
-          </div>
-
-          <div className="book-preview-thumbnails" aria-label="템플릿 미리보기 페이지 목록">
-            {slides.map((slide, index) => (
-              <button
-                className={index === activeSlideIndex ? "active" : ""}
-                type="button"
-                key={slide.id}
-                onClick={() => setActiveSlideIndex(index)}
-                aria-current={index === activeSlideIndex ? "true" : undefined}
-              >
-                <span className={`book-preview-thumb ${slide.kind}`}>
-                  <BookTemplateVisual slide={slide} compact />
-                </span>
-                <small>{slide.thumbnailLabel}</small>
-              </button>
-            ))}
-          </div>
-        </div>
+        <BookTemplatePreviewViewer preview={preview} />
 
         <aside className="book-estimate-panel">
           <h3>{preview.product.displayName}</h3>
@@ -6935,18 +7644,24 @@ function BookOrdersView({
   selectedOrder,
   loading,
   detailLoading,
+  actionLoading,
   onOpenOrder,
   onOpenCancel,
+  onCloseOrderDetail,
 }: {
   mode: "status" | "history";
   orders: PrintOrderSummary[];
   selectedOrder: PrintOrderDetail | null;
   loading: boolean;
   detailLoading: boolean;
+  actionLoading: boolean;
   onOpenOrder: (orderId: number) => void;
   onOpenCancel?: () => void;
+  onCloseOrderDetail: () => void;
 }) {
   const isStatusMode = mode === "status";
+  const table = useOrderTableState(orders);
+  const csvPrefix = isStatusMode ? "book-status-orders" : "book-history-orders";
 
   return (
     <>
@@ -6958,143 +7673,53 @@ function BookOrdersView({
       </header>
 
       <section className="book-page book-orders-page" aria-busy={loading || detailLoading}>
-        <div className="book-order-list-panel">
+        <div className="book-order-list-panel order-table-panel">
           <div className="book-section-heading compact">
             <div>
               <span>{isStatusMode ? "진행 주문" : "지난 주문"}</span>
-              <h2>{orders.length}건</h2>
+              <h2>{table.filteredOrders.length}건</h2>
             </div>
           </div>
 
-          {loading ? (
-            <div className="book-empty-state compact">주문을 불러오는 중입니다.</div>
-          ) : orders.length === 0 ? (
-            <div className="book-empty-state compact">
-              {isStatusMode ? "진행 중인 주문이 없습니다." : "완료되거나 취소된 주문 내역이 없습니다."}
-            </div>
-          ) : (
-            <div className="book-order-list">
-              {orders.map((order) => (
-                <button
-                  className={`book-order-card ${selectedOrder?.id === order.id ? "selected" : ""}`}
-                  type="button"
-                  key={order.id}
-                  onClick={() => onOpenOrder(order.id)}
-                >
-                  <span className={`book-order-status-badge ${printOrderStatusTone(order.status)}`}>{order.statusLabel}</span>
-                  <strong>{order.title}</strong>
-                  <small>{order.orderNo} · {order.roomName}</small>
-                  <em>{order.product.displayName} · {order.estimatedPageCount}p · {order.quantity}권</em>
-                  <b>{formatCurrency(order.totalPrice)}</b>
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
+          <OrderTableToolbar
+            filters={table.filters}
+            actionFilterLabel={table.actionFilterLabel}
+            showActionFilter={false}
+            resultCount={table.filteredOrders.length}
+            selectedCount={table.selectedOrders.length}
+            allCsvDisabled={orders.length === 0}
+            filteredCsvDisabled={table.filteredOrders.length === 0}
+            onFilterChange={table.updateFilter}
+            onReset={() => table.resetFilters()}
+            onDownloadAll={() => downloadPrintOrdersCsv(`${csvPrefix}-all.csv`, orders)}
+            onDownloadFiltered={() => downloadPrintOrdersCsv(`${csvPrefix}-filtered.csv`, table.filteredOrders)}
+            onDownloadSelected={() => downloadPrintOrdersCsv(`${csvPrefix}-selected.csv`, table.selectedOrders)}
+          />
 
-        <BookOrderDetailPanel order={selectedOrder} loading={detailLoading} onOpenCancel={isStatusMode ? onOpenCancel : undefined} />
+          <PrintOrderDataTable
+            orders={table.visibleOrders}
+            selectedOrderId={selectedOrder?.id ?? null}
+            selectedIds={table.selectedIds}
+            pagination={table.pagination}
+            loading={loading}
+            emptyMessage={isStatusMode ? "조건에 맞는 진행 주문이 없습니다." : "조건에 맞는 지난 주문이 없습니다."}
+            onToggleOrder={table.toggleOrder}
+            onToggleVisibleOrders={table.toggleVisibleOrders}
+            onOpenOrder={onOpenOrder}
+          />
+        </div>
       </section>
+
+      {detailLoading || selectedOrder ? (
+        <PrintOrderDetailModal
+          order={selectedOrder}
+          detailLoading={detailLoading}
+          actionLoading={actionLoading}
+          onOpenCancel={isStatusMode ? onOpenCancel : undefined}
+          onClose={onCloseOrderDetail}
+        />
+      ) : null}
     </>
-  );
-}
-
-function BookOrderDetailPanel({
-  order,
-  loading,
-  onOpenCancel,
-}: {
-  order: PrintOrderDetail | null;
-  loading: boolean;
-  onOpenCancel?: () => void;
-}) {
-  if (loading) {
-    return (
-      <aside className="book-order-detail-panel">
-        <div className="book-empty-state">주문 상세를 불러오는 중입니다.</div>
-      </aside>
-    );
-  }
-
-  if (!order) {
-    return (
-      <aside className="book-order-detail-panel">
-        <div className="book-empty-state">목록에서 주문을 선택하면 상품, 기간, 콘텐츠, 견적 스냅샷을 확인할 수 있습니다.</div>
-      </aside>
-    );
-  }
-
-  return (
-    <aside className="book-order-detail-panel">
-      <div className="book-order-detail-header">
-        <span className={`book-order-status-badge ${printOrderStatusTone(order.status)}`}>{order.statusLabel}</span>
-        <h2>{order.title}</h2>
-        <p>{order.orderNo}</p>
-      </div>
-
-      <dl className="book-order-detail-list">
-        <div>
-          <dt>방</dt>
-          <dd>{order.roomName}</dd>
-        </div>
-        <div>
-          <dt>상품</dt>
-          <dd>{order.product.displayName}</dd>
-        </div>
-        <div>
-          <dt>기간</dt>
-          <dd>{formatDateLabel(order.period.startDate)} ~ {formatDateLabel(order.period.endDate)}</dd>
-        </div>
-        <div>
-          <dt>페이지/수량</dt>
-          <dd>{order.estimatedPageCount}p · {order.quantity}권</dd>
-        </div>
-        <div className="total">
-          <dt>총액</dt>
-          <dd>{formatCurrency(order.totalPrice)}</dd>
-        </div>
-      </dl>
-
-      {order.cancelReason ? (
-        <div className="book-order-cancel-reason">
-          <strong>취소 사유</strong>
-          <p>{order.cancelReason}</p>
-        </div>
-      ) : null}
-
-      <div className="book-order-subsection">
-        <h3>담긴 콘텐츠</h3>
-        <div className="book-order-content-list">
-          {order.contents.map((content) => (
-            <div key={`${content.type}-${content.sourceId}-${content.sortOrder}`}>
-              <strong>{content.title}</strong>
-              <small>{bookContentTypeLabel(content.type)} · {formatDateLabel(content.occurredDate)} · {content.pageCount}p</small>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <div className="book-order-subsection">
-        <h3>상태 이력</h3>
-        <div className="book-order-history-list">
-          {order.statusHistories.map((history) => (
-            <div key={history.id}>
-              <strong>{history.nextStatusLabel}</strong>
-              <small>{formatDateTimeLabel(history.changedAt)}</small>
-              {history.memo ? <p>{history.memo}</p> : null}
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {onOpenCancel ? (
-        <div className="book-order-actions">
-          <button className="outline-button danger-button" type="button" onClick={onOpenCancel} disabled={!canCancelPrintOrder(order.status)}>
-            주문 취소
-          </button>
-          {!canCancelPrintOrder(order.status) ? <p>주문 확정 이후에는 이 화면에서 취소할 수 없습니다.</p> : null}
-        </div>
-      ) : null}
-    </aside>
   );
 }
 
