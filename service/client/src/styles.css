@@ -758,6 +758,19 @@ dl {
   margin-top: 8px;
 }
 
+.sidebar.is-collapsed .room-dashboard-link {
+  width: 52px;
+  min-height: 52px;
+  margin-left: 0;
+  padding: 0;
+  justify-content: center;
+}
+
+.sidebar.is-collapsed .room-dashboard-link svg {
+  width: 20px;
+  height: 20px;
+}
+
 .sidebar.is-collapsed .room-entry {
   padding-left: 0;
 }
