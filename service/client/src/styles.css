@@ -69,6 +69,62 @@ dl {
   gap: 10px;
 }
 
+.member-select-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.member-select-help {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border: 1px solid #dce5f3;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #0c9fa8;
+  cursor: help;
+}
+
+.member-select-help:focus-visible {
+  border-color: #0c9fa8;
+  box-shadow: 0 0 0 3px rgba(12, 159, 168, 0.14);
+  outline: none;
+}
+
+.member-select-help-popover {
+  position: absolute;
+  right: auto;
+  bottom: calc(100% + 10px);
+  left: 0;
+  z-index: 20;
+  width: min(420px, calc(100vw - 80px));
+  border: 1px solid #dce5f3;
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 18px 42px rgba(38, 56, 80, 0.18);
+  color: #536176;
+  padding: 14px 16px;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.6;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(4px);
+  transition:
+    opacity 0.16s ease,
+    transform 0.16s ease;
+}
+
+.member-select-help:hover .member-select-help-popover,
+.member-select-help:focus .member-select-help-popover,
+.member-select-help:focus-within .member-select-help-popover {
+  opacity: 1;
+  transform: translateY(0);
+}
+
 .member-select-heading h1 {
   font-size: 38px;
   line-height: 1.15;
@@ -81,10 +137,49 @@ dl {
   font-weight: 700;
 }
 
+.member-select-groups {
+  display: grid;
+  gap: 24px;
+}
+
+.member-select-group {
+  display: grid;
+  gap: 12px;
+}
+
+.member-select-group.operator {
+  border-top: 1px solid #e9eef7;
+  padding-top: 24px;
+}
+
+.member-select-group-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.member-select-group-heading strong {
+  color: #0c9fa8;
+  font-size: 17px;
+  font-weight: 950;
+}
+
+.member-select-group-heading span {
+  color: #8c98aa;
+  font-size: 13px;
+  font-weight: 800;
+}
+
 .member-select-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16px;
+}
+
+.member-select-grid.operator {
+  grid-template-columns: minmax(0, 1fr);
+  max-width: calc(50% - 8px);
 }
 
 .member-select-card {
@@ -106,10 +201,20 @@ dl {
     transform 0.16s ease;
 }
 
+.member-select-card.operator {
+  border-color: #cfe7ea;
+  background: linear-gradient(90deg, rgba(240, 253, 252, 0.9), #ffffff);
+}
+
 .member-select-card:hover {
   border-color: #ed4b97;
   box-shadow: 0 14px 34px rgba(237, 75, 151, 0.15);
   transform: translateY(-2px);
+}
+
+.member-select-card.operator:hover {
+  border-color: #0c9fa8;
+  box-shadow: 0 14px 34px rgba(12, 159, 168, 0.15);
 }
 
 .member-select-avatar {
@@ -124,10 +229,29 @@ dl {
   font-weight: 900;
 }
 
+.member-select-card.operator .member-select-avatar {
+  background: #0c9fa8;
+}
+
 .member-select-info {
   min-width: 0;
   display: grid;
   gap: 7px;
+}
+
+.member-select-role-badge {
+  width: fit-content;
+  border-radius: 999px;
+  background: #f2f6fb;
+  color: #667085;
+  padding: 4px 9px;
+  font-size: 12px;
+  font-weight: 950;
+}
+
+.member-select-card.operator .member-select-role-badge {
+  background: #e9fbfa;
+  color: #0c9fa8;
 }
 
 .member-select-info strong {
@@ -135,7 +259,7 @@ dl {
   color: #253248;
 }
 
-.member-select-info span,
+.member-select-info > span:not(.member-select-role-badge),
 .member-select-info small {
   font-size: 14px;
   color: #657389;
@@ -262,6 +386,29 @@ dl {
 
   .member-select-grid {
     grid-template-columns: 1fr;
+  }
+
+  .member-select-grid.operator {
+    max-width: none;
+  }
+
+  .member-select-group-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .member-select-help-popover {
+    top: calc(100% + 10px);
+    bottom: auto;
+    left: 0;
+    width: min(320px, calc(100vw - 64px));
+    transform: translateY(-4px);
+  }
+
+  .member-select-help:hover .member-select-help-popover,
+  .member-select-help:focus .member-select-help-popover,
+  .member-select-help:focus-within .member-select-help-popover {
+    transform: translateY(0);
   }
 
   .member-select-card {

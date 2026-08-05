@@ -3532,29 +3532,66 @@ function DemoMemberSelectionView({
   members: DemoMemberOption[];
   onSelect: (member: DemoMemberOption) => void;
 }) {
+  const userMembers = members.filter((member) => !isOperatorDemoMember(member));
+  const operatorMember = members.find((member) => isOperatorDemoMember(member));
+  const renderMemberCard = (member: DemoMemberOption, variant: "user" | "operator") => (
+    <button className={`member-select-card ${variant}`} type="button" key={member.id} onClick={() => onSelect(member)}>
+      <span className="member-select-avatar" aria-hidden="true">
+        {member.displayName.slice(0, 1)}
+      </span>
+      <span className="member-select-info">
+        <span className="member-select-role-badge">
+          {variant === "operator" ? "운영자 계정" : "일반 사용자"}
+        </span>
+        <strong>{member.displayName}</strong>
+        <span>아이디 {member.username}</span>
+        <small>{member.roleDescription}</small>
+        <em>{member.roomHint}</em>
+      </span>
+      {variant === "operator" ? <ShieldAlert size={22} /> : <UserRound size={22} />}
+    </button>
+  );
+
   return (
     <main className="member-select-page">
       <section className="member-select-panel" aria-labelledby="member-select-title">
         <div className="member-select-heading">
-          <span className="eyebrow">체험 시작</span>
-          <h1 id="member-select-title">사용자를 선택하세요</h1>
+          <div className="member-select-title-row">
+            <span className="eyebrow">체험 시작</span>
+            <span className="member-select-help" tabIndex={0} aria-label="선택형 로그인 설명">
+              <CircleHelp size={18} aria-hidden="true" />
+              <span className="member-select-help-popover" role="tooltip">
+                심사자가 로그인 절차 없이 사용자별 권한과 화면 차이를 빠르게 확인할 수 있도록 만든 체험용 선택 화면입니다.
+                실제 인증 구현이 아니라 사전 시드된 일반 사용자와 운영자 역할을 전환하는 방식입니다.
+              </span>
+            </span>
+          </div>
+          <h1 id="member-select-title">사용자 유형을 선택하세요</h1>
+          <p>일반 사용자는 기록방을 사용하고 책을 주문합니다. 운영자는 전체 책 주문을 확인하고 상태를 관리합니다.</p>
         </div>
 
-        <div className="member-select-grid">
-          {members.map((member) => (
-            <button className="member-select-card" type="button" key={member.id} onClick={() => onSelect(member)}>
-              <span className="member-select-avatar" aria-hidden="true">
-                {member.displayName.slice(0, 1)}
-              </span>
-              <span className="member-select-info">
-                <strong>{member.displayName}</strong>
-                <span>아이디 {member.username}</span>
-                <small>{member.roleDescription}</small>
-                <em>{member.roomHint}</em>
-              </span>
-              <UserRound size={22} />
-            </button>
-          ))}
+        <div className="member-select-groups">
+          <section className="member-select-group" aria-labelledby="member-user-group-title">
+            <div className="member-select-group-heading">
+              <strong id="member-user-group-title">일반 사용자</strong>
+              <span>기록방 작성, 참여, 책 만들기와 주문 흐름 확인</span>
+            </div>
+            <div className="member-select-grid">
+              {userMembers.map((member) => renderMemberCard(member, "user"))}
+            </div>
+          </section>
+
+          {operatorMember ? (
+            <section className="member-select-group operator" aria-labelledby="member-operator-group-title">
+              <div className="member-select-group-heading">
+                <strong id="member-operator-group-title">운영자</strong>
+                <span>전체 책 주문 조회, CSV 다운로드, 주문 상태 변경 확인</span>
+              </div>
+              <div className="member-select-grid operator">
+                {renderMemberCard(operatorMember, "operator")}
+              </div>
+            </section>
+          ) : null}
         </div>
       </section>
     </main>
