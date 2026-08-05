@@ -3744,7 +3744,7 @@ dl {
 .room-hub-grid {
   display: grid;
   grid-template-columns: minmax(360px, 0.9fr) minmax(0, 1.55fr);
-  align-items: start;
+  align-items: stretch;
   gap: 16px;
   margin-bottom: 18px;
 }
@@ -3776,6 +3776,7 @@ dl {
 
 .room-create-card,
 .invitation-card {
+  height: 100%;
   min-height: 0;
   padding: 18px 20px;
 }
@@ -4006,6 +4007,44 @@ dl {
 .invite-inline-form.is-disabled button {
   cursor: not-allowed;
   opacity: 0.58;
+}
+
+.invite-action-tooltip-wrap {
+  position: relative;
+  display: inline-flex;
+  flex: 0 0 auto;
+}
+
+.invite-action-tooltip {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 8px);
+  width: max-content;
+  max-width: 240px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #253248;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 850;
+  line-height: 1.4;
+  box-shadow: 0 12px 30px rgba(37, 50, 72, 0.22);
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(4px);
+  transition:
+    opacity 0.16s ease,
+    transform 0.16s ease,
+    visibility 0.16s ease;
+  pointer-events: none;
+  z-index: 20;
+}
+
+.invite-action-tooltip-wrap:hover .invite-action-tooltip,
+.invite-action-tooltip-wrap:focus-within .invite-action-tooltip {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
 }
 
 .invitee-card {

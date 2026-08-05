@@ -1570,10 +1570,10 @@ function App() {
       setProfile(profileResponse);
       setSettings(settingsResponse);
       setRooms(visibleRooms);
+      setPendingInvitationCount(roomsResponse.pendingInvitationCount);
       await loadLatestNotifications();
       await loadPendingInvitations();
       await loadCalendarActivities(null);
-      setPendingInvitationCount(roomsResponse.pendingInvitationCount);
       setProfileForm({
         displayName: profileResponse.displayName,
         profileImageUrl: profileResponse.profileImageUrl ?? "",
@@ -1674,7 +1674,9 @@ function App() {
 
   async function loadPendingInvitations() {
     const response = await safeApiGet<PendingRoomInvitationsResponse>("/room-invitations/pending");
-    setPendingInvitations(response?.items ?? []);
+    const invitations = response?.items ?? [];
+    setPendingInvitations(invitations);
+    setPendingInvitationCount(invitations.length);
   }
 
   async function loadCalendarActivities(nextRoomId: number | null, targetMonth = calendarMonth) {
@@ -3296,7 +3298,6 @@ function App() {
           <RoomsView
             rooms={rooms}
             selectedRoomId={selectedRoom?.id ?? null}
-            pendingInvitationCount={pendingInvitationCount}
             pendingInvitations={pendingInvitations}
             createRoomForm={createRoomForm}
             inviteContacts={inviteContacts}
@@ -4852,7 +4853,6 @@ function ChatMessageTimeline({ messages, loading, compact = false }: { messages:
 function RoomsView({
   rooms,
   selectedRoomId,
-  pendingInvitationCount,
   pendingInvitations,
   createRoomForm,
   inviteContacts,
@@ -4866,7 +4866,6 @@ function RoomsView({
 }: {
   rooms: RoomSummary[];
   selectedRoomId: number | null;
-  pendingInvitationCount: number;
   pendingInvitations: PendingRoomInvitation[];
   createRoomForm: CreateRoomForm;
   inviteContacts: Record<number, string>;
@@ -4878,6 +4877,8 @@ function RoomsView({
   onRespondInvitation: (invitationId: number, action: "accept" | "decline") => void;
   onSelectRoom: (roomId: number) => void;
 }) {
+  const visiblePendingInvitationCount = pendingInvitations.length;
+
   return (
     <>
       <header className="page-header">
@@ -4928,7 +4929,7 @@ function RoomsView({
 
         <article className="hub-card invitation-card">
           <span>초대 받은 방</span>
-          <strong>{pendingInvitationCount}개</strong>
+          <strong>{visiblePendingInvitationCount}개</strong>
           {pendingInvitations.length > 0 ? (
             <div className="pending-invitation-list">
               {pendingInvitations.map((invitation) => (
@@ -5006,14 +5007,22 @@ function RoomsView({
                       aria-label={`${room.name} 초대 대상 검색`}
                       disabled={!canInvite}
                     />
-                    <button
-                      className="primary-button"
-                      type="button"
-                      onClick={() => onSearchInvitees(room.id)}
-                      disabled={!canInvite || inviteSearchingRoomId === room.id}
-                    >
-                      {inviteSearchingRoomId === room.id ? "검색 중" : "검색"}
-                    </button>
+                    <span className="invite-action-tooltip-wrap" tabIndex={canInvite ? undefined : 0}>
+                      <button
+                        className="primary-button"
+                        type="button"
+                        onClick={() => onSearchInvitees(room.id)}
+                        disabled={!canInvite || inviteSearchingRoomId === room.id}
+                        aria-describedby={canInvite ? undefined : `room-${room.id}-invite-disabled-help`}
+                      >
+                        {inviteSearchingRoomId === room.id ? "확인 중" : "초대"}
+                      </button>
+                      {!canInvite ? (
+                        <span className="invite-action-tooltip" id={`room-${room.id}-invite-disabled-help`} role="tooltip">
+                          멤버 초대는 방장만 가능합니다.
+                        </span>
+                      ) : null}
+                    </span>
                   </div>
                 </div>
               </div>
