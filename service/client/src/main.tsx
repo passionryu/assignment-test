@@ -6438,17 +6438,17 @@ function BookCreateView({
                 </div>
               ) : null}
 
-              <BookCompositionOrderPanel
-                selectedContents={selectedContents}
-                orderMode={contentOrderMode}
-                contentTypeOrder={contentTypeOrder}
-              />
-
               <div className="book-wizard-actions stacked">
                 <button className="primary-button" type="button" onClick={onCreatePreview} disabled={!canPreview || previewLoading}>
                   {previewLoading ? "계산 중" : "미리보기/견적 계산"}
                 </button>
               </div>
+
+              <BookCompositionOrderPanel
+                selectedContents={selectedContents}
+                orderMode={contentOrderMode}
+                contentTypeOrder={contentTypeOrder}
+              />
             </aside>
           </section>
         ) : null}
