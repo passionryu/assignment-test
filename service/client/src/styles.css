@@ -1892,6 +1892,13 @@ dl {
   margin-bottom: 22px;
 }
 
+.room-section-heading-with-action {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+
 .room-section-heading h2 {
   color: #253248;
   font-size: 22px;
@@ -1901,6 +1908,35 @@ dl {
   color: #667085;
   font-size: 14px;
   line-height: 1.5;
+}
+
+.room-chat-shortcut-button {
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: 1px solid #ffd3e5;
+  border-radius: 8px;
+  background: #fff6fa;
+  color: #cc3f7d;
+  padding: 0 10px 0 12px;
+  font-size: 13px;
+  font-weight: 900;
+  white-space: nowrap;
+  transition:
+    border-color 0.16s ease,
+    background 0.16s ease,
+    box-shadow 0.16s ease,
+    transform 0.16s ease;
+}
+
+.room-chat-shortcut-button:hover,
+.room-chat-shortcut-button:focus-visible {
+  border-color: #f04f95;
+  background: #fff0f7;
+  box-shadow: 0 0 0 4px rgba(240, 79, 149, 0.1);
+  outline: none;
+  transform: translateY(-1px);
 }
 
 .chat-date-divider {
@@ -1954,12 +1990,12 @@ dl {
   grid-template-columns: 58px minmax(0, 1fr) auto;
   align-items: center;
   gap: 16px;
-  min-height: 106px;
+  min-height: 126px;
   border: 1px solid var(--feature-color);
   border-radius: 8px;
   background: linear-gradient(180deg, #ffffff, var(--feature-bg));
   color: #253248;
-  padding: 18px;
+  padding: 16px 18px;
   text-align: left;
   transition:
     border-color 0.18s ease,
@@ -2007,6 +2043,38 @@ dl {
 .room-feature-card strong {
   color: #253248;
   font-size: 18px;
+}
+
+.room-feature-copy {
+  min-width: 0;
+}
+
+.room-feature-points {
+  display: grid;
+  gap: 4px;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.room-feature-points li {
+  position: relative;
+  padding-left: 12px;
+  color: #667085;
+  font-size: 12px;
+  font-weight: 850;
+  line-height: 1.35;
+}
+
+.room-feature-points li::before {
+  position: absolute;
+  top: 0.62em;
+  left: 0;
+  width: 4px;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--feature-color);
+  content: "";
 }
 
 .room-feature-card small {

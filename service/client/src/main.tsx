@@ -4708,11 +4708,15 @@ function RoomHomeView({
 
         <div className="room-home-content">
           <article className="room-chat-preview">
-            <div className="room-section-heading">
+            <div className="room-section-heading room-section-heading-with-action">
               <div className="heading-help-row">
                 <h2>최근 대화</h2>
                 <HelpButton title="최근 대화" message="방 구성원이 남긴 최근 메시지를 확인하고 바로 새 메시지를 남길 수 있습니다." />
               </div>
+              <button className="room-chat-shortcut-button" type="button" onClick={() => onMoveRoomFeature("chat")}>
+                채팅방으로 이동하기
+                <ChevronRight size={15} />
+              </button>
             </div>
             <ChatMessageTimeline messages={messages} loading={loading} compact />
             <div className="chat-input-row compact-chat-input">
@@ -4743,22 +4747,37 @@ function RoomHomeView({
             <div className="room-feature-list">
               <button className="room-feature-card memory" type="button" onClick={() => onMoveRoomFeature("memories")}>
                 <span className="room-feature-icon"><BookImage size={32} /></span>
-                <span>
+                <span className="room-feature-copy">
                   <strong>추억 게시판</strong>
+                  <ul className="room-feature-points">
+                    <li>사진과 글로 추억 업로드</li>
+                    <li>댓글로 함께 회상</li>
+                    <li>책 제작 후보로 활용</li>
+                  </ul>
                 </span>
                 <span aria-hidden="true">›</span>
               </button>
               <button className="room-feature-card mission" type="button" onClick={() => onMoveRoomFeature("missions")}>
                 <span className="room-feature-icon"><BadgeCheck size={32} /></span>
-                <span>
+                <span className="room-feature-copy">
                   <strong>미션 인증</strong>
+                  <ul className="room-feature-points">
+                    <li>기본/커스텀 미션 수행</li>
+                    <li>사진과 글로 인증 기록</li>
+                    <li>동의 상태와 댓글 확인</li>
+                  </ul>
                 </span>
                 <span aria-hidden="true">›</span>
               </button>
               <button className="room-feature-card letter" type="button" onClick={() => onMoveRoomFeature("letters")}>
                 <span className="room-feature-icon"><MailPlus size={32} /></span>
-                <span>
+                <span className="room-feature-copy">
                   <strong>편지</strong>
+                  <ul className="room-feature-points">
+                    <li>한 명에게 보내는 비공개 글</li>
+                    <li>받은 편지와 보낸 편지 구분</li>
+                    <li>책에 담을 편지 선택</li>
+                  </ul>
                 </span>
                 <span aria-hidden="true">›</span>
               </button>
