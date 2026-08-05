@@ -4097,20 +4097,20 @@ function Sidebar({
             </button>
           </div>
 
-          <div className={`room-submenu book-submenu ${bookMenuExpanded && !collapsed ? "is-open" : ""}`} aria-hidden={!bookMenuExpanded || collapsed}>
-            <button className={activeView === "bookProducts" ? "active" : ""} type="button" tabIndex={bookMenuExpanded && !collapsed ? 0 : -1} onClick={() => onMove("bookProducts")}>
+          <div className={`room-submenu book-submenu ${bookMenuExpanded ? "is-open" : ""}`} aria-hidden={!bookMenuExpanded}>
+            <button className={activeView === "bookProducts" ? "active" : ""} type="button" tabIndex={bookMenuExpanded ? 0 : -1} onClick={() => onMove("bookProducts")}>
               <CircleHelp size={16} />
               <span className="nav-label">상품 안내</span>
             </button>
-            <button className={activeView === "bookCreate" ? "active" : ""} type="button" tabIndex={bookMenuExpanded && !collapsed ? 0 : -1} onClick={() => onMove("bookCreate")}>
+            <button className={activeView === "bookCreate" ? "active" : ""} type="button" tabIndex={bookMenuExpanded ? 0 : -1} onClick={() => onMove("bookCreate")}>
               <BookImage size={16} />
               <span className="nav-label">책 만들기</span>
             </button>
-            <button className={activeView === "bookStatus" ? "active" : ""} type="button" tabIndex={bookMenuExpanded && !collapsed ? 0 : -1} onClick={() => onMove("bookStatus")}>
+            <button className={activeView === "bookStatus" ? "active" : ""} type="button" tabIndex={bookMenuExpanded ? 0 : -1} onClick={() => onMove("bookStatus")}>
               <Clock size={16} />
               <span className="nav-label">주문 상태</span>
             </button>
-            <button className={activeView === "bookHistory" ? "active" : ""} type="button" tabIndex={bookMenuExpanded && !collapsed ? 0 : -1} onClick={() => onMove("bookHistory")}>
+            <button className={activeView === "bookHistory" ? "active" : ""} type="button" tabIndex={bookMenuExpanded ? 0 : -1} onClick={() => onMove("bookHistory")}>
               <FileText size={16} />
               <span className="nav-label">주문 내역</span>
             </button>

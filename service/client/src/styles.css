@@ -754,7 +754,7 @@ dl {
 }
 
 .sidebar.is-collapsed .room-list-tree {
-  gap: 10px;
+  gap: 8px;
   margin-top: 8px;
 }
 
@@ -4401,6 +4401,30 @@ dl {
 
 .book-submenu.is-open {
   max-height: 190px;
+}
+
+.sidebar.is-collapsed .book-submenu {
+  gap: 8px;
+  margin: 8px 0 6px;
+  padding: 0;
+}
+
+.sidebar.is-collapsed .book-submenu.is-open {
+  max-height: 232px;
+  padding: 0;
+}
+
+.sidebar.is-collapsed .book-submenu button {
+  width: 52px;
+  min-height: 52px;
+  margin: 0;
+  padding: 0;
+  justify-content: center;
+}
+
+.sidebar.is-collapsed .book-submenu svg {
+  width: 20px;
+  height: 20px;
 }
 
 .book-page {
