@@ -178,13 +178,80 @@ Lv2는 사용자가 기록방 콘텐츠를 골라 책 주문 요청에 가까운
 
 ### 주요 화면 캡처
 
-작성 예정: 최종 화면을 기준으로 실행 전 심사자가 흐름을 이해할 수 있는 캡처를 첨부합니다.
+심사자가 실행 전 핵심 화면 흐름을 빠르게 확인할 수 있도록 데스크톱 기준 캡처를 정리했습니다.
+채팅 화면은 최종 캡처 확보 후 추가합니다.
 
-- 사용자 선택 화면: 작성 예정
-- 홈/전체 기록 캘린더: 작성 예정
-- 책 만들기 단계형 흐름: 작성 예정
-- 주문 상태/주문 내역: 작성 예정
-- 운영자 주문 관리: 작성 예정
+<details>
+<summary>사용자 선택 화면 - 일반 사용자와 운영자 계정을 구분해 체험을 시작하는 화면</summary>
+
+| 데스크톱 화면 캡처 |
+| --- |
+| <img src="docs/assets/readme/screenshots/user-selection.png" alt="사용자 선택 화면" width="900"> |
+
+</details>
+
+<details>
+<summary>홈/전체 기록 캘린더 화면 - 참여 기록방 요약과 날짜별 기록 흐름을 함께 확인하는 화면</summary>
+
+| 데스크톱 화면 캡처 |
+| --- |
+| <img src="docs/assets/readme/screenshots/home-calendar.png" alt="홈/전체 기록 캘린더 화면" width="900"> |
+
+</details>
+
+<details>
+<summary>방 관리 대시보드 화면 - 새 방 생성, 초대 수락/거절, 참여 기록방 초대를 관리하는 화면</summary>
+
+| 데스크톱 화면 캡처 |
+| --- |
+| <img src="docs/assets/readme/screenshots/room-dashboard.png" alt="방 관리 대시보드 화면" width="900"> |
+
+</details>
+
+<details>
+<summary>추억 게시판 화면 - 사진과 글을 남기고 댓글로 함께 기록을 이어가는 화면</summary>
+
+| 데스크톱 화면 캡처 |
+| --- |
+| <img src="docs/assets/readme/screenshots/memory-board.png" alt="추억 게시판 화면" width="900"> |
+
+</details>
+
+<details>
+<summary>미션 인증 화면 - 방별 미션 인증, 동의 상태, 댓글을 확인하는 화면</summary>
+
+| 데스크톱 화면 캡처 |
+| --- |
+| <img src="docs/assets/readme/screenshots/mission-verification.png" alt="미션 인증 화면" width="900"> |
+
+</details>
+
+<details>
+<summary>편지 화면 - 특정 멤버에게 보낸 비공개 편지를 확인하고 작성하는 화면</summary>
+
+| 데스크톱 화면 캡처 |
+| --- |
+| <img src="docs/assets/readme/screenshots/letters.png" alt="편지 화면" width="900"> |
+
+</details>
+
+<details>
+<summary>책 만들기 화면 - 방, 상품, 기간, 콘텐츠를 고르고 템플릿 기반 책 주문으로 이어가는 화면</summary>
+
+| 데스크톱 화면 캡처 |
+| --- |
+| <img src="docs/assets/readme/screenshots/book-maker.png" alt="책 만들기 화면" width="900"> |
+
+</details>
+
+<details>
+<summary>주문 상태/주문 상세 모달 화면 - 주문 목록에서 진행 단계와 상태 이력, 주문 상세를 확인하는 화면</summary>
+
+| 데스크톱 화면 캡처 |
+| --- |
+| <img src="docs/assets/readme/screenshots/order-detail-modal.png" alt="주문 상태/주문 상세 모달 화면" width="900"> |
+
+</details>
 
 ## 5. 기술 스택 및 아키텍처
 
@@ -213,56 +280,60 @@ Lv2는 사용자가 기록방 콘텐츠를 골라 책 주문 요청에 가까운
 
 ```text
 assignment-test
-├── README.md
-├── .env.example
-├── docs
-│   ├── agents
+├── README.md                  # 제출자가 가장 먼저 확인하는 프로젝트 안내 문서
+├── .env.example               # 로컬 실행용 환경변수 예시. 실제 비밀값은 커밋하지 않음
+├── docs                       # 기획, QA, 제출 산출물을 모아 둔 문서 영역
+│   ├── assets                 # README/제출 문서에서 참조하는 이미지 자산
+│   │   └── readme
+│   │       └── screenshots    # README 주요 화면 캡처
+│   ├── agents                 # AI 에이전트 협업 구조와 산출물 근거
 │   │   └── assets
 │   │       └── agent-system-architecture.png
-│   ├── conventions
+│   ├── conventions            # 브랜치, 커밋, 작업 흐름 컨벤션
 │   │   └── ...
-│   ├── dev-spec
+│   ├── dev-spec               # 기능 구현 전후의 개발 명세와 API 흐름
 │   │   └── ...
-│   ├── plan
+│   ├── plan                   # PM/PO, 화면 정의, 사용자 흐름 기획 산출물
 │   │   └── screen-spec
-│   │       ├── v1.0
+│   │       ├── v1.0           # Lv1 화면 정의서와 승인 기록
 │   │       │   ├── SCREEN-001-main-page-screen-spec.pdf
 │   │       │   ├── screen-spec.md
 │   │       │   ├── user-flow.md
 │   │       │   ├── approval-log.md
 │   │       │   └── screens/
-│   │       ├── v2.0
+│   │       ├── v2.0           # Lv2 책 주문 화면 정의서와 승인 기록
 │   │       │   ├── SCREEN-004-lv2-book-order-screen-spec.pdf
 │   │       │   ├── screen-spec.md
 │   │       │   ├── user-flow.md
 │   │       │   └── approval-log.md
-│   │       └── v3.0
+│   │       └── v3.0           # Lv3 UI/UX 개선 계획 산출물
 │   │           ├── screen-spec.md
 │   │           ├── user-flow.md
 │   │           └── approval-log.md
-│   ├── qa
+│   ├── qa                     # 이슈별 Human QA, 기술 검증, AI QA 결과
 │   │   ├── issue-3/
 │   │   ├── issue-4/
 │   │   ├── ...
-│   │   ├── issue-27/
+│   │   ├── issue-27/          # Lv2 책 주문 AI QA HTML과 검증 기록
 │   │   │   ├── AI_QA_REPORT.html
 │   │   │   ├── HUMAN_QA.md
 │   │   │   └── TECH_LEAD_VERIFICATION.md
 │   │   └── issue-32/
-│   └── submission.md
-├── service
-│   ├── client
-│   │   ├── src
+│   └── submission.md          # 제출용 보조 문서 초안
+├── service                    # 실제 애플리케이션 코드
+│   ├── client                 # React/Vite 프론트엔드
+│   │   ├── src                # 화면, 상태, API 클라이언트
 │   │   ├── package.json
 │   │   └── vite.config.ts
-│   ├── server
-│   │   ├── src
+│   ├── server                 # Kotlin/Spring Boot 백엔드
+│   │   ├── src                # 도메인, API, 영속성, seed
 │   │   ├── build.gradle.kts
 │   │   └── gradlew
-│   └── infra
+│   └── infra                  # Docker Compose와 로컬 실행 인프라
 │       └── docker-compose.yml
-├── test-results
+├── test-results               # Playwright 등 자동 검증 산출물
 │   └── playwright
+└── tmp                        # 로컬 임시 파일. 제출 판단 근거에는 사용하지 않음
 ```
 
 산출물 관리 기준:
