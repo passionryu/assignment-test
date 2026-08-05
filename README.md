@@ -116,7 +116,7 @@ docker compose -f service/infra/docker-compose.yml down
 
 | 데스크톱 화면 캡처 | 추가 화면 캡처 |
 | --- | --- |
-| <img src="docs/assets/readme/screenshots/home-calendar.png" alt="홈/전체 기록 캘린더 화면" width="420"> | <img src="img.png" alt="홈 추가 캡처" width="420"> |
+| <img src="img.png" alt="홈 추가 캡처" width="420"> | <img src="docs/assets/readme/screenshots/home-calendar.png" alt="홈/전체 기록 캘린더 화면" width="420"> |
 
 </details>
 
