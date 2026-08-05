@@ -228,6 +228,8 @@ assignment-test
 
 개발 과정에서 AI 도구를 사용한 내역은 긍정/부정 영향을 모두 포함해 최종 제출 전 보강합니다.
 
+![AI Agent System](docs/agents/assets/agent-system-architecture.png)
+
 | AI 도구 | 활용 내용 |
 | --- | --- |
 | Codex | 이슈 단위 구현, 문서 정리, QA 체크리스트 작성, git/GitHub 작업 보조 |
