@@ -116,7 +116,7 @@ docker compose -f service/infra/docker-compose.yml down
 
 | 데스크톱 화면 캡처 | 추가 화면 캡처 |
 | --- | --- |
-| <img src="img.png" alt="홈 추가 캡처" width="420"> | <img src="docs/assets/readme/screenshots/home-calendar.png" alt="홈/전체 기록 캘린더 화면" width="420"> |
+| <img src="docs/assets/readme/screenshots/home-summary.png" alt="홈 추가 캡처" width="420"> | <img src="docs/assets/readme/screenshots/home-calendar.png" alt="홈/전체 기록 캘린더 화면" width="420"> |
 
 </details>
 
@@ -170,7 +170,7 @@ docker compose -f service/infra/docker-compose.yml down
 
 | 데스크톱 화면 캡처 | 추가 화면 캡처 |
 | --- | --- |
-| <img src="docs/assets/readme/screenshots/order-detail-modal.png" alt="주문 상태/주문 상세 모달 화면" width="420"> | <img src="img_1.png" alt="주문 상세 추가 캡처" width="420"> |
+| <img src="docs/assets/readme/screenshots/order-detail-modal.png" alt="주문 상태/주문 상세 모달 화면" width="420"> | <img src="docs/assets/readme/screenshots/order-list.png" alt="주문 상세 추가 캡처" width="420"> |
 
 </details>
 
