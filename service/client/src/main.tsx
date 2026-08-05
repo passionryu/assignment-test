@@ -797,7 +797,7 @@ const demoRooms: RoomSummary[] = [
   {
     id: 1,
     name: "우리 둘의 100일",
-    description: "둘이 함께 남기는 100일 기록방",
+    description: "둘이 함께 남기는 100일 방",
     type: "COUPLE",
     role: "OWNER",
     memberCount: 2,
@@ -821,7 +821,7 @@ const demoRooms: RoomSummary[] = [
   {
     id: 3,
     name: "여름 프로젝트반",
-    description: "프로젝트반 활동과 미션 인증 기록방",
+    description: "프로젝트반 활동과 미션 인증 방",
     type: "GROUP",
     role: "MEMBER",
     memberCount: 12,
@@ -1570,10 +1570,10 @@ function App() {
       setProfile(profileResponse);
       setSettings(settingsResponse);
       setRooms(visibleRooms);
+      setPendingInvitationCount(roomsResponse.pendingInvitationCount);
       await loadLatestNotifications();
       await loadPendingInvitations();
       await loadCalendarActivities(null);
-      setPendingInvitationCount(roomsResponse.pendingInvitationCount);
       setProfileForm({
         displayName: profileResponse.displayName,
         profileImageUrl: profileResponse.profileImageUrl ?? "",
@@ -1674,7 +1674,9 @@ function App() {
 
   async function loadPendingInvitations() {
     const response = await safeApiGet<PendingRoomInvitationsResponse>("/room-invitations/pending");
-    setPendingInvitations(response?.items ?? []);
+    const invitations = response?.items ?? [];
+    setPendingInvitations(invitations);
+    setPendingInvitationCount(invitations.length);
   }
 
   async function loadCalendarActivities(nextRoomId: number | null, targetMonth = calendarMonth) {
@@ -3064,7 +3066,7 @@ function App() {
         setExpandedRoomId(response.roomId);
         setRoomFeedbackModal({
           title: "초대 수락 완료",
-          message: "초대를 수락했습니다. 기록방 목록에 새 방이 추가되었습니다.",
+          message: "초대를 수락했습니다. Room 목록에 새 방이 추가되었습니다.",
         });
       } else {
         setRoomFeedbackModal({ title: "초대 거절 완료", message: "초대를 거절했습니다." });
@@ -3150,7 +3152,7 @@ function App() {
       setRoomSettingsMode(null);
       setRoomDetail(null);
       setRoomDeleteConfirmName("");
-      setRoomFeedbackModal({ title: "방 삭제 완료", message: "방장 확인 절차를 거쳐 기록방을 삭제했습니다." });
+      setRoomFeedbackModal({ title: "방 삭제 완료", message: "방장 확인 절차를 거쳐 방을 삭제했습니다." });
     } catch (error) {
       setRoomSettingsMode(null);
       setRoomFeedbackModal({ title: "방 삭제 실패", message: toMessage(error) });
@@ -3296,7 +3298,6 @@ function App() {
           <RoomsView
             rooms={rooms}
             selectedRoomId={selectedRoom?.id ?? null}
-            pendingInvitationCount={pendingInvitationCount}
             pendingInvitations={pendingInvitations}
             createRoomForm={createRoomForm}
             inviteContacts={inviteContacts}
@@ -3638,14 +3639,14 @@ function DemoMemberSelectionView({
             </span>
           </div>
           <h1 id="member-select-title">사용자 유형을 선택하세요</h1>
-          <p>일반 사용자는 기록방을 사용하고 책을 주문합니다. 운영자는 전체 책 주문을 확인하고 상태를 관리합니다.</p>
+          <p>일반 사용자는 Roomory에서 방을 사용하고 책을 주문합니다. 운영자는 전체 책 주문을 확인하고 상태를 관리합니다.</p>
         </div>
 
         <div className="member-select-groups">
           <section className="member-select-group" aria-labelledby="member-user-group-title">
             <div className="member-select-group-heading">
               <strong id="member-user-group-title">일반 사용자</strong>
-              <span>기록방 작성, 참여, 책 만들기와 주문 흐름 확인</span>
+              <span>방 작성, 참여, 책 만들기와 주문 흐름 확인</span>
             </div>
             <div className="member-select-grid">
               {userMembers.map((member) => renderMemberCard(member, "user"))}
@@ -3981,15 +3982,15 @@ function Sidebar({
     activeView === "room" || activeView === "chat" || activeView === "memories" || activeView === "missions" || activeView === "letters";
 
   return (
-    <aside className={`sidebar ${collapsed ? "is-collapsed" : ""}`} aria-label="기록방 메뉴">
+    <aside className={`sidebar ${collapsed ? "is-collapsed" : ""}`} aria-label="Roomory 메뉴">
       <div>
         <div className="sidebar-brand">
           <div className="sidebar-brand-text">
-            <strong>기록방</strong>
+            <strong>Roomory</strong>
             <span>방 기준 메뉴</span>
           </div>
           <span className="sidebar-brand-mark" aria-hidden="true">
-            기
+            R
           </span>
           <button className="sidebar-toggle" type="button" aria-label={collapsed ? "사이드바 펼치기" : "사이드바 접기"} onClick={onToggleSidebar}>
             {collapsed ? <PanelLeftOpen size={20} /> : <PanelLeftClose size={20} />}
@@ -4002,16 +4003,16 @@ function Sidebar({
             <span className="nav-label">홈</span>
           </button>
           <div className={`nav-item-combo ${activeView === "rooms" ? "active" : ""} ${roomListExpanded ? "is-expanded" : ""}`}>
-            <button className="nav-item room-list-nav" type="button" aria-label={roomListExpanded ? "기록방 목록 접기" : "기록방 목록 펼치기"} aria-expanded={roomListExpanded} onClick={onToggleRoomList}>
+            <button className="nav-item room-list-nav" type="button" aria-label={roomListExpanded ? "Room 목록 접기" : "Room 목록 펼치기"} aria-expanded={roomListExpanded} onClick={onToggleRoomList}>
               <List size={18} />
-              <span className="nav-label">기록방</span>
+              <span className="nav-label">Room</span>
               {pendingInvitationCount > 0 ? (
                 <span className="count-badge" aria-label={`대기 중인 초대 ${pendingInvitationCount}개`}>
                   {pendingInvitationCount}
                 </span>
               ) : null}
             </button>
-            <button className="nav-icon-toggle" type="button" aria-label={roomListExpanded ? "기록방 목록 접기" : "기록방 목록 펼치기"} aria-expanded={roomListExpanded} onClick={onToggleRoomList}>
+            <button className="nav-icon-toggle" type="button" aria-label={roomListExpanded ? "Room 목록 접기" : "Room 목록 펼치기"} aria-expanded={roomListExpanded} onClick={onToggleRoomList}>
               <ChevronDown size={16} />
             </button>
           </div>
@@ -4250,8 +4251,8 @@ function HomeView({
         <article className="dashboard-card wide-card home-rooms-card">
           <div className="panel-heading compact-heading">
             <div>
-              <span>내 기록방</span>
-              <h2>참여 중인 기록방</h2>
+              <span>내 방</span>
+              <h2>참여 중인 방</h2>
             </div>
             <button className="text-button" type="button" onClick={onOpenRoomList}>
               전체 보기
@@ -4262,7 +4263,7 @@ function HomeView({
               <button className="home-room-card" type="button" key={room.id} onClick={() => onOpenRoom(room.id)}>
                 <span className="home-room-type">{roomTypeLabel(room.type)}</span>
                 <strong>{room.name}</strong>
-                <span>{room.description ?? "함께 쓰는 기록방"}</span>
+                <span>{room.description ?? "함께 쓰는 방"}</span>
                 <div className="home-room-meta">
                   <span>구성원 {room.memberCount}명</span>
                   <span>알림 {room.unreadChatCount + room.unreadMemoryCount + room.unreadLetterCount + room.pendingMissionCount}개</span>
@@ -4270,7 +4271,7 @@ function HomeView({
               </button>
             ))}
           </div>
-          {hiddenRoomCount > 0 ? <p className="home-room-more">외 {hiddenRoomCount}개 기록방은 방 관리 대시보드에서 확인할 수 있습니다.</p> : null}
+          {hiddenRoomCount > 0 ? <p className="home-room-more">외 {hiddenRoomCount}개 방은 방 관리 대시보드에서 확인할 수 있습니다.</p> : null}
         </article>
 
         <article className="dashboard-card wide-card">
@@ -4777,7 +4778,6 @@ function RoomHomeView({
                   <ul className="room-feature-points">
                     <li>사진과 글로 추억 업로드</li>
                     <li>댓글로 함께 회상</li>
-                    <li>책 제작 후보로 활용</li>
                   </ul>
                 </span>
                 <span aria-hidden="true">›</span>
@@ -4801,7 +4801,6 @@ function RoomHomeView({
                   <ul className="room-feature-points">
                     <li>한 명에게 보내는 비공개 글</li>
                     <li>받은 편지와 보낸 편지 구분</li>
-                    <li>책에 담을 편지 선택</li>
                   </ul>
                 </span>
                 <span aria-hidden="true">›</span>
@@ -4852,7 +4851,6 @@ function ChatMessageTimeline({ messages, loading, compact = false }: { messages:
 function RoomsView({
   rooms,
   selectedRoomId,
-  pendingInvitationCount,
   pendingInvitations,
   createRoomForm,
   inviteContacts,
@@ -4866,7 +4864,6 @@ function RoomsView({
 }: {
   rooms: RoomSummary[];
   selectedRoomId: number | null;
-  pendingInvitationCount: number;
   pendingInvitations: PendingRoomInvitation[];
   createRoomForm: CreateRoomForm;
   inviteContacts: Record<number, string>;
@@ -4878,6 +4875,8 @@ function RoomsView({
   onRespondInvitation: (invitationId: number, action: "accept" | "decline") => void;
   onSelectRoom: (roomId: number) => void;
 }) {
+  const visiblePendingInvitationCount = pendingInvitations.length;
+
   return (
     <>
       <header className="page-header">
@@ -4890,7 +4889,7 @@ function RoomsView({
         <article className="hub-card room-create-card">
           <div className="room-create-heading">
             <span>새 방 만들기</span>
-            <p>방장이 되어 새로운 기록방을 만들어보세요</p>
+            <p>방장이 되어 새로운 방을 만들어보세요</p>
           </div>
           <div className="room-form-grid">
             <label className="field compact-field">
@@ -4928,7 +4927,7 @@ function RoomsView({
 
         <article className="hub-card invitation-card">
           <span>초대 받은 방</span>
-          <strong>{pendingInvitationCount}개</strong>
+          <strong>{visiblePendingInvitationCount}개</strong>
           {pendingInvitations.length > 0 ? (
             <div className="pending-invitation-list">
               {pendingInvitations.map((invitation) => (
@@ -5006,14 +5005,22 @@ function RoomsView({
                       aria-label={`${room.name} 초대 대상 검색`}
                       disabled={!canInvite}
                     />
-                    <button
-                      className="primary-button"
-                      type="button"
-                      onClick={() => onSearchInvitees(room.id)}
-                      disabled={!canInvite || inviteSearchingRoomId === room.id}
-                    >
-                      {inviteSearchingRoomId === room.id ? "검색 중" : "검색"}
-                    </button>
+                    <span className="invite-action-tooltip-wrap" tabIndex={canInvite ? undefined : 0}>
+                      <button
+                        className="primary-button"
+                        type="button"
+                        onClick={() => onSearchInvitees(room.id)}
+                        disabled={!canInvite || inviteSearchingRoomId === room.id}
+                        aria-describedby={canInvite ? undefined : `room-${room.id}-invite-disabled-help`}
+                      >
+                        {inviteSearchingRoomId === room.id ? "확인 중" : "초대"}
+                      </button>
+                      {!canInvite ? (
+                        <span className="invite-action-tooltip" id={`room-${room.id}-invite-disabled-help`} role="tooltip">
+                          멤버 초대는 방장만 가능합니다.
+                        </span>
+                      ) : null}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -5052,6 +5059,8 @@ function ChatView({
   onSearch: () => void;
   onMoveToMessage: (messageId: number) => void;
 }) {
+  const [searchOpen, setSearchOpen] = useState(false);
+
   return (
     <>
       <header className="page-header">
@@ -5067,7 +5076,13 @@ function ChatView({
               <span>{selectedRoom ? roomTypeLabel(selectedRoom.type) : "방 없음"}</span>
               <h2>{selectedRoom?.name ?? "참여 방 없음"}</h2>
             </div>
-            <MessageCircle size={24} />
+            <div className="chat-header-actions">
+              <button className="chat-search-trigger" type="button" onClick={() => setSearchOpen(true)}>
+                <Search size={16} />
+                대화 검색
+              </button>
+              <MessageCircle size={24} />
+            </div>
           </div>
 
           <ChatMessageTimeline messages={messages} loading={loading} />
@@ -5089,39 +5104,66 @@ function ChatView({
             </button>
           </div>
         </article>
-
-        <aside className="chat-search-panel">
-          <div className="room-section-heading">
-            <div className="heading-help-row">
-              <h2>대화 검색</h2>
-              <HelpButton title="대화 검색" message="검색 결과를 선택하면 해당 메시지 위치로 이동합니다." />
-            </div>
-          </div>
-          <div className="chat-search-form">
-            <input
-              value={searchKeyword}
-              onChange={(event) => onSearchKeywordChange(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key !== "Enter") return;
-                onSearch();
-              }}
-              placeholder="검색어 입력"
-            />
-            <button className="outline-button" type="button" onClick={onSearch}>
-              검색
-            </button>
-          </div>
-          <div className="chat-search-results">
-            {searchResults.map((result) => (
-              <button type="button" key={result.messageId} onClick={() => onMoveToMessage(result.messageId)}>
-                <strong>{result.senderName}</strong>
-                <span>{formatDateLabel(result.occurredDate)} · {formatChatTime(result.sentAt)}</span>
-                <p>{result.body}</p>
-              </button>
-            ))}
-          </div>
-        </aside>
       </section>
+
+      {searchOpen ? (
+        <div
+          className="modal-backdrop"
+          role="presentation"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) setSearchOpen(false);
+          }}
+        >
+          <section className="modal chat-search-modal" role="dialog" aria-modal="true" aria-labelledby="chat-search-title">
+            <div className="modal-title-row">
+              <div>
+                <span className="modal-kicker">대화 검색</span>
+                <h2 id="chat-search-title">채팅 메시지 찾기</h2>
+                <p>검색 결과를 선택하면 해당 메시지 위치로 이동합니다.</p>
+              </div>
+              <button className="icon-button" type="button" onClick={() => setSearchOpen(false)} aria-label="닫기">
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="chat-search-form">
+              <input
+                value={searchKeyword}
+                onChange={(event) => onSearchKeywordChange(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key !== "Enter") return;
+                  onSearch();
+                }}
+                placeholder="검색어 입력"
+                autoFocus
+              />
+              <button className="outline-button" type="button" onClick={onSearch}>
+                검색
+              </button>
+            </div>
+
+            <div className="chat-search-results">
+              {searchResults.map((result) => (
+                <button
+                  type="button"
+                  key={result.messageId}
+                  onClick={() => {
+                    onMoveToMessage(result.messageId);
+                    setSearchOpen(false);
+                  }}
+                >
+                  <strong>{result.senderName}</strong>
+                  <span>
+                    {formatDateLabel(result.occurredDate)} · {formatChatTime(result.sentAt)}
+                  </span>
+                  <p>{result.body}</p>
+                </button>
+              ))}
+              {searchKeyword.trim() && searchResults.length === 0 ? <p>검색 결과가 없습니다.</p> : null}
+            </div>
+          </section>
+        </div>
+      ) : null}
     </>
   );
 }
@@ -5672,8 +5714,12 @@ function MissionBoardView({
   const selectedMission = missions.find((mission) => mission.id === submissionForm.missionId) ?? missions[0] ?? null;
   const uploadInputId = `mission-image-upload-${selectedRoom?.id ?? "none"}`;
   const requiredApprovalCount = selectedRoom ? requiredMissionApprovals(selectedRoom.type, selectedRoom.memberCount) : 0;
-  const inProgressMissionCount = missions.filter((mission) => mission.latestSubmission && mission.status !== "COMPLETED").length;
-  const waitingApprovalMissionCount = missions.filter((mission) => mission.status === "WAITING_APPROVAL").length;
+  const inProgressMissionCount = missions.filter(
+    (mission) => mission.latestSubmission && missionDisplayStatus(mission) === "IN_PROGRESS",
+  ).length;
+  const waitingApprovalMissionCount = missions.filter(
+    (mission) => mission.latestSubmission && missionDisplayStatus(mission) === "WAITING_APPROVAL",
+  ).length;
 
   useEffect(() => {
     if (!selectedMission || submissionForm.missionId === selectedMission.id) return;
@@ -5711,7 +5757,7 @@ function MissionBoardView({
       <section className="mission-page">
         <article className="mission-room-card">
           <div>
-            <span>{selectedRoom ? roomTypeLabel(selectedRoom.type) : "기록방"}</span>
+            <span>{selectedRoom ? roomTypeLabel(selectedRoom.type) : "방"}</span>
             <h2>{selectedRoom?.name ?? "방을 선택하세요"}</h2>
             <p>{missionList?.completionRule ?? "커플은 상대 동의, 가족/학급/동아리는 방장 승인 또는 과반 동의로 완료된다."}</p>
           </div>
@@ -5740,7 +5786,7 @@ function MissionBoardView({
               <div className="mission-card-grid">
                 {!loading && missions.length === 0 ? <p className="empty-state">아직 미션이 없습니다.</p> : null}
                 {missions.map((mission) => {
-                  const visibleStatus = mission.latestSubmission ? mission.status : null;
+                  const visibleStatus = mission.latestSubmission ? missionDisplayStatus(mission) : null;
 
                   return (
                     <button
@@ -5794,8 +5840,8 @@ function MissionBoardView({
                 {selectedMission.latestSubmission ? (
                   <section className="mission-proof-card">
                     <div className="mission-proof-heading">
-                      <span className={`mission-status ${selectedMission.status.toLowerCase().replace("_", "-")}`}>
-                        {missionStatusLabel(selectedMission.status)}
+                      <span className={`mission-status ${missionDisplayStatus(selectedMission).toLowerCase().replace("_", "-")}`}>
+                        {missionStatusLabel(missionDisplayStatus(selectedMission))}
                       </span>
                       <small>{formatDateLabel(selectedMission.latestSubmission.occurredDate)}</small>
                     </div>
@@ -8846,7 +8892,7 @@ function RoomSettingsModal({
             <>
               <div className="delete-warning">
                 <strong>{room.name}</strong>
-                <span>방장이 나가면 이 기록방이 삭제되고 모든 멤버가 더 이상 접근할 수 없습니다.</span>
+                <span>방장이 나가면 이 방이 삭제되고 모든 멤버가 더 이상 접근할 수 없습니다.</span>
                 <span>실수로 방 전체가 사라지는 일을 막기 위해 방 제목을 정확히 입력해야 합니다.</span>
               </div>
               <label className="field">
@@ -8982,7 +9028,7 @@ function NotificationList({
             {notificationTypeLabel(notification.type)}
           </span>
           <span className="notification-body">
-            <strong>{notification.roomName ?? "기록방"}</strong>
+            <strong>{notification.roomName ?? "방"}</strong>
             <span>
               {notification.actorName} · {notification.summary}
             </span>
@@ -9802,6 +9848,14 @@ function missionStatusLabel(status: MissionStatus): string {
   if (status === "COMPLETED") return "완료";
   if (status === "WAITING_APPROVAL") return "승인 대기";
   return "진행 중";
+}
+
+function missionDisplayStatus(mission: MissionSummary): MissionStatus {
+  if (mission.status !== "COMPLETED" && mission.latestSubmission?.canApprove) {
+    return "WAITING_APPROVAL";
+  }
+
+  return mission.status;
 }
 
 function missionProgressRate(roomType: RoomSummary["type"], approvedCount: number, totalMemberCount: number): number {

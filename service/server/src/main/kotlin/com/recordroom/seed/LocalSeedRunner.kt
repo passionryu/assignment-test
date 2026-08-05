@@ -64,7 +64,7 @@ class LocalSeedRunner(
                 (11, '도윤', 'doyun', 'doyun@example.com', '010-5555-0011', null, 'local-dummy-hash', false),
                 (12, '하준', 'hajun', 'hajun@example.com', '010-5555-0012', null, 'local-dummy-hash', false),
                 (13, '수아', 'sua', 'sua@example.com', '010-5555-0013', null, 'local-dummy-hash', false),
-                (99, '기록방 AI', 'recordbot', 'recordbot@example.com', '010-9999-0000', null, 'local-dummy-hash', false),
+                (99, 'Roomory AI', 'recordbot', 'recordbot@example.com', '010-9999-0000', null, 'local-dummy-hash', false),
                 (100, '운영자', 'operator', 'operator@example.com', '010-0000-0100', null, 'local-dummy-hash', false),
                 (20, '초대회원0', 'invitee0', 'invitee0@example.com', '010-0000-0000', null, 'local-dummy-hash', false),
                 (21, '초대회원1', 'invitee1', 'invitee1@example.com', '010-1111-1111', null, 'local-dummy-hash', false),
@@ -86,15 +86,15 @@ class LocalSeedRunner(
         )
     }
 
-    // 메인 사이드바와 이후 기능 이슈가 공통으로 사용할 기록방을 준비한다.
+    // 메인 사이드바와 이후 기능 이슈가 공통으로 사용할 방을 준비한다.
     private fun seedRooms() {
         jdbcTemplate.update(
             """
             insert into rooms (id, name, description, type, owner_member_id)
             values
-                (1, '우리 둘의 100일', '둘이 함께 쌓는 기록방', 'COUPLE', 1),
-                (2, '7월 가족', '가족의 이번 달 기록방', 'FAMILY', 1),
-                (3, '여름 프로젝트반', '프로젝트 구성원의 기록방', 'GROUP', 1),
+                (1, '우리 둘의 100일', '둘이 함께 쌓는 방', 'COUPLE', 1),
+                (2, '7월 가족', '가족의 이번 달 방', 'FAMILY', 1),
+                (3, '여름 프로젝트반', '프로젝트 구성원의 방', 'GROUP', 1),
                 (4, '여자친구의 여행 준비방', '여행 준비 과정을 같이 모으는 방', 'GROUP', 2),
                 (40, '가족 여행 사진방', '가족 여행 사진을 함께 모으는 방', 'FAMILY', 3),
                 (41, '4학년 1반', '반 기록을 함께 모으는 학급방', 'GROUP', 4)
@@ -289,7 +289,7 @@ class LocalSeedRunner(
                 (235, 2, 1, '이번 가족 기록은 내가 먼저 정리해둘게요.', ((now() at time zone 'Asia/Seoul')::date), now() - interval '16 minutes'),
                 (236, 3, 1, '프로젝트반 사진은 발표 자료 후보로도 좋아요.', ((now() at time zone 'Asia/Seoul')::date), now() - interval '14 minutes'),
                 (237, 40, 1, '초대받은 사진방도 확인해볼게요.', ((now() at time zone 'Asia/Seoul')::date), now() - interval '10 minutes'),
-                (238, 41, 1, '반 기록방은 수락 후 같이 채워보겠습니다.', ((now() at time zone 'Asia/Seoul')::date), now() - interval '9 minutes')
+                (238, 41, 1, '반 기록은 수락 후 같이 채워보겠습니다.', ((now() at time zone 'Asia/Seoul')::date), now() - interval '9 minutes')
             on conflict (id) do update set
                 room_id = excluded.room_id,
                 sender_member_id = excluded.sender_member_id,
