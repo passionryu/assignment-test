@@ -10,6 +10,7 @@ import com.recordroom.room.model.CreateRoomInvitationResponse
 import com.recordroom.room.model.CreateRoomRequest
 import com.recordroom.room.model.CreateRoomResponse
 import com.recordroom.room.model.DeleteRoomResponse
+import com.recordroom.room.model.LeaveRoomResponse
 import com.recordroom.room.model.PendingRoomInvitationsResponse
 import com.recordroom.room.model.RespondRoomInvitationResponse
 import com.recordroom.room.model.RoomDetailResponse
@@ -175,6 +176,30 @@ class RoomService(
         roomRepository.saveRoom(room)
 
         return DeleteRoomResponse(id = room.id, deleted = true)
+    }
+
+    @Transactional
+    fun leaveRoom(memberId: Long, roomId: Long): LeaveRoomResponse {
+        memberService.getProfile(memberId)
+
+        roomRepository.findActiveRoom(roomId) ?: roomNotFound(memberId, roomId, "RoomService.leaveRoom")
+
+        val membership = roomRepository.findActiveRoomMember(roomId, memberId)
+            ?: memberNotJoinedRoom(memberId, roomId, "RoomService.leaveRoom")
+
+        if (membership.role == "OWNER") {
+            log.warn(
+                "[방 나가기] 방장 방 나가기 실패. who=memberId:{}, what=RoomService.leaveRoom, requestData=roomId:{}, reason=owner_must_delete_room",
+                memberId,
+                roomId,
+            )
+            throw ApiException(HttpStatus.BAD_REQUEST, "ROOM_OWNER_MUST_DELETE_ROOM", "방장은 방 나가기 대신 방 삭제를 진행해야 합니다.")
+        }
+
+        membership.leftAt = OffsetDateTime.now()
+        roomRepository.saveRoomMember(membership)
+
+        return LeaveRoomResponse(id = roomId, left = true)
     }
 
     fun searchInvitationCandidates(memberId: Long, roomId: Long, rawKeyword: String?): RoomInviteeSearchResponse {

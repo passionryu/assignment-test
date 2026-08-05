@@ -51,6 +51,11 @@ data class DeleteRoomResponse(
     val deleted: Boolean,
 )
 
+data class LeaveRoomResponse(
+    val id: Long,
+    val left: Boolean,
+)
+
 data class CreateRoomInvitationRequest(
     val memberId: Long? = null,
     val email: String? = null,

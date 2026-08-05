@@ -113,6 +113,11 @@ type DeleteRoomResponse = {
   deleted: boolean;
 };
 
+type LeaveRoomResponse = {
+  id: number;
+  left: boolean;
+};
+
 type PendingRoomInvitation = {
   id: number;
   roomId: number;
@@ -680,7 +685,7 @@ type RoomFeatureKind = "chat" | "memories" | "missions" | "letters";
 type BookArchiveView = "bookProducts" | "bookCreate" | "bookStatus" | "bookHistory";
 type BookCreateStep = "room" | "product" | "period" | "content" | "preview";
 type AppView = "home" | "rooms" | "room" | "settings" | RoomFeatureKind | BookArchiveView;
-type RoomSettingsMode = "menu" | "info" | "edit" | "delete" | null;
+type RoomSettingsMode = "menu" | "info" | "edit" | "leave" | null;
 type MemoryActionMode = "edit" | "delete" | null;
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8080/api";
@@ -1348,6 +1353,7 @@ function App() {
   const [roomSettingsMode, setRoomSettingsMode] = useState<RoomSettingsMode>(null);
   const [roomDetail, setRoomDetail] = useState<RoomDetail | null>(null);
   const [roomEditForm, setRoomEditForm] = useState({ name: "", description: "" });
+  const [roomDeleteConfirmName, setRoomDeleteConfirmName] = useState("");
   const [roomActionLoading, setRoomActionLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -3069,6 +3075,7 @@ function App() {
       name: fallbackDetail.name,
       description: fallbackDetail.description ?? "",
     });
+    setRoomDeleteConfirmName("");
     setRoomSettingsMode("menu");
 
     const response = await safeApiGet<RoomDetail>(`/rooms/${selectedRoom.id}`);
@@ -3079,6 +3086,7 @@ function App() {
       name: response.name,
       description: response.description ?? "",
     });
+    setRoomDeleteConfirmName("");
   }
 
   async function updateRoomInfo() {
@@ -3130,10 +3138,44 @@ function App() {
       await loadCalendarActivities(nextCalendarRoomId);
       setRoomSettingsMode(null);
       setRoomDetail(null);
-      setRoomFeedbackModal({ title: "방 삭제 완료", message: "선택한 방을 삭제했습니다." });
+      setRoomDeleteConfirmName("");
+      setRoomFeedbackModal({ title: "방 삭제 완료", message: "방장 확인 절차를 거쳐 기록방을 삭제했습니다." });
     } catch (error) {
       setRoomSettingsMode(null);
       setRoomFeedbackModal({ title: "방 삭제 실패", message: toMessage(error) });
+    } finally {
+      setRoomActionLoading(false);
+    }
+  }
+
+  async function leaveSelectedRoom() {
+    if (!roomDetail) return;
+
+    setRoomActionLoading(true);
+    setMessage(null);
+    setErrorMessage(null);
+    try {
+      await apiRequest<LeaveRoomResponse>(`/rooms/${roomDetail.id}/members/me`, {
+        method: "DELETE",
+      });
+
+      const leftRoomName = roomDetail.name;
+      const nextRooms = await loadRooms();
+      const nextRoomId = nextRooms[0]?.id ?? null;
+      const nextCalendarRoomId = calendarRoomId === roomDetail.id ? null : calendarRoomId;
+      setSelectedRoomId(nextRoomId);
+      setExpandedRoomId(nextRoomId);
+      setRoomListExpanded(true);
+      setCalendarRoomId(nextCalendarRoomId);
+      setActiveView(nextRoomId ? "rooms" : "home");
+      await loadCalendarActivities(nextCalendarRoomId);
+      setRoomSettingsMode(null);
+      setRoomDetail(null);
+      setRoomDeleteConfirmName("");
+      setRoomFeedbackModal({ title: "방 나가기 완료", message: `${leftRoomName} 방에서 나갔습니다.` });
+    } catch (error) {
+      setRoomSettingsMode(null);
+      setRoomFeedbackModal({ title: "방 나가기 실패", message: toMessage(error) });
     } finally {
       setRoomActionLoading(false);
     }
@@ -3496,11 +3538,14 @@ function App() {
           mode={roomSettingsMode}
           room={roomDetail}
           editForm={roomEditForm}
+          deleteConfirmName={roomDeleteConfirmName}
           loading={roomActionLoading}
           onModeChange={setRoomSettingsMode}
           onEditFormChange={setRoomEditForm}
+          onDeleteConfirmNameChange={setRoomDeleteConfirmName}
           onSave={updateRoomInfo}
           onDelete={deleteSelectedRoom}
+          onLeave={leaveSelectedRoom}
           onClose={() => setRoomSettingsMode(null)}
         />
       ) : null}
@@ -8578,21 +8623,27 @@ function RoomSettingsModal({
   mode,
   room,
   editForm,
+  deleteConfirmName,
   loading,
   onModeChange,
   onEditFormChange,
+  onDeleteConfirmNameChange,
   onSave,
   onDelete,
+  onLeave,
   onClose,
 }: {
   mode: RoomSettingsMode;
   room: RoomDetail | null;
   editForm: { name: string; description: string };
+  deleteConfirmName: string;
   loading: boolean;
   onModeChange: (mode: RoomSettingsMode) => void;
   onEditFormChange: (form: { name: string; description: string }) => void;
+  onDeleteConfirmNameChange: (value: string) => void;
   onSave: () => void;
   onDelete: () => void;
+  onLeave: () => void;
   onClose: () => void;
 }) {
   const canManage = room?.canManage ?? false;
@@ -8705,29 +8756,57 @@ function RoomSettingsModal({
     );
   }
 
-  if (mode === "delete") {
+  if (mode === "leave") {
+    const deleteConfirmMatched = deleteConfirmName.trim() === room.name;
+
     return (
       <div className="modal-backdrop" role="presentation">
-        <section className="modal room-settings-modal" role="alertdialog" aria-modal="true" aria-labelledby="room-delete-title">
+        <section className="modal room-settings-modal" role="alertdialog" aria-modal="true" aria-labelledby="room-leave-title">
           <div className="modal-title-row">
             <div>
-              <h2 id="room-delete-title">방 삭제</h2>
+              <h2 id="room-leave-title">방 나가기</h2>
             </div>
             <button className="icon-button" type="button" aria-label="닫기" onClick={onClose}>
               <X size={18} />
             </button>
           </div>
-          <div className="delete-warning">
-            <strong>{room.name}</strong>
-            <span>이 방을 삭제하려면 방장 권한이 필요하다.</span>
-          </div>
+          {canManage ? (
+            <>
+              <div className="delete-warning">
+                <strong>{room.name}</strong>
+                <span>방장이 나가면 이 기록방이 삭제되고 모든 멤버가 더 이상 접근할 수 없습니다.</span>
+                <span>실수로 방 전체가 사라지는 일을 막기 위해 방 제목을 정확히 입력해야 합니다.</span>
+              </div>
+              <label className="field">
+                방 제목 확인
+                <input
+                  value={deleteConfirmName}
+                  onChange={(event) => onDeleteConfirmNameChange(event.target.value)}
+                  disabled={loading}
+                  placeholder={room.name}
+                />
+              </label>
+            </>
+          ) : (
+            <div className="delete-warning">
+              <strong>{room.name}</strong>
+              <span>이 방에서 나가면 사이드바와 방 목록에서 보이지 않습니다.</span>
+              <span>내가 남긴 기존 기록은 방 안에 그대로 보관됩니다.</span>
+            </div>
+          )}
           <div className="modal-actions">
             <button className="outline-button" type="button" onClick={() => onModeChange("menu")} disabled={loading}>
-              이전
+              취소
             </button>
-            <button className="danger-button" type="button" onClick={onDelete} disabled={!canManage || loading}>
-              {loading ? "삭제 중" : "삭제"}
-            </button>
+            {canManage ? (
+              <button className="danger-button" type="button" onClick={onDelete} disabled={loading || !deleteConfirmMatched}>
+                {loading ? "삭제 중" : "방 삭제"}
+              </button>
+            ) : (
+              <button className="danger-button" type="button" onClick={onLeave} disabled={loading}>
+                {loading ? "나가는 중" : "확인"}
+              </button>
+            )}
           </div>
         </section>
       </div>
@@ -8758,10 +8837,11 @@ function RoomSettingsModal({
               <strong>방 정보 수정</strong>
             </span>
           </button>
-          <button className="danger-action" type="button" onClick={() => onModeChange("delete")} disabled={!canManage}>
+          <button className="danger-action" type="button" onClick={() => onModeChange("leave")}>
             <ShieldAlert size={22} />
             <span>
-              <strong>방 삭제</strong>
+              <strong>방 나가기</strong>
+              <small>{canManage ? "방장은 제목 확인 후 방 전체가 삭제됩니다." : "내 참여만 종료하고 목록에서 제거합니다."}</small>
             </span>
           </button>
         </div>
