@@ -7578,6 +7578,7 @@ function BookOrdersView({
           <OrderTableToolbar
             filters={table.filters}
             actionFilterLabel={table.actionFilterLabel}
+            showActionFilter={false}
             resultCount={table.filteredOrders.length}
             selectedCount={table.selectedOrders.length}
             csvDisabled={table.filteredOrders.length === 0}
