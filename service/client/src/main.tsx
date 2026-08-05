@@ -3218,6 +3218,7 @@ function App() {
             onCalendarDateSelect={setSelectedCalendarDate}
             onViewDateRecords={viewSelectedDateRecords}
             onOpenRoom={(roomId) => openRoomHome(roomId)}
+            onOpenRoomList={openRoomListView}
             onOpenProfileEdit={() => setProfileEditOpen(true)}
             onLogout={() => setLogoutOpen(true)}
           />
@@ -3962,8 +3963,9 @@ function Sidebar({
               <span className="nav-label">방 관리 대시보드</span>
             </button>
             {rooms.map((room) => {
-              const isSelected = activeView !== "rooms" && room.id === selectedRoom?.id;
-              const isExpanded = roomListExpanded && room.id === expandedRoomId && !collapsed;
+              const isRoomContext = activeView !== "home" && activeView !== "rooms";
+              const isSelected = isRoomContext && room.id === selectedRoom?.id;
+              const isExpanded = isSelected && roomListExpanded && room.id === expandedRoomId && !collapsed;
 
               return (
                 <div className={`room-entry ${isSelected ? "selected-room" : ""}`} key={room.id}>
@@ -4086,6 +4088,7 @@ function HomeView({
   onCalendarDateSelect,
   onViewDateRecords,
   onOpenRoom,
+  onOpenRoomList,
   onOpenProfileEdit,
   onLogout,
 }: {
@@ -4104,9 +4107,13 @@ function HomeView({
   onCalendarDateSelect: (date: string) => void;
   onViewDateRecords: (roomId?: number) => void;
   onOpenRoom: (roomId: number) => void;
+  onOpenRoomList: () => void;
   onOpenProfileEdit: () => void;
   onLogout: () => void;
 }) {
+  const visibleRooms = rooms.slice(0, 4);
+  const hiddenRoomCount = Math.max(rooms.length - visibleRooms.length, 0);
+
   return (
     <>
       <header className="page-header">
@@ -4176,10 +4183,12 @@ function HomeView({
               <span>내 기록방</span>
               <h2>참여 중인 기록방</h2>
             </div>
-            <UsersRound size={24} />
+            <button className="text-button" type="button" onClick={onOpenRoomList}>
+              전체 보기
+            </button>
           </div>
           <div className="home-room-grid">
-            {rooms.map((room) => (
+            {visibleRooms.map((room) => (
               <button className="home-room-card" type="button" key={room.id} onClick={() => onOpenRoom(room.id)}>
                 <span className="home-room-type">{roomTypeLabel(room.type)}</span>
                 <strong>{room.name}</strong>
@@ -4191,6 +4200,7 @@ function HomeView({
               </button>
             ))}
           </div>
+          {hiddenRoomCount > 0 ? <p className="home-room-more">외 {hiddenRoomCount}개 기록방은 방 관리 대시보드에서 확인할 수 있습니다.</p> : null}
         </article>
 
         <article className="dashboard-card wide-card">
