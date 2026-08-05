@@ -4210,7 +4210,11 @@ function RecordCalendar({
   onViewRecords: (roomId?: number) => void;
 }) {
   const [selectedSummaryRoomId, setSelectedSummaryRoomId] = useState<number | null>(null);
+  const [calendarPickerMode, setCalendarPickerMode] = useState<"year" | "month" | null>(null);
+  const [draftCalendarYear, setDraftCalendarYear] = useState(() => Number((calendar?.month ?? calendarMonth).slice(0, 4)));
+  const calendarMonthPickerRef = useRef<HTMLDivElement | null>(null);
   const month = calendar?.month ?? calendarMonth;
+  const [selectedYear, selectedMonth] = month.split("-").map(Number);
   const days = useMemo(() => buildCalendarCells(month), [month]);
   const activityByDate = useMemo(() => new Map((calendar?.days ?? []).map((day) => [day.date, day])), [calendar]);
   const selectedDay = selectedDate ? activityByDate.get(selectedDate) ?? null : null;
@@ -4223,6 +4227,43 @@ function RecordCalendar({
   useEffect(() => {
     setSelectedSummaryRoomId(null);
   }, [selectedDate, selectedRoomId]);
+
+  useEffect(() => {
+    setDraftCalendarYear(selectedYear);
+  }, [selectedYear]);
+
+  useEffect(() => {
+    if (!calendarPickerMode) return;
+
+    function closeCalendarPicker(event: MouseEvent) {
+      if (calendarMonthPickerRef.current?.contains(event.target as Node)) return;
+      setCalendarPickerMode(null);
+    }
+
+    function closeCalendarPickerByEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setCalendarPickerMode(null);
+      }
+    }
+
+    document.addEventListener("mousedown", closeCalendarPicker);
+    document.addEventListener("keydown", closeCalendarPickerByEscape);
+
+    return () => {
+      document.removeEventListener("mousedown", closeCalendarPicker);
+      document.removeEventListener("keydown", closeCalendarPickerByEscape);
+    };
+  }, [calendarPickerMode]);
+
+  const calendarYearOptions = useMemo(
+    () => Array.from({ length: 9 }, (_, index) => draftCalendarYear - 4 + index),
+    [draftCalendarYear],
+  );
+
+  function selectCalendarMonth(nextMonth: number) {
+    onMonthChange(`${draftCalendarYear}-${`${nextMonth}`.padStart(2, "0")}`);
+    setCalendarPickerMode(null);
+  }
 
   return (
     <div className="record-calendar">
@@ -4252,27 +4293,72 @@ function RecordCalendar({
               <span>월을 이동해 이전·다음 기록 흐름을 확인하세요.</span>
             </div>
             <div className="calendar-month-controls" aria-label="캘린더 월 이동">
-              <button type="button" onClick={() => onMonthChange(shiftMonthKey(month, -1))}>
+              <button className="calendar-month-step-button" type="button" onClick={() => onMonthChange(shiftMonthKey(month, -1))}>
                 <ChevronLeft size={16} />
-                이전
+                이전 달
               </button>
-              <label className="calendar-month-picker">
-                <span>연월</span>
-                <input
-                  type="month"
-                  value={month}
-                  onChange={(event) => {
-                    if (event.target.value) {
-                      onMonthChange(event.target.value);
-                    }
-                  }}
-                />
-              </label>
-              <button type="button" onClick={() => onMonthChange(currentMonth)}>
-                오늘
-              </button>
-              <button type="button" onClick={() => onMonthChange(shiftMonthKey(month, 1))}>
-                다음
+              <div className="calendar-month-picker" ref={calendarMonthPickerRef}>
+                <span className="calendar-month-picker-label">연월</span>
+                <button className="calendar-month-value-button" type="button" onClick={() => setCalendarPickerMode("year")}>
+                  {selectedYear}년
+                </button>
+                <button className="calendar-month-value-button" type="button" onClick={() => setCalendarPickerMode("month")}>
+                  {selectedMonth}월
+                </button>
+                <CalendarDays size={16} aria-hidden="true" />
+                {calendarPickerMode ? (
+                  <div className="calendar-month-popover" role="dialog" aria-label="조회할 연월 선택">
+                    {calendarPickerMode === "year" ? (
+                      <>
+                        <div className="calendar-picker-heading">
+                          <button type="button" aria-label="이전 연도 범위" onClick={() => setDraftCalendarYear((year) => year - 9)}>
+                            <ChevronLeft size={16} />
+                          </button>
+                          <strong>연도 선택</strong>
+                          <button type="button" aria-label="다음 연도 범위" onClick={() => setDraftCalendarYear((year) => year + 9)}>
+                            <ChevronRight size={16} />
+                          </button>
+                        </div>
+                        <div className="calendar-year-grid">
+                          {calendarYearOptions.map((year) => (
+                            <button
+                              className={year === selectedYear ? "selected" : ""}
+                              type="button"
+                              key={year}
+                              onClick={() => {
+                                setDraftCalendarYear(year);
+                                setCalendarPickerMode("month");
+                              }}
+                            >
+                              {year}
+                            </button>
+                          ))}
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="calendar-picker-heading month-heading">
+                          <strong>{draftCalendarYear}년 월 선택</strong>
+                        </div>
+                        <div className="calendar-month-grid">
+                          {Array.from({ length: 12 }, (_, index) => index + 1).map((monthValue) => (
+                            <button
+                              className={draftCalendarYear === selectedYear && monthValue === selectedMonth ? "selected" : ""}
+                              type="button"
+                              key={monthValue}
+                              onClick={() => selectCalendarMonth(monthValue)}
+                            >
+                              {monthValue}월
+                            </button>
+                          ))}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                ) : null}
+              </div>
+              <button className="calendar-month-step-button" type="button" onClick={() => onMonthChange(shiftMonthKey(month, 1))}>
+                다음 달
                 <ChevronRight size={16} />
               </button>
             </div>
