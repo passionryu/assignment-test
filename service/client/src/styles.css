@@ -5761,14 +5761,42 @@ dl {
 .print-order-detail-body {
   min-height: 0;
   display: grid;
-  gap: 22px;
+  gap: 18px;
   overflow-y: auto;
   padding-right: 4px;
 }
 
 .print-order-detail-summary {
   display: grid;
-  gap: 14px;
+  gap: 12px;
+}
+
+.print-order-detail-summary .book-order-detail-list {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.print-order-detail-summary .book-order-detail-list div {
+  min-width: 0;
+  grid-template-columns: 1fr;
+  gap: 5px;
+  border: 1px solid #edf2f8;
+  border-radius: 8px;
+  background: #fbfcff;
+  padding: 12px;
+}
+
+.print-order-detail-summary .book-order-detail-list dt {
+  font-size: 12px;
+}
+
+.print-order-detail-summary .book-order-detail-list dd {
+  overflow-wrap: anywhere;
+}
+
+.print-order-detail-summary .book-order-detail-list .total {
+  border: 1px solid #ffd7e9;
+  background: #fff7fb;
 }
 
 .order-detail-section-heading {
@@ -6532,9 +6560,9 @@ dl {
 }
 
 .print-order-detail-modal {
-  width: min(1280px, calc(100vw - 48px));
+  width: min(1180px, calc(100vw - 56px));
   max-width: none;
-  max-height: min(860px, calc(100dvh - 48px));
+  max-height: min(820px, calc(100dvh - 56px));
 }
 
 .notification-modal {
@@ -6971,6 +6999,10 @@ dl {
     width: min(100%, calc(100vw - 28px));
   }
 
+  .print-order-detail-summary .book-order-detail-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .order-table-filter-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -7042,6 +7074,10 @@ dl {
   .chat-input-row,
   .chat-search-form,
   .notification-item {
+    grid-template-columns: 1fr;
+  }
+
+  .print-order-detail-summary .book-order-detail-list {
     grid-template-columns: 1fr;
   }
 
