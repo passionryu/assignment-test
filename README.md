@@ -116,7 +116,7 @@ docker compose -f service/infra/docker-compose.yml down
 
 | 데스크톱 화면 캡처 |
 | --- |
-| <img src="docs/assets/readme/screenshots/home-calendar.png" alt="홈/전체 기록 캘린더 화면" width="900"> |
+| <img src="docs/assets/readme/screenshots/home-calendar.png" alt="홈/전체 기록 캘린더 화면" width="430"> <img src="img.png" alt="추가 캡처" width="430"> |
 
 </details>
 
@@ -170,7 +170,7 @@ docker compose -f service/infra/docker-compose.yml down
 
 | 데스크톱 화면 캡처 |
 | --- |
-| <img src="docs/assets/readme/screenshots/order-detail-modal.png" alt="주문 상태/주문 상세 모달 화면" width="900"> |
+| <img src="docs/assets/readme/screenshots/order-detail-modal.png" alt="주문 상태/주문 상세 모달 화면" width="430"> <img src="img_1.png" alt="추가 캡처" width="430"> |
 
 </details>
 
@@ -201,8 +201,7 @@ docker compose -f service/infra/docker-compose.yml down
 
 ```text
 assignment-test
-├── README.md                  # 제출자가 가장 먼저 확인하는 프로젝트 안내 문서
-├── .env.example               # 로컬 실행용 환경변수 예시. 실제 비밀값은 커밋하지 않음
+├── README.md                  
 ├── docs                       # 기획, QA, 제출 산출물을 모아 둔 문서 영역
 │   ├── assets                 # README/제출 문서에서 참조하는 이미지 자산
 │   │   └── readme
@@ -217,7 +216,7 @@ assignment-test
 │   ├── plan                   # PM/PO, 화면 정의, 사용자 흐름 기획 산출물
 │   │   └── screen-spec
 │   │       ├── v1.0           # Lv1 화면 정의서와 승인 기록
-│   │       │   ├── SCREEN-001-main-page-screen-spec.pdf
+│   │       │   ├── SCREEN-001-main-page-screen-spec.pdf # 화면 설계서
 │   │       │   ├── screen-spec.md
 │   │       │   ├── user-flow.md
 │   │       │   ├── approval-log.md
@@ -234,11 +233,14 @@ assignment-test
 │   ├── qa                     # 이슈별 Human QA, 기술 검증, AI QA 결과
 │   │   ├── issue-3/
 │   │   ├── issue-4/
+│   │   │   ├── QA_레포트.md # Human QA 산출물 본문
+│   │   │   ├── QA_레포트.html # QA 결과 HTML 뷰어 파일
+│   │   │   ├── settings-human-qa-fix.png # UI/흐름 수정 전후 증빙 스크린샷
+│   │   │   ├── 보안_에이전트_보안_리뷰.md # 보안 관점 검토 기록
+│   │   │   ├── 코드리뷰_에이전트_코드_리뷰.md # 코드 리뷰 이슈/권고사항 기록
+│   │   │   ├── 테크리드_에이전트_1차검증.md # 기술 검증 1차 확인 문서
+│   │   │   └── evidence/ # 테스트 캡처/로그 등 증빙 파일 모음
 │   │   ├── ...
-│   │   ├── issue-27/          # Lv2 책 주문 AI QA HTML과 검증 기록
-│   │   │   ├── AI_QA_REPORT.html
-│   │   │   ├── HUMAN_QA.md
-│   │   │   └── TECH_LEAD_VERIFICATION.md
 │   │   └── issue-32/
 │   └── submission.md          # 제출용 보조 문서 초안
 ├── service                    # 실제 애플리케이션 코드
@@ -258,13 +260,12 @@ assignment-test
 ```
 ## 6. AI 도구 사용 내역
 
-개발 과정에서 AI 도구를 사용한 내역은 긍정/부정 영향을 모두 포함해 최종 제출 전 보강합니다.
 
 ![AI Agent System](docs/agents/assets/agent-system-architecture.png)
 
 | AI 도구 | 활용 내용 |
 | --- | --- |
-| Codex | Multi-Agent 시스템 가동, 개발 |
+| Codex | Multi-Agent 시스템 가동, 기획, 설계, 구현, 코드 리뷰, 보안 검증, QA, 문서화 |
 | Perplexity | 자료 조사, 기존 서비스 벤치마킹 |
 | GPT | 기타 AI 작업 |
 
