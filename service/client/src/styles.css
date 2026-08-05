@@ -5471,7 +5471,7 @@ dl {
 }
 
 .book-orders-page {
-  grid-template-columns: minmax(0, 1.45fr) minmax(340px, 0.8fr);
+  grid-template-columns: 1fr;
   align-items: stretch;
 }
 
@@ -5484,6 +5484,10 @@ dl {
   padding: 24px;
   max-height: min(760px, calc(100vh - 260px));
   overflow-y: auto;
+}
+
+.book-order-list-panel {
+  max-height: none;
 }
 
 .book-order-list {
@@ -5724,42 +5728,206 @@ dl {
   outline: none;
 }
 
-.operator-order-detail-modal {
-  width: min(760px, 100%);
-  max-height: min(820px, calc(100vh - 40px));
+.print-order-detail-modal {
+  width: min(1180px, 100%);
+  max-height: min(880px, calc(100vh - 40px));
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
   overflow: hidden;
 }
 
-.operator-order-detail-modal .modal-title-row {
+.print-order-detail-modal .modal-title-row {
   margin-bottom: 16px;
 }
 
-.operator-order-detail-modal .modal-title-row > div {
+.print-order-detail-modal .modal-title-row > div {
   display: grid;
   gap: 8px;
 }
 
-.operator-order-detail-modal .modal-title-row h2 {
+.print-order-detail-modal .modal-title-row h2 {
   color: #253248;
   font-size: 26px;
   line-height: 1.25;
 }
 
-.operator-order-detail-modal .modal-title-row p {
+.print-order-detail-modal .modal-title-row p {
   margin: 0;
   color: #667085;
   font-size: 14px;
   font-weight: 850;
 }
 
-.operator-order-detail-body {
+.print-order-detail-body {
   min-height: 0;
   display: grid;
-  gap: 18px;
+  gap: 22px;
   overflow-y: auto;
   padding-right: 4px;
+}
+
+.print-order-detail-summary {
+  display: grid;
+  gap: 14px;
+}
+
+.order-detail-section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.order-detail-section-heading h3 {
+  color: #253248;
+  font-size: 18px;
+  line-height: 1.35;
+}
+
+.order-detail-section-heading span {
+  color: #0c9fa8;
+  font-size: 13px;
+  font-weight: 950;
+}
+
+.order-status-progress-section,
+.order-status-events {
+  display: grid;
+  gap: 14px;
+}
+
+.order-status-progress {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(7, minmax(92px, 1fr));
+  gap: 10px;
+  overflow-x: auto;
+  padding: 16px 0 4px;
+}
+
+.order-status-progress-track {
+  position: absolute;
+  top: 31px;
+  left: 46px;
+  right: 46px;
+  height: 4px;
+  border-radius: 999px;
+  background: #e4ebf5;
+}
+
+.order-status-progress-track span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: #0c9fa8;
+}
+
+.order-status-progress.cancelled .order-status-progress-track span,
+.order-status-progress.error .order-status-progress-track span {
+  background: #d64545;
+}
+
+.order-status-step {
+  position: relative;
+  z-index: 1;
+  min-width: 92px;
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  color: #98a2b3;
+  font-size: 12px;
+  font-weight: 950;
+  line-height: 1.3;
+  text-align: center;
+}
+
+.order-status-step > span {
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border: 2px solid #dfe7f2;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #98a2b3;
+}
+
+.order-status-step.completed > span {
+  border-color: #0c9fa8;
+  background: #0c9fa8;
+  color: #ffffff;
+}
+
+.order-status-progress.cancelled .order-status-step.completed > span,
+.order-status-progress.error .order-status-step.completed > span {
+  border-color: #d64545;
+  background: #d64545;
+}
+
+.order-status-step.current strong {
+  color: #0c7f86;
+}
+
+.order-status-terminal-note {
+  margin: 0;
+  color: #c73737;
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.order-status-event-list {
+  display: grid;
+  border: 1px solid #e4ebf5;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #ffffff;
+}
+
+.order-status-event-list div {
+  display: grid;
+  grid-template-columns: 180px 150px minmax(0, 1fr);
+  gap: 14px;
+  border-bottom: 1px solid #edf2f8;
+  padding: 12px 14px;
+}
+
+.order-status-event-list div:last-child {
+  border-bottom: 0;
+}
+
+.order-status-event-list time,
+.order-status-event-list span {
+  color: #667085;
+  font-size: 13px;
+  font-weight: 850;
+  line-height: 1.45;
+}
+
+.order-status-event-list strong {
+  color: #253248;
+  font-size: 13px;
+  font-weight: 950;
+}
+
+.print-order-preview-viewer {
+  padding: 16px;
+}
+
+.print-order-preview-viewer .book-preview-stage {
+  padding: 16px 8px;
+}
+
+.print-order-preview-viewer .book-template-page {
+  width: min(440px, 100%);
+  min-height: 430px;
+}
+
+.print-order-preview-viewer .book-template-page-inner {
+  padding: 24px;
+}
+
+.print-order-preview-viewer .book-template-page h3 {
+  font-size: 26px;
 }
 
 .book-order-card {
@@ -6793,12 +6961,21 @@ dl {
     max-height: none;
   }
 
+  .print-order-detail-modal {
+    width: min(100%, calc(100vw - 28px));
+  }
+
   .order-table-filter-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .order-table-filter-grid label.wide {
     grid-column: 1 / -1;
+  }
+
+  .order-status-event-list div {
+    grid-template-columns: 1fr;
+    gap: 5px;
   }
 
   .row-button {

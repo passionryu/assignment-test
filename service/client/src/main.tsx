@@ -3384,8 +3384,10 @@ function App() {
             selectedOrder={selectedBookOrder}
             loading={bookOrdersLoading}
             detailLoading={bookOrderDetailLoading}
+            actionLoading={bookOrderActionLoading}
             onOpenOrder={openBookOrderDetail}
             onOpenCancel={() => setBookOrderCancelOpen(true)}
+            onCloseOrderDetail={() => setSelectedBookOrder(null)}
           />
         ) : null}
         {activeView === "bookHistory" ? (
@@ -3395,7 +3397,9 @@ function App() {
             selectedOrder={selectedBookOrder}
             loading={bookOrdersLoading}
             detailLoading={bookOrderDetailLoading}
+            actionLoading={bookOrderActionLoading}
             onOpenOrder={openBookOrderDetail}
+            onCloseOrderDetail={() => setSelectedBookOrder(null)}
           />
         ) : null}
         {activeView === "settings" ? (
@@ -3674,7 +3678,7 @@ function OperatorBookOrdersView({
       </section>
 
       {detailLoading || selectedOrder ? (
-        <OperatorOrderDetailModal
+        <PrintOrderDetailModal
           order={selectedOrder}
           detailLoading={detailLoading}
           actionLoading={actionLoading}
@@ -3687,7 +3691,7 @@ function OperatorBookOrdersView({
   );
 }
 
-function OperatorOrderDetailModal({
+function PrintOrderDetailModal({
   order,
   detailLoading,
   actionLoading,
@@ -3698,17 +3702,17 @@ function OperatorOrderDetailModal({
   order: PrintOrderDetail | null;
   detailLoading: boolean;
   actionLoading: boolean;
-  onAdvanceStatus: () => void;
-  onOpenCancel: () => void;
+  onAdvanceStatus?: () => void;
+  onOpenCancel?: () => void;
   onClose: () => void;
 }) {
   if (detailLoading) {
     return (
       <div className="modal-backdrop" role="presentation">
-        <section className="modal operator-order-detail-modal" role="dialog" aria-modal="true" aria-labelledby="operator-order-detail-title">
+        <section className="modal print-order-detail-modal" role="dialog" aria-modal="true" aria-labelledby="print-order-detail-title">
           <div className="modal-title-row">
             <div>
-              <h2 id="operator-order-detail-title">주문 상세</h2>
+              <h2 id="print-order-detail-title">주문 상세</h2>
               <p>주문 상세를 불러오는 중입니다.</p>
             </div>
             <button className="icon-button" type="button" onClick={onClose} aria-label="닫기">
@@ -3726,14 +3730,16 @@ function OperatorOrderDetailModal({
   }
 
   const nextStatus = nextPrintOrderStatus(order.status);
+  const preview = buildPrintOrderPreview(order);
+  const hasActions = Boolean(onAdvanceStatus || onOpenCancel);
 
   return (
     <div className="modal-backdrop" role="presentation">
-      <section className="modal operator-order-detail-modal" role="dialog" aria-modal="true" aria-labelledby="operator-order-detail-title">
+      <section className="modal print-order-detail-modal" role="dialog" aria-modal="true" aria-labelledby="print-order-detail-title">
         <div className="modal-title-row">
           <div>
             <span className={`book-order-status-badge ${printOrderStatusTone(order.status)}`}>{order.statusLabel}</span>
-            <h2 id="operator-order-detail-title">{order.title}</h2>
+            <h2 id="print-order-detail-title">{order.title}</h2>
             <p>{order.orderNo}</p>
           </div>
           <button className="icon-button" type="button" onClick={onClose} aria-label="닫기" disabled={actionLoading}>
@@ -3741,74 +3747,72 @@ function OperatorOrderDetailModal({
           </button>
         </div>
 
-        <div className="operator-order-detail-body">
-          <dl className="book-order-detail-list">
-            <div>
-              <dt>주문자</dt>
-              <dd>{order.memberName}</dd>
+        <div className="print-order-detail-body">
+          <section className="print-order-detail-summary" aria-labelledby="print-order-summary-title">
+            <div className="order-detail-section-heading">
+              <h3 id="print-order-summary-title">주문 정보</h3>
             </div>
-            <div>
-              <dt>방</dt>
-              <dd>{order.roomName}</dd>
-            </div>
-            <div>
-              <dt>상품</dt>
-              <dd>{order.product.displayName}</dd>
-            </div>
-            <div>
-              <dt>기간</dt>
-              <dd>{formatDateLabel(order.period.startDate)} ~ {formatDateLabel(order.period.endDate)}</dd>
-            </div>
-            <div>
-              <dt>페이지/수량</dt>
-              <dd>{order.estimatedPageCount}p · {order.quantity}권</dd>
-            </div>
-            <div className="total">
-              <dt>총액</dt>
-              <dd>{formatCurrency(order.totalPrice)}</dd>
-            </div>
-          </dl>
+            <dl className="book-order-detail-list">
+              <div>
+                <dt>주문자</dt>
+                <dd>{order.memberName}</dd>
+              </div>
+              <div>
+                <dt>방</dt>
+                <dd>{order.roomName}</dd>
+              </div>
+              <div>
+                <dt>상품</dt>
+                <dd>{order.product.displayName}</dd>
+              </div>
+              <div>
+                <dt>기간</dt>
+                <dd>{formatDateLabel(order.period.startDate)} ~ {formatDateLabel(order.period.endDate)}</dd>
+              </div>
+              <div>
+                <dt>페이지/수량</dt>
+                <dd>{order.estimatedPageCount}p · {order.quantity}권</dd>
+              </div>
+              <div className="total">
+                <dt>총액</dt>
+                <dd>{formatCurrency(order.totalPrice)}</dd>
+              </div>
+            </dl>
 
-          <div className="operator-order-actions">
-            <button className="primary-button" type="button" onClick={onAdvanceStatus} disabled={!nextStatus || actionLoading}>
-              {nextStatus ? `다음 상태: ${printOrderStatusLabel(nextStatus)}` : "다음 상태 없음"}
-            </button>
-            <button className="danger-button" type="button" onClick={onOpenCancel} disabled={!canCancelPrintOrder(order.status) || actionLoading}>
-              주문 취소
-            </button>
-          </div>
+            {hasActions ? (
+              <div className="operator-order-actions">
+                {onAdvanceStatus ? (
+                  <button className="primary-button" type="button" onClick={onAdvanceStatus} disabled={!nextStatus || actionLoading}>
+                    {nextStatus ? `다음 상태: ${printOrderStatusLabel(nextStatus)}` : "다음 상태 없음"}
+                  </button>
+                ) : null}
+                {onOpenCancel ? (
+                  <button className="danger-button" type="button" onClick={onOpenCancel} disabled={!canCancelPrintOrder(order.status) || actionLoading}>
+                    주문 취소
+                  </button>
+                ) : null}
+              </div>
+            ) : null}
 
-          {order.cancelReason ? (
-            <div className="book-order-cancel-reason">
-              <strong>취소 사유</strong>
-              <p>{order.cancelReason}</p>
-            </div>
-          ) : null}
+            {order.cancelReason ? (
+              <div className="book-order-cancel-reason">
+                <strong>취소 사유</strong>
+                <p>{order.cancelReason}</p>
+              </div>
+            ) : null}
+          </section>
+
+          <OrderStatusProgress order={order} />
 
           <div className="book-order-subsection">
-            <h3>담긴 콘텐츠</h3>
-            <div className="book-order-content-list">
-              {order.contents.map((content) => (
-                <div key={`${content.type}-${content.sourceId}-${content.sortOrder}`}>
-                  <strong>{content.title}</strong>
-                  <small>{bookContentTypeLabel(content.type)} · {formatDateLabel(content.occurredDate)} · {content.pageCount}p</small>
-                </div>
-              ))}
+            <div className="order-detail-section-heading">
+              <h3>담긴 콘텐츠 미리보기</h3>
+              <span>{order.contents.length}개 · {order.estimatedPageCount}p</span>
             </div>
+            <BookTemplatePreviewViewer preview={preview} className="print-order-preview-viewer" />
           </div>
 
-          <div className="book-order-subsection">
-            <h3>상태 이력</h3>
-            <div className="book-order-history-list">
-              {order.statusHistories.map((history) => (
-                <div key={history.id}>
-                  <strong>{history.nextStatusLabel}</strong>
-                  <small>{formatDateTimeLabel(history.changedAt)}</small>
-                  {history.memo ? <p>{history.memo}</p> : null}
-                </div>
-              ))}
-            </div>
-          </div>
+          <OrderStatusEventList histories={order.statusHistories} />
         </div>
       </section>
     </div>
@@ -6886,6 +6890,155 @@ function BookTemplateVisual({ slide, compact = false }: { slide: BookTemplatePre
   );
 }
 
+const printOrderProgressStatuses: PrintOrderStatus[] = [
+  "PAID",
+  "PDF_READY",
+  "CONFIRMED",
+  "IN_PRODUCTION",
+  "PRODUCTION_COMPLETE",
+  "SHIPPED",
+  "DELIVERED",
+];
+
+function buildPrintOrderPreview(order: PrintOrderDetail): BookPreviewResponse {
+  const contents = [...order.contents]
+    .sort((first, second) => first.sortOrder - second.sortOrder)
+    .map((content) => ({
+      type: content.type,
+      sourceId: content.sourceId,
+      title: content.title,
+      description: content.snapshot?.description ?? `${bookContentTypeLabel(content.type)} 기록을 템플릿 페이지에 배치합니다.`,
+      occurredDate: content.occurredDate,
+      authorName: content.snapshot?.authorName ?? order.memberName,
+      imageCount: content.snapshot?.imageCount ?? 0,
+      commentCount: content.snapshot?.commentCount ?? 0,
+      pageCount: content.pageCount,
+      selectedByDefault: true,
+      sourceLabel: content.snapshot?.sourceLabel ?? `${bookContentTypeLabel(content.type)} · ${formatDateLabel(content.occurredDate)}`,
+    }));
+  const summary = buildPrintOrderContentSummary(contents);
+  const additionalPageCount = Math.max(order.estimatedPageCount - order.product.includedPageCount, 0);
+
+  return {
+    previewId: order.id,
+    creationType: order.creationType,
+    roomId: order.roomId,
+    roomName: order.roomName,
+    product: order.product,
+    title: order.title,
+    period: order.period,
+    contents,
+    summary,
+    pageRange: {
+      minPage: order.product.minPage,
+      maxPage: order.product.maxPage,
+      estimatedPageCount: order.estimatedPageCount,
+      status: "AVAILABLE",
+      message: "주문 당시 저장된 템플릿 구성입니다.",
+    },
+    estimate: {
+      basePrice: order.basePrice,
+      includedPageCount: order.product.includedPageCount,
+      additionalPageCount,
+      additionalPagePrice: order.additionalPagePrice,
+      shippingPrice: order.shippingPrice,
+      quantity: order.quantity,
+      subtotalPrice: Math.max(order.totalPrice - order.shippingPrice, 0),
+      totalPrice: order.totalPrice,
+    },
+    pages: [],
+    warnings: [],
+  };
+}
+
+function buildPrintOrderContentSummary(contents: BookContentCandidate[]): BookContentSummary {
+  return contents.reduce<BookContentSummary>((summary, content) => {
+    if (content.type === "MEMORY") summary.memoryCount += 1;
+    if (content.type === "MISSION") summary.missionCount += 1;
+    if (content.type === "LETTER") summary.letterCount += 1;
+    if (content.type === "CHAT") summary.chatCount += 1;
+    summary.estimatedPageCount += content.pageCount;
+    return summary;
+  }, {
+    memoryCount: 0,
+    missionCount: 0,
+    letterCount: 0,
+    chatCount: 0,
+    estimatedPageCount: 0,
+  });
+}
+
+function completedPrintOrderStatusSet(order: PrintOrderDetail): Set<PrintOrderStatus> {
+  return new Set(order.statusHistories.map((history) => history.nextStatus));
+}
+
+function printOrderProgressIndex(order: PrintOrderDetail): number {
+  const completedStatuses = completedPrintOrderStatusSet(order);
+  const currentIndex = printOrderProgressStatuses.indexOf(order.status);
+  if (currentIndex >= 0) return currentIndex;
+
+  for (let index = printOrderProgressStatuses.length - 1; index >= 0; index -= 1) {
+    if (completedStatuses.has(printOrderProgressStatuses[index])) return index;
+  }
+
+  return 0;
+}
+
+function OrderStatusProgress({ order }: { order: PrintOrderDetail }) {
+  const completedStatuses = completedPrintOrderStatusSet(order);
+  const progressIndex = printOrderProgressIndex(order);
+  const progressPercent = printOrderProgressStatuses.length <= 1
+    ? 0
+    : (progressIndex / (printOrderProgressStatuses.length - 1)) * 100;
+
+  return (
+    <section className="order-status-progress-section" aria-labelledby="order-status-progress-title">
+      <div className="order-detail-section-heading">
+        <h3 id="order-status-progress-title">진행 상태</h3>
+        <span>{order.statusLabel}</span>
+      </div>
+      <div className={`order-status-progress ${printOrderStatusTone(order.status)}`}>
+        <div className="order-status-progress-track" aria-hidden="true">
+          <span style={{ width: `${progressPercent}%` }} />
+        </div>
+        {printOrderProgressStatuses.map((status, index) => {
+          const completed = index <= progressIndex || completedStatuses.has(status);
+          const current = status === order.status;
+
+          return (
+            <div className={`order-status-step ${completed ? "completed" : ""} ${current ? "current" : ""}`} key={status}>
+              <span>{completed ? <CheckCircle2 size={18} /> : index + 1}</span>
+              <strong>{printOrderStatusLabel(status)}</strong>
+            </div>
+          );
+        })}
+      </div>
+      {order.status === "CANCELLED_REFUND" || order.status === "ERROR" ? (
+        <p className="order-status-terminal-note">{order.statusLabel} 상태로 종료된 주문입니다.</p>
+      ) : null}
+    </section>
+  );
+}
+
+function OrderStatusEventList({ histories }: { histories: PrintOrderStatusHistory[] }) {
+  return (
+    <section className="order-status-events" aria-labelledby="order-status-events-title">
+      <div className="order-detail-section-heading">
+        <h3 id="order-status-events-title">상태 이력</h3>
+      </div>
+      <div className="order-status-event-list">
+        {histories.map((history) => (
+          <div key={history.id}>
+            <time>{formatDateTimeLabel(history.changedAt)}</time>
+            <strong>{history.nextStatusLabel}</strong>
+            {history.memo ? <span>{history.memo}</span> : null}
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 const orderSortOptions: Array<{ value: OrderSortKey; label: string }> = [
   { value: "REQUESTED_DESC", label: "주문일 최신순" },
   { value: "REQUESTED_ASC", label: "주문일 오래된순" },
@@ -7227,12 +7380,12 @@ function escapeCsvCell(value: string): string {
   return /[",\n]/.test(escaped) ? `"${escaped}"` : escaped;
 }
 
-function BookPreviewPanel({
+function BookTemplatePreviewViewer({
   preview,
-  onOpenOrderConfirm,
+  className = "",
 }: {
   preview: BookPreviewResponse;
-  onOpenOrderConfirm: () => void;
+  className?: string;
 }) {
   const slides = useMemo(() => buildBookTemplatePreviewSlides(preview), [preview]);
   const [activeSlideIndex, setActiveSlideIndex] = useState(0);
@@ -7248,6 +7401,82 @@ function BookPreviewPanel({
   };
 
   return (
+    <div className={`book-preview-viewer ${className}`}>
+      <div className="book-preview-viewer-top">
+        <div>
+          <strong>{activeSlide.title}</strong>
+          <span>{activeSlide.kicker}</span>
+        </div>
+        <em>{activeSlide.pageRangeLabel} · {activeSlideIndex + 1}/{slides.length}</em>
+      </div>
+
+      <div className="book-preview-stage">
+        <button className="book-preview-nav previous" type="button" onClick={() => moveSlide("PREVIOUS")} disabled={!canMovePrevious} aria-label="이전 미리보기 페이지">
+          <ChevronLeft size={28} />
+        </button>
+
+        <article className={`book-template-page ${activeSlide.kind}`}>
+          <div className="book-template-page-inner">
+            <span className="book-template-kicker">{activeSlide.kicker}</span>
+            <h3>{activeSlide.title}</h3>
+            {activeSlide.subtitle ? <strong>{activeSlide.subtitle}</strong> : null}
+            <p>{activeSlide.description}</p>
+            {activeSlide.content ? (
+              <div className="book-template-content">
+                <BookTemplateVisual slide={activeSlide} />
+                <div>
+                  {activeSlide.occurredDate ? <small>{formatDateLabel(activeSlide.occurredDate)}</small> : null}
+                  {activeSlide.authorName ? <small>{activeSlide.authorName}</small> : null}
+                  {activeSlide.contentType ? <small>{bookContentTypeLabel(activeSlide.contentType)}</small> : null}
+                </div>
+              </div>
+            ) : null}
+            {activeSlide.summaryItems.length > 0 ? (
+              <div className="book-template-summary-grid">
+                {activeSlide.summaryItems.map((item) => (
+                  <div key={item.label}>
+                    <span>{item.label}</span>
+                    <strong>{item.value}</strong>
+                  </div>
+                ))}
+              </div>
+            ) : null}
+          </div>
+        </article>
+
+        <button className="book-preview-nav next" type="button" onClick={() => moveSlide("NEXT")} disabled={!canMoveNext} aria-label="다음 미리보기 페이지">
+          <ChevronRight size={28} />
+        </button>
+      </div>
+
+      <div className="book-preview-thumbnails" aria-label="템플릿 미리보기 페이지 목록">
+        {slides.map((slide, index) => (
+          <button
+            className={index === activeSlideIndex ? "active" : ""}
+            type="button"
+            key={slide.id}
+            onClick={() => setActiveSlideIndex(index)}
+            aria-current={index === activeSlideIndex ? "true" : undefined}
+          >
+            <span className={`book-preview-thumb ${slide.kind}`}>
+              <BookTemplateVisual slide={slide} compact />
+            </span>
+            <small>{slide.thumbnailLabel}</small>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function BookPreviewPanel({
+  preview,
+  onOpenOrderConfirm,
+}: {
+  preview: BookPreviewResponse;
+  onOpenOrderConfirm: () => void;
+}) {
+  return (
     <section className="book-section book-preview-section" aria-labelledby="book-preview-title">
       <div className="book-section-heading">
         <div>
@@ -7259,71 +7488,7 @@ function BookPreviewPanel({
       </div>
 
       <div className="book-preview-layout">
-        <div className="book-preview-viewer">
-          <div className="book-preview-viewer-top">
-            <div>
-              <strong>{activeSlide.title}</strong>
-              <span>{activeSlide.kicker}</span>
-            </div>
-            <em>{activeSlide.pageRangeLabel} · {activeSlideIndex + 1}/{slides.length}</em>
-          </div>
-
-          <div className="book-preview-stage">
-            <button className="book-preview-nav previous" type="button" onClick={() => moveSlide("PREVIOUS")} disabled={!canMovePrevious} aria-label="이전 미리보기 페이지">
-              <ChevronLeft size={28} />
-            </button>
-
-            <article className={`book-template-page ${activeSlide.kind}`}>
-              <div className="book-template-page-inner">
-                <span className="book-template-kicker">{activeSlide.kicker}</span>
-                <h3>{activeSlide.title}</h3>
-                {activeSlide.subtitle ? <strong>{activeSlide.subtitle}</strong> : null}
-                <p>{activeSlide.description}</p>
-                {activeSlide.content ? (
-                  <div className="book-template-content">
-                    <BookTemplateVisual slide={activeSlide} />
-                    <div>
-                      {activeSlide.occurredDate ? <small>{formatDateLabel(activeSlide.occurredDate)}</small> : null}
-                      {activeSlide.authorName ? <small>{activeSlide.authorName}</small> : null}
-                      {activeSlide.contentType ? <small>{bookContentTypeLabel(activeSlide.contentType)}</small> : null}
-                    </div>
-                  </div>
-                ) : null}
-                {activeSlide.summaryItems.length > 0 ? (
-                  <div className="book-template-summary-grid">
-                    {activeSlide.summaryItems.map((item) => (
-                      <div key={item.label}>
-                        <span>{item.label}</span>
-                        <strong>{item.value}</strong>
-                      </div>
-                    ))}
-                  </div>
-                ) : null}
-              </div>
-            </article>
-
-            <button className="book-preview-nav next" type="button" onClick={() => moveSlide("NEXT")} disabled={!canMoveNext} aria-label="다음 미리보기 페이지">
-              <ChevronRight size={28} />
-            </button>
-          </div>
-
-          <div className="book-preview-thumbnails" aria-label="템플릿 미리보기 페이지 목록">
-            {slides.map((slide, index) => (
-              <button
-                className={index === activeSlideIndex ? "active" : ""}
-                type="button"
-                key={slide.id}
-                onClick={() => setActiveSlideIndex(index)}
-                aria-current={index === activeSlideIndex ? "true" : undefined}
-              >
-                <span className={`book-preview-thumb ${slide.kind}`}>
-                  <BookTemplateVisual slide={slide} compact />
-                </span>
-                <small>{slide.thumbnailLabel}</small>
-              </button>
-            ))}
-          </div>
-        </div>
+        <BookTemplatePreviewViewer preview={preview} />
 
         <aside className="book-estimate-panel">
           <h3>{preview.product.displayName}</h3>
@@ -7375,16 +7540,20 @@ function BookOrdersView({
   selectedOrder,
   loading,
   detailLoading,
+  actionLoading,
   onOpenOrder,
   onOpenCancel,
+  onCloseOrderDetail,
 }: {
   mode: "status" | "history";
   orders: PrintOrderSummary[];
   selectedOrder: PrintOrderDetail | null;
   loading: boolean;
   detailLoading: boolean;
+  actionLoading: boolean;
   onOpenOrder: (orderId: number) => void;
   onOpenCancel?: () => void;
+  onCloseOrderDetail: () => void;
 }) {
   const isStatusMode = mode === "status";
   const table = useOrderTableState(orders);
@@ -7432,110 +7601,18 @@ function BookOrdersView({
             onOpenOrder={onOpenOrder}
           />
         </div>
-
-        <BookOrderDetailPanel order={selectedOrder} loading={detailLoading} onOpenCancel={isStatusMode ? onOpenCancel : undefined} />
       </section>
+
+      {detailLoading || selectedOrder ? (
+        <PrintOrderDetailModal
+          order={selectedOrder}
+          detailLoading={detailLoading}
+          actionLoading={actionLoading}
+          onOpenCancel={isStatusMode ? onOpenCancel : undefined}
+          onClose={onCloseOrderDetail}
+        />
+      ) : null}
     </>
-  );
-}
-
-function BookOrderDetailPanel({
-  order,
-  loading,
-  onOpenCancel,
-}: {
-  order: PrintOrderDetail | null;
-  loading: boolean;
-  onOpenCancel?: () => void;
-}) {
-  if (loading) {
-    return (
-      <aside className="book-order-detail-panel">
-        <div className="book-empty-state">주문 상세를 불러오는 중입니다.</div>
-      </aside>
-    );
-  }
-
-  if (!order) {
-    return (
-      <aside className="book-order-detail-panel">
-        <div className="book-empty-state">목록에서 주문을 선택하면 상품, 기간, 콘텐츠, 견적 스냅샷을 확인할 수 있습니다.</div>
-      </aside>
-    );
-  }
-
-  return (
-    <aside className="book-order-detail-panel">
-      <div className="book-order-detail-header">
-        <span className={`book-order-status-badge ${printOrderStatusTone(order.status)}`}>{order.statusLabel}</span>
-        <h2>{order.title}</h2>
-        <p>{order.orderNo}</p>
-      </div>
-
-      <dl className="book-order-detail-list">
-        <div>
-          <dt>방</dt>
-          <dd>{order.roomName}</dd>
-        </div>
-        <div>
-          <dt>상품</dt>
-          <dd>{order.product.displayName}</dd>
-        </div>
-        <div>
-          <dt>기간</dt>
-          <dd>{formatDateLabel(order.period.startDate)} ~ {formatDateLabel(order.period.endDate)}</dd>
-        </div>
-        <div>
-          <dt>페이지/수량</dt>
-          <dd>{order.estimatedPageCount}p · {order.quantity}권</dd>
-        </div>
-        <div className="total">
-          <dt>총액</dt>
-          <dd>{formatCurrency(order.totalPrice)}</dd>
-        </div>
-      </dl>
-
-      {order.cancelReason ? (
-        <div className="book-order-cancel-reason">
-          <strong>취소 사유</strong>
-          <p>{order.cancelReason}</p>
-        </div>
-      ) : null}
-
-      <div className="book-order-subsection">
-        <h3>담긴 콘텐츠</h3>
-        <div className="book-order-content-list">
-          {order.contents.map((content) => (
-            <div key={`${content.type}-${content.sourceId}-${content.sortOrder}`}>
-              <strong>{content.title}</strong>
-              <small>{bookContentTypeLabel(content.type)} · {formatDateLabel(content.occurredDate)} · {content.pageCount}p</small>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <div className="book-order-subsection">
-        <h3>상태 이력</h3>
-        <div className="book-order-history-list">
-          {order.statusHistories.map((history) => (
-            <div key={history.id}>
-              <strong>{history.nextStatusLabel}</strong>
-              <small>{formatDateTimeLabel(history.changedAt)}</small>
-              {history.memo ? <p>{history.memo}</p> : null}
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {onOpenCancel ? (
-        <div className="book-order-actions">
-          <button className="outline-button danger-button" type="button" onClick={onOpenCancel} disabled={!canCancelPrintOrder(order.status)}>
-            주문 취소
-          </button>
-          {!canCancelPrintOrder(order.status) ? <p>주문 확정 이후에는 이 화면에서 취소할 수 없습니다.</p> : null}
-        </div>
-      ) : null}
-    </aside>
   );
 }
 
