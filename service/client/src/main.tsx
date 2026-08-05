@@ -3977,6 +3977,8 @@ function Sidebar({
 }) {
   const selectedRoom = rooms.find((room) => room.id === selectedRoomId) ?? rooms[0] ?? null;
   const bookMenuActive = isBookArchiveView(activeView);
+  const roomMenuActive =
+    activeView === "room" || activeView === "chat" || activeView === "memories" || activeView === "missions" || activeView === "letters";
 
   return (
     <aside className={`sidebar ${collapsed ? "is-collapsed" : ""}`} aria-label="기록방 메뉴">
@@ -4020,8 +4022,7 @@ function Sidebar({
               <span className="nav-label">방 관리 대시보드</span>
             </button>
             {rooms.map((room) => {
-              const isRoomContext = activeView !== "home" && activeView !== "rooms";
-              const isSelected = isRoomContext && room.id === selectedRoom?.id;
+              const isSelected = roomMenuActive && room.id === selectedRoom?.id;
               const isExpanded = isSelected && roomListExpanded && room.id === expandedRoomId && !collapsed;
 
               return (
@@ -4087,7 +4088,19 @@ function Sidebar({
           </div>
 
           <div className={`nav-item-combo book-nav-combo ${bookMenuActive ? "active" : ""} ${bookMenuExpanded ? "is-expanded" : ""}`}>
-            <button className="nav-item room-list-nav" type="button" aria-label="추억을 책으로 소장" onClick={() => onMove("bookProducts")}>
+            <button
+              className="nav-item room-list-nav"
+              type="button"
+              aria-label={collapsed ? (bookMenuExpanded ? "책 메뉴 접기" : "책 메뉴 펼치기") : "추억을 책으로 소장"}
+              aria-expanded={collapsed ? bookMenuExpanded : undefined}
+              onClick={() => {
+                if (collapsed) {
+                  onToggleBookMenu();
+                  return;
+                }
+                onMove("bookProducts");
+              }}
+            >
               <BookOpen size={18} />
               <span className="nav-label">추억을 책으로 소장</span>
             </button>
@@ -4096,20 +4109,20 @@ function Sidebar({
             </button>
           </div>
 
-          <div className={`room-submenu book-submenu ${bookMenuExpanded && !collapsed ? "is-open" : ""}`} aria-hidden={!bookMenuExpanded || collapsed}>
-            <button className={activeView === "bookProducts" ? "active" : ""} type="button" tabIndex={bookMenuExpanded && !collapsed ? 0 : -1} onClick={() => onMove("bookProducts")}>
+          <div className={`room-submenu book-submenu ${bookMenuExpanded ? "is-open" : ""}`} aria-hidden={!bookMenuExpanded}>
+            <button className={activeView === "bookProducts" ? "active" : ""} type="button" tabIndex={bookMenuExpanded ? 0 : -1} onClick={() => onMove("bookProducts")}>
               <CircleHelp size={16} />
               <span className="nav-label">상품 안내</span>
             </button>
-            <button className={activeView === "bookCreate" ? "active" : ""} type="button" tabIndex={bookMenuExpanded && !collapsed ? 0 : -1} onClick={() => onMove("bookCreate")}>
+            <button className={activeView === "bookCreate" ? "active" : ""} type="button" tabIndex={bookMenuExpanded ? 0 : -1} onClick={() => onMove("bookCreate")}>
               <BookImage size={16} />
               <span className="nav-label">책 만들기</span>
             </button>
-            <button className={activeView === "bookStatus" ? "active" : ""} type="button" tabIndex={bookMenuExpanded && !collapsed ? 0 : -1} onClick={() => onMove("bookStatus")}>
+            <button className={activeView === "bookStatus" ? "active" : ""} type="button" tabIndex={bookMenuExpanded ? 0 : -1} onClick={() => onMove("bookStatus")}>
               <Clock size={16} />
               <span className="nav-label">주문 상태</span>
             </button>
-            <button className={activeView === "bookHistory" ? "active" : ""} type="button" tabIndex={bookMenuExpanded && !collapsed ? 0 : -1} onClick={() => onMove("bookHistory")}>
+            <button className={activeView === "bookHistory" ? "active" : ""} type="button" tabIndex={bookMenuExpanded ? 0 : -1} onClick={() => onMove("bookHistory")}>
               <FileText size={16} />
               <span className="nav-label">주문 내역</span>
             </button>
