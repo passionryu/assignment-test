@@ -5093,7 +5093,7 @@ dl {
 
 .book-content-toolbar {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 220px;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: start;
   gap: 14px;
 }
@@ -5123,20 +5123,21 @@ dl {
 .book-filter-tabs button {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
-  min-height: 36px;
-  padding: 0 10px;
+  gap: 6px;
+  min-height: 32px;
+  padding: 0 9px;
+  font-size: 13px;
 }
 
 .book-filter-tabs button b {
-  min-width: 22px;
-  height: 22px;
+  min-width: 20px;
+  height: 20px;
   display: inline-grid;
   place-items: center;
   border-radius: 999px;
   background: #eef3fb;
   color: #536176;
-  font-size: 12px;
+  font-size: 11px;
 }
 
 .book-filter-tabs button.active {
@@ -5152,12 +5153,14 @@ dl {
 
 .book-order-controls {
   position: relative;
-  display: grid;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
   gap: 10px;
   border: 1px solid #dfe7f2;
   border-radius: 8px;
   background: #fbfcff;
-  padding: 12px;
+  padding: 10px 12px;
 }
 
 .book-order-controls > span,
@@ -5167,14 +5170,19 @@ dl {
   font-weight: 950;
 }
 
+.book-order-controls > span {
+  white-space: nowrap;
+}
+
 .segmented-control {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  display: flex;
+  align-items: center;
   gap: 6px;
 }
 
 .segmented-control button {
-  min-height: 34px;
+  min-width: 82px;
+  min-height: 32px;
   padding: 0 10px;
 }
 
@@ -5187,9 +5195,9 @@ dl {
 .book-type-order-inline {
   position: absolute;
   top: calc(100% + 10px);
-  right: 12px;
+  right: 0;
   z-index: 6;
-  width: calc(100% - 24px);
+  width: 236px;
   border: 1px solid #dfe7f2;
   border-radius: 8px;
   background: #ffffff;
