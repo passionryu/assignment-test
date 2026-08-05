@@ -4088,7 +4088,19 @@ function Sidebar({
           </div>
 
           <div className={`nav-item-combo book-nav-combo ${bookMenuActive ? "active" : ""} ${bookMenuExpanded ? "is-expanded" : ""}`}>
-            <button className="nav-item room-list-nav" type="button" aria-label="추억을 책으로 소장" onClick={() => onMove("bookProducts")}>
+            <button
+              className="nav-item room-list-nav"
+              type="button"
+              aria-label={collapsed ? (bookMenuExpanded ? "책 메뉴 접기" : "책 메뉴 펼치기") : "추억을 책으로 소장"}
+              aria-expanded={collapsed ? bookMenuExpanded : undefined}
+              onClick={() => {
+                if (collapsed) {
+                  onToggleBookMenu();
+                  return;
+                }
+                onMove("bookProducts");
+              }}
+            >
               <BookOpen size={18} />
               <span className="nav-label">추억을 책으로 소장</span>
             </button>
