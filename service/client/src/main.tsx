@@ -113,6 +113,11 @@ type DeleteRoomResponse = {
   deleted: boolean;
 };
 
+type LeaveRoomResponse = {
+  id: number;
+  left: boolean;
+};
+
 type PendingRoomInvitation = {
   id: number;
   roomId: number;
@@ -680,7 +685,7 @@ type RoomFeatureKind = "chat" | "memories" | "missions" | "letters";
 type BookArchiveView = "bookProducts" | "bookCreate" | "bookStatus" | "bookHistory";
 type BookCreateStep = "room" | "product" | "period" | "content" | "preview";
 type AppView = "home" | "rooms" | "room" | "settings" | RoomFeatureKind | BookArchiveView;
-type RoomSettingsMode = "menu" | "info" | "edit" | "delete" | null;
+type RoomSettingsMode = "menu" | "info" | "edit" | "leave" | null;
 type MemoryActionMode = "edit" | "delete" | null;
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8080/api";
@@ -1245,6 +1250,7 @@ function App() {
   const [allNotifications, setAllNotifications] = useState<NotificationItem[]>([]);
   const [pendingInvitations, setPendingInvitations] = useState<PendingRoomInvitation[]>([]);
   const [calendar, setCalendar] = useState<CalendarResponse | null>(null);
+  const [calendarMonth, setCalendarMonth] = useState(currentMonth);
   const [selectedCalendarDate, setSelectedCalendarDate] = useState<string | null>(null);
   const [calendarRoomId, setCalendarRoomId] = useState<number | null>(null);
   const [pendingInvitationCount, setPendingInvitationCount] = useState(0);
@@ -1347,6 +1353,7 @@ function App() {
   const [roomSettingsMode, setRoomSettingsMode] = useState<RoomSettingsMode>(null);
   const [roomDetail, setRoomDetail] = useState<RoomDetail | null>(null);
   const [roomEditForm, setRoomEditForm] = useState({ name: "", description: "" });
+  const [roomDeleteConfirmName, setRoomDeleteConfirmName] = useState("");
   const [roomActionLoading, setRoomActionLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -1478,6 +1485,7 @@ function App() {
     setAllNotifications([]);
     setPendingInvitations([]);
     setCalendar(null);
+    setCalendarMonth(currentMonth);
     setSelectedCalendarDate(null);
     setCalendarRoomId(null);
     setPendingInvitationCount(0);
@@ -1578,8 +1586,10 @@ function App() {
       setPendingInvitations(fallbackInvitations);
       setLatestNotifications(fallbackNotifications.filter(isHomeNotification).slice(0, 3));
       setAllNotifications(fallbackNotifications.filter(isHomeNotification));
-      setCalendar(demoCalendar);
-      setSelectedCalendarDate(demoCalendar.selectedDate ?? demoCalendar.days[0]?.date ?? null);
+      const fallbackCalendar = filterDemoCalendar(null, currentMonth);
+      setCalendarMonth(fallbackCalendar.month);
+      setCalendar(fallbackCalendar);
+      setSelectedCalendarDate(fallbackCalendar.selectedDate ?? fallbackCalendar.days[0]?.date ?? null);
       setPendingInvitationCount(fallbackInvitations.length);
       setProfileForm({
         displayName: fallbackProfile.displayName,
@@ -1667,11 +1677,12 @@ function App() {
     setPendingInvitations(response?.items ?? []);
   }
 
-  async function loadCalendarActivities(nextRoomId: number | null) {
+  async function loadCalendarActivities(nextRoomId: number | null, targetMonth = calendarMonth) {
     const roomQuery = nextRoomId ? `&roomId=${nextRoomId}` : "";
-    const calendarResponse = await safeApiGet<CalendarResponse>(`/calendar?month=${currentMonth}${roomQuery}`);
-    const nextCalendar = calendarResponse ?? filterDemoCalendar(nextRoomId);
+    const calendarResponse = await safeApiGet<CalendarResponse>(`/calendar?month=${targetMonth}${roomQuery}`);
+    const nextCalendar = calendarResponse ?? filterDemoCalendar(nextRoomId, targetMonth);
 
+    setCalendarMonth(nextCalendar.month);
     setCalendar(nextCalendar);
     setSelectedCalendarDate((currentDate) => {
       if (currentDate && nextCalendar.days.some((day) => day.date === currentDate)) {
@@ -2888,7 +2899,12 @@ function App() {
 
   function changeCalendarRoomFilter(nextRoomId: number | null) {
     setCalendarRoomId(nextRoomId);
-    void loadCalendarActivities(nextRoomId);
+    void loadCalendarActivities(nextRoomId, calendarMonth);
+  }
+
+  function changeCalendarMonth(nextMonth: string) {
+    setCalendarMonth(nextMonth);
+    void loadCalendarActivities(calendarRoomId, nextMonth);
   }
 
   function viewSelectedDateRecords(summaryRoomId?: number) {
@@ -3037,7 +3053,7 @@ function App() {
         setExpandedRoomId(response.roomId);
         setRoomFeedbackModal({
           title: "초대 수락 완료",
-          message: "초대를 수락했습니다. 방 리스트에 새 방이 추가되었습니다.",
+          message: "초대를 수락했습니다. 기록방 목록에 새 방이 추가되었습니다.",
         });
       } else {
         setRoomFeedbackModal({ title: "초대 거절 완료", message: "초대를 거절했습니다." });
@@ -3059,6 +3075,7 @@ function App() {
       name: fallbackDetail.name,
       description: fallbackDetail.description ?? "",
     });
+    setRoomDeleteConfirmName("");
     setRoomSettingsMode("menu");
 
     const response = await safeApiGet<RoomDetail>(`/rooms/${selectedRoom.id}`);
@@ -3069,6 +3086,7 @@ function App() {
       name: response.name,
       description: response.description ?? "",
     });
+    setRoomDeleteConfirmName("");
   }
 
   async function updateRoomInfo() {
@@ -3120,10 +3138,44 @@ function App() {
       await loadCalendarActivities(nextCalendarRoomId);
       setRoomSettingsMode(null);
       setRoomDetail(null);
-      setRoomFeedbackModal({ title: "방 삭제 완료", message: "선택한 방을 삭제했습니다." });
+      setRoomDeleteConfirmName("");
+      setRoomFeedbackModal({ title: "방 삭제 완료", message: "방장 확인 절차를 거쳐 기록방을 삭제했습니다." });
     } catch (error) {
       setRoomSettingsMode(null);
       setRoomFeedbackModal({ title: "방 삭제 실패", message: toMessage(error) });
+    } finally {
+      setRoomActionLoading(false);
+    }
+  }
+
+  async function leaveSelectedRoom() {
+    if (!roomDetail) return;
+
+    setRoomActionLoading(true);
+    setMessage(null);
+    setErrorMessage(null);
+    try {
+      await apiRequest<LeaveRoomResponse>(`/rooms/${roomDetail.id}/members/me`, {
+        method: "DELETE",
+      });
+
+      const leftRoomName = roomDetail.name;
+      const nextRooms = await loadRooms();
+      const nextRoomId = nextRooms[0]?.id ?? null;
+      const nextCalendarRoomId = calendarRoomId === roomDetail.id ? null : calendarRoomId;
+      setSelectedRoomId(nextRoomId);
+      setExpandedRoomId(nextRoomId);
+      setRoomListExpanded(true);
+      setCalendarRoomId(nextCalendarRoomId);
+      setActiveView(nextRoomId ? "rooms" : "home");
+      await loadCalendarActivities(nextCalendarRoomId);
+      setRoomSettingsMode(null);
+      setRoomDetail(null);
+      setRoomDeleteConfirmName("");
+      setRoomFeedbackModal({ title: "방 나가기 완료", message: `${leftRoomName} 방에서 나갔습니다.` });
+    } catch (error) {
+      setRoomSettingsMode(null);
+      setRoomFeedbackModal({ title: "방 나가기 실패", message: toMessage(error) });
     } finally {
       setRoomActionLoading(false);
     }
@@ -3198,13 +3250,17 @@ function App() {
             rooms={rooms}
             latestNotifications={latestNotifications}
             calendar={calendar}
+            calendarMonth={calendarMonth}
             selectedCalendarDate={selectedCalendarDate}
             calendarRoomId={calendarRoomId}
             onOpenNotifications={openNotificationsModal}
             onNotificationClick={handleNotificationClick}
             onCalendarRoomFilter={changeCalendarRoomFilter}
+            onCalendarMonthChange={changeCalendarMonth}
             onCalendarDateSelect={setSelectedCalendarDate}
             onViewDateRecords={viewSelectedDateRecords}
+            onOpenRoom={(roomId) => openRoomHome(roomId)}
+            onOpenRoomList={openRoomListView}
             onOpenProfileEdit={() => setProfileEditOpen(true)}
             onLogout={() => setLogoutOpen(true)}
           />
@@ -3482,11 +3538,14 @@ function App() {
           mode={roomSettingsMode}
           room={roomDetail}
           editForm={roomEditForm}
+          deleteConfirmName={roomDeleteConfirmName}
           loading={roomActionLoading}
           onModeChange={setRoomSettingsMode}
           onEditFormChange={setRoomEditForm}
+          onDeleteConfirmNameChange={setRoomDeleteConfirmName}
           onSave={updateRoomInfo}
           onDelete={deleteSelectedRoom}
+          onLeave={leaveSelectedRoom}
           onClose={() => setRoomSettingsMode(null)}
         />
       ) : null}
@@ -3532,29 +3591,66 @@ function DemoMemberSelectionView({
   members: DemoMemberOption[];
   onSelect: (member: DemoMemberOption) => void;
 }) {
+  const userMembers = members.filter((member) => !isOperatorDemoMember(member));
+  const operatorMember = members.find((member) => isOperatorDemoMember(member));
+  const renderMemberCard = (member: DemoMemberOption, variant: "user" | "operator") => (
+    <button className={`member-select-card ${variant}`} type="button" key={member.id} onClick={() => onSelect(member)}>
+      <span className="member-select-avatar" aria-hidden="true">
+        {member.displayName.slice(0, 1)}
+      </span>
+      <span className="member-select-info">
+        <span className="member-select-role-badge">
+          {variant === "operator" ? "운영자 계정" : "일반 사용자"}
+        </span>
+        <strong>{member.displayName}</strong>
+        <span>아이디 {member.username}</span>
+        <small>{member.roleDescription}</small>
+        <em>{member.roomHint}</em>
+      </span>
+      {variant === "operator" ? <ShieldAlert size={22} /> : <UserRound size={22} />}
+    </button>
+  );
+
   return (
     <main className="member-select-page">
       <section className="member-select-panel" aria-labelledby="member-select-title">
         <div className="member-select-heading">
-          <span className="eyebrow">체험 시작</span>
-          <h1 id="member-select-title">사용자를 선택하세요</h1>
+          <div className="member-select-title-row">
+            <span className="eyebrow">체험 시작</span>
+            <span className="member-select-help" tabIndex={0} aria-label="선택형 로그인 설명">
+              <CircleHelp size={18} aria-hidden="true" />
+              <span className="member-select-help-popover" role="tooltip">
+                심사자가 로그인 절차 없이 사용자별 권한과 화면 차이를 빠르게 확인할 수 있도록 만든 체험용 선택 화면입니다.
+                실제 인증 구현이 아니라 사전 시드된 일반 사용자와 운영자 역할을 전환하는 방식입니다.
+              </span>
+            </span>
+          </div>
+          <h1 id="member-select-title">사용자 유형을 선택하세요</h1>
+          <p>일반 사용자는 기록방을 사용하고 책을 주문합니다. 운영자는 전체 책 주문을 확인하고 상태를 관리합니다.</p>
         </div>
 
-        <div className="member-select-grid">
-          {members.map((member) => (
-            <button className="member-select-card" type="button" key={member.id} onClick={() => onSelect(member)}>
-              <span className="member-select-avatar" aria-hidden="true">
-                {member.displayName.slice(0, 1)}
-              </span>
-              <span className="member-select-info">
-                <strong>{member.displayName}</strong>
-                <span>아이디 {member.username}</span>
-                <small>{member.roleDescription}</small>
-                <em>{member.roomHint}</em>
-              </span>
-              <UserRound size={22} />
-            </button>
-          ))}
+        <div className="member-select-groups">
+          <section className="member-select-group" aria-labelledby="member-user-group-title">
+            <div className="member-select-group-heading">
+              <strong id="member-user-group-title">일반 사용자</strong>
+              <span>기록방 작성, 참여, 책 만들기와 주문 흐름 확인</span>
+            </div>
+            <div className="member-select-grid">
+              {userMembers.map((member) => renderMemberCard(member, "user"))}
+            </div>
+          </section>
+
+          {operatorMember ? (
+            <section className="member-select-group operator" aria-labelledby="member-operator-group-title">
+              <div className="member-select-group-heading">
+                <strong id="member-operator-group-title">운영자</strong>
+                <span>전체 책 주문 조회, CSV 다운로드, 주문 상태 변경 확인</span>
+              </div>
+              <div className="member-select-grid operator">
+                {renderMemberCard(operatorMember, "operator")}
+              </div>
+            </section>
+          ) : null}
         </div>
       </section>
     </main>
@@ -3892,24 +3988,29 @@ function Sidebar({
             <span className="nav-label">홈</span>
           </button>
           <div className={`nav-item-combo ${activeView === "rooms" ? "active" : ""} ${roomListExpanded ? "is-expanded" : ""}`}>
-            <button className="nav-item room-list-nav" type="button" aria-label="방 리스트" onClick={onOpenRoomList}>
+            <button className="nav-item room-list-nav" type="button" aria-label={roomListExpanded ? "기록방 목록 접기" : "기록방 목록 펼치기"} aria-expanded={roomListExpanded} onClick={onToggleRoomList}>
               <List size={18} />
-              <span className="nav-label">방 리스트</span>
+              <span className="nav-label">기록방</span>
               {pendingInvitationCount > 0 ? (
                 <span className="count-badge" aria-label={`대기 중인 초대 ${pendingInvitationCount}개`}>
                   {pendingInvitationCount}
                 </span>
               ) : null}
             </button>
-            <button className="nav-icon-toggle" type="button" aria-label={roomListExpanded ? "방 목록 접기" : "방 목록 펼치기"} aria-expanded={roomListExpanded} onClick={onToggleRoomList}>
+            <button className="nav-icon-toggle" type="button" aria-label={roomListExpanded ? "기록방 목록 접기" : "기록방 목록 펼치기"} aria-expanded={roomListExpanded} onClick={onToggleRoomList}>
               <ChevronDown size={16} />
             </button>
           </div>
 
           <div className={`room-list-tree ${roomListExpanded ? "is-open" : ""}`} aria-hidden={!roomListExpanded}>
+            <button className={`nav-item room-dashboard-link ${activeView === "rooms" ? "active" : ""}`} type="button" tabIndex={roomListExpanded ? 0 : -1} onClick={onOpenRoomList}>
+              <List size={16} />
+              <span className="nav-label">방 관리 대시보드</span>
+            </button>
             {rooms.map((room) => {
-              const isSelected = room.id === selectedRoom?.id;
-              const isExpanded = roomListExpanded && room.id === expandedRoomId && !collapsed;
+              const isRoomContext = activeView !== "home" && activeView !== "rooms";
+              const isSelected = isRoomContext && room.id === selectedRoom?.id;
+              const isExpanded = isSelected && roomListExpanded && room.id === expandedRoomId && !collapsed;
 
               return (
                 <div className={`room-entry ${isSelected ? "selected-room" : ""}`} key={room.id}>
@@ -4022,13 +4123,17 @@ function HomeView({
   rooms,
   latestNotifications,
   calendar,
+  calendarMonth,
   selectedCalendarDate,
   calendarRoomId,
   onOpenNotifications,
   onNotificationClick,
   onCalendarRoomFilter,
+  onCalendarMonthChange,
   onCalendarDateSelect,
   onViewDateRecords,
+  onOpenRoom,
+  onOpenRoomList,
   onOpenProfileEdit,
   onLogout,
 }: {
@@ -4037,16 +4142,23 @@ function HomeView({
   rooms: RoomSummary[];
   latestNotifications: NotificationItem[];
   calendar: CalendarResponse | null;
+  calendarMonth: string;
   selectedCalendarDate: string | null;
   calendarRoomId: number | null;
   onOpenNotifications: () => void;
   onNotificationClick: (notification: NotificationItem) => void;
   onCalendarRoomFilter: (roomId: number | null) => void;
+  onCalendarMonthChange: (month: string) => void;
   onCalendarDateSelect: (date: string) => void;
   onViewDateRecords: (roomId?: number) => void;
+  onOpenRoom: (roomId: number) => void;
+  onOpenRoomList: () => void;
   onOpenProfileEdit: () => void;
   onLogout: () => void;
 }) {
+  const visibleRooms = rooms.slice(0, 4);
+  const hiddenRoomCount = Math.max(rooms.length - visibleRooms.length, 0);
+
   return (
     <>
       <header className="page-header">
@@ -4110,6 +4222,32 @@ function HomeView({
           <NotificationList notifications={latestNotifications.slice(0, 3)} onNotificationClick={onNotificationClick} />
         </article>
 
+        <article className="dashboard-card wide-card home-rooms-card">
+          <div className="panel-heading compact-heading">
+            <div>
+              <span>내 기록방</span>
+              <h2>참여 중인 기록방</h2>
+            </div>
+            <button className="text-button" type="button" onClick={onOpenRoomList}>
+              전체 보기
+            </button>
+          </div>
+          <div className="home-room-grid">
+            {visibleRooms.map((room) => (
+              <button className="home-room-card" type="button" key={room.id} onClick={() => onOpenRoom(room.id)}>
+                <span className="home-room-type">{roomTypeLabel(room.type)}</span>
+                <strong>{room.name}</strong>
+                <span>{room.description ?? "함께 쓰는 기록방"}</span>
+                <div className="home-room-meta">
+                  <span>구성원 {room.memberCount}명</span>
+                  <span>알림 {room.unreadChatCount + room.unreadMemoryCount + room.unreadLetterCount + room.pendingMissionCount}개</span>
+                </div>
+              </button>
+            ))}
+          </div>
+          {hiddenRoomCount > 0 ? <p className="home-room-more">외 {hiddenRoomCount}개 기록방은 방 관리 대시보드에서 확인할 수 있습니다.</p> : null}
+        </article>
+
         <article className="dashboard-card wide-card">
           <div className="panel-heading">
             <div>
@@ -4120,10 +4258,12 @@ function HomeView({
           </div>
           <RecordCalendar
             calendar={calendar}
+            calendarMonth={calendarMonth}
             rooms={rooms}
             selectedDate={selectedCalendarDate}
             selectedRoomId={calendarRoomId}
             onRoomFilter={onCalendarRoomFilter}
+            onMonthChange={onCalendarMonthChange}
             onDateSelect={onCalendarDateSelect}
             onViewRecords={onViewDateRecords}
           />
@@ -4135,23 +4275,31 @@ function HomeView({
 
 function RecordCalendar({
   calendar,
+  calendarMonth,
   rooms,
   selectedDate,
   selectedRoomId,
   onRoomFilter,
+  onMonthChange,
   onDateSelect,
   onViewRecords,
 }: {
   calendar: CalendarResponse | null;
+  calendarMonth: string;
   rooms: RoomSummary[];
   selectedDate: string | null;
   selectedRoomId: number | null;
   onRoomFilter: (roomId: number | null) => void;
+  onMonthChange: (month: string) => void;
   onDateSelect: (date: string) => void;
   onViewRecords: (roomId?: number) => void;
 }) {
   const [selectedSummaryRoomId, setSelectedSummaryRoomId] = useState<number | null>(null);
-  const month = calendar?.month ?? currentMonth;
+  const [calendarPickerMode, setCalendarPickerMode] = useState<"year" | "month" | null>(null);
+  const [draftCalendarYear, setDraftCalendarYear] = useState(() => Number((calendar?.month ?? calendarMonth).slice(0, 4)));
+  const calendarMonthPickerRef = useRef<HTMLDivElement | null>(null);
+  const month = calendar?.month ?? calendarMonth;
+  const [selectedYear, selectedMonth] = month.split("-").map(Number);
   const days = useMemo(() => buildCalendarCells(month), [month]);
   const activityByDate = useMemo(() => new Map((calendar?.days ?? []).map((day) => [day.date, day])), [calendar]);
   const selectedDay = selectedDate ? activityByDate.get(selectedDate) ?? null : null;
@@ -4164,6 +4312,43 @@ function RecordCalendar({
   useEffect(() => {
     setSelectedSummaryRoomId(null);
   }, [selectedDate, selectedRoomId]);
+
+  useEffect(() => {
+    setDraftCalendarYear(selectedYear);
+  }, [selectedYear]);
+
+  useEffect(() => {
+    if (!calendarPickerMode) return;
+
+    function closeCalendarPicker(event: MouseEvent) {
+      if (calendarMonthPickerRef.current?.contains(event.target as Node)) return;
+      setCalendarPickerMode(null);
+    }
+
+    function closeCalendarPickerByEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setCalendarPickerMode(null);
+      }
+    }
+
+    document.addEventListener("mousedown", closeCalendarPicker);
+    document.addEventListener("keydown", closeCalendarPickerByEscape);
+
+    return () => {
+      document.removeEventListener("mousedown", closeCalendarPicker);
+      document.removeEventListener("keydown", closeCalendarPickerByEscape);
+    };
+  }, [calendarPickerMode]);
+
+  const calendarYearOptions = useMemo(
+    () => Array.from({ length: 9 }, (_, index) => draftCalendarYear - 4 + index),
+    [draftCalendarYear],
+  );
+
+  function selectCalendarMonth(nextMonth: number) {
+    onMonthChange(`${draftCalendarYear}-${`${nextMonth}`.padStart(2, "0")}`);
+    setCalendarPickerMode(null);
+  }
 
   return (
     <div className="record-calendar">
@@ -4188,7 +4373,80 @@ function RecordCalendar({
       <div className="calendar-content">
         <div className="calendar-month">
           <div className="calendar-month-header">
-            <strong>{formatMonthLabel(month)}</strong>
+            <div className="calendar-month-title">
+              <strong>{formatMonthLabel(month)}</strong>
+              <span>월을 이동해 이전·다음 기록 흐름을 확인하세요.</span>
+            </div>
+            <div className="calendar-month-controls" aria-label="캘린더 월 이동">
+              <button className="calendar-month-step-button" type="button" onClick={() => onMonthChange(shiftMonthKey(month, -1))}>
+                <ChevronLeft size={16} />
+                이전 달
+              </button>
+              <div className="calendar-month-picker" ref={calendarMonthPickerRef}>
+                <span className="calendar-month-picker-label">연월</span>
+                <button className="calendar-month-value-button" type="button" onClick={() => setCalendarPickerMode("year")}>
+                  {selectedYear}년
+                </button>
+                <button className="calendar-month-value-button" type="button" onClick={() => setCalendarPickerMode("month")}>
+                  {selectedMonth}월
+                </button>
+                <CalendarDays size={16} aria-hidden="true" />
+                {calendarPickerMode ? (
+                  <div className="calendar-month-popover" role="dialog" aria-label="조회할 연월 선택">
+                    {calendarPickerMode === "year" ? (
+                      <>
+                        <div className="calendar-picker-heading">
+                          <button type="button" aria-label="이전 연도 범위" onClick={() => setDraftCalendarYear((year) => year - 9)}>
+                            <ChevronLeft size={16} />
+                          </button>
+                          <strong>연도 선택</strong>
+                          <button type="button" aria-label="다음 연도 범위" onClick={() => setDraftCalendarYear((year) => year + 9)}>
+                            <ChevronRight size={16} />
+                          </button>
+                        </div>
+                        <div className="calendar-year-grid">
+                          {calendarYearOptions.map((year) => (
+                            <button
+                              className={year === selectedYear ? "selected" : ""}
+                              type="button"
+                              key={year}
+                              onClick={() => {
+                                setDraftCalendarYear(year);
+                                setCalendarPickerMode("month");
+                              }}
+                            >
+                              {year}
+                            </button>
+                          ))}
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="calendar-picker-heading month-heading">
+                          <strong>{draftCalendarYear}년 월 선택</strong>
+                        </div>
+                        <div className="calendar-month-grid">
+                          {Array.from({ length: 12 }, (_, index) => index + 1).map((monthValue) => (
+                            <button
+                              className={draftCalendarYear === selectedYear && monthValue === selectedMonth ? "selected" : ""}
+                              type="button"
+                              key={monthValue}
+                              onClick={() => selectCalendarMonth(monthValue)}
+                            >
+                              {monthValue}월
+                            </button>
+                          ))}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                ) : null}
+              </div>
+              <button className="calendar-month-step-button" type="button" onClick={() => onMonthChange(shiftMonthKey(month, 1))}>
+                다음 달
+                <ChevronRight size={16} />
+              </button>
+            </div>
           </div>
           <div className="calendar-weekdays" aria-hidden="true">
             {["일", "월", "화", "수", "목", "금", "토"].map((weekday) => (
@@ -4409,7 +4667,7 @@ function RoomHomeView({
               </div>
               <UsersRound size={24} />
             </div>
-            <p>방 리스트에서 참여 방을 만들거나 초대를 수락해 주세요.</p>
+            <p>방 관리 대시보드에서 참여 방을 만들거나 초대를 수락해 주세요.</p>
           </article>
         </section>
       </>
@@ -4450,11 +4708,15 @@ function RoomHomeView({
 
         <div className="room-home-content">
           <article className="room-chat-preview">
-            <div className="room-section-heading">
+            <div className="room-section-heading room-section-heading-with-action">
               <div className="heading-help-row">
                 <h2>최근 대화</h2>
                 <HelpButton title="최근 대화" message="방 구성원이 남긴 최근 메시지를 확인하고 바로 새 메시지를 남길 수 있습니다." />
               </div>
+              <button className="room-chat-shortcut-button" type="button" onClick={() => onMoveRoomFeature("chat")}>
+                채팅방으로 이동하기
+                <ChevronRight size={15} />
+              </button>
             </div>
             <ChatMessageTimeline messages={messages} loading={loading} compact />
             <div className="chat-input-row compact-chat-input">
@@ -4485,22 +4747,37 @@ function RoomHomeView({
             <div className="room-feature-list">
               <button className="room-feature-card memory" type="button" onClick={() => onMoveRoomFeature("memories")}>
                 <span className="room-feature-icon"><BookImage size={32} /></span>
-                <span>
+                <span className="room-feature-copy">
                   <strong>추억 게시판</strong>
+                  <ul className="room-feature-points">
+                    <li>사진과 글로 추억 업로드</li>
+                    <li>댓글로 함께 회상</li>
+                    <li>책 제작 후보로 활용</li>
+                  </ul>
                 </span>
                 <span aria-hidden="true">›</span>
               </button>
               <button className="room-feature-card mission" type="button" onClick={() => onMoveRoomFeature("missions")}>
                 <span className="room-feature-icon"><BadgeCheck size={32} /></span>
-                <span>
+                <span className="room-feature-copy">
                   <strong>미션 인증</strong>
+                  <ul className="room-feature-points">
+                    <li>기본/커스텀 미션 수행</li>
+                    <li>사진과 글로 인증 기록</li>
+                    <li>동의 상태와 댓글 확인</li>
+                  </ul>
                 </span>
                 <span aria-hidden="true">›</span>
               </button>
               <button className="room-feature-card letter" type="button" onClick={() => onMoveRoomFeature("letters")}>
                 <span className="room-feature-icon"><MailPlus size={32} /></span>
-                <span>
+                <span className="room-feature-copy">
                   <strong>편지</strong>
+                  <ul className="room-feature-points">
+                    <li>한 명에게 보내는 비공개 글</li>
+                    <li>받은 편지와 보낸 편지 구분</li>
+                    <li>책에 담을 편지 선택</li>
+                  </ul>
                 </span>
                 <span aria-hidden="true">›</span>
               </button>
@@ -4580,13 +4857,16 @@ function RoomsView({
     <>
       <header className="page-header">
         <div>
-          <h1>방 리스트</h1>
+          <h1>방 관리 대시보드</h1>
         </div>
       </header>
 
       <section className="room-hub-grid">
         <article className="hub-card room-create-card">
-          <span>새 방 만들기</span>
+          <div className="room-create-heading">
+            <span>새 방 만들기</span>
+            <p>방장이 되어 새로운 기록방을 만들어보세요</p>
+          </div>
           <div className="room-form-grid">
             <label className="field compact-field">
               방 이름
@@ -4646,14 +4926,6 @@ function RoomsView({
           ) : (
             <p>현재 처리할 초대가 없습니다.</p>
           )}
-        </article>
-
-        <article className="hub-card">
-          <div className="hub-card-heading">
-            <span>참여 방</span>
-            <HelpButton title="참여 방" message="현재 선택한 사용자가 참여 중인 방입니다. 방장인 방에서는 사용자를 검색한 뒤 초대 대상을 선택할 수 있습니다." />
-          </div>
-          <strong>{rooms.length}개</strong>
         </article>
       </section>
 
@@ -8370,21 +8642,27 @@ function RoomSettingsModal({
   mode,
   room,
   editForm,
+  deleteConfirmName,
   loading,
   onModeChange,
   onEditFormChange,
+  onDeleteConfirmNameChange,
   onSave,
   onDelete,
+  onLeave,
   onClose,
 }: {
   mode: RoomSettingsMode;
   room: RoomDetail | null;
   editForm: { name: string; description: string };
+  deleteConfirmName: string;
   loading: boolean;
   onModeChange: (mode: RoomSettingsMode) => void;
   onEditFormChange: (form: { name: string; description: string }) => void;
+  onDeleteConfirmNameChange: (value: string) => void;
   onSave: () => void;
   onDelete: () => void;
+  onLeave: () => void;
   onClose: () => void;
 }) {
   const canManage = room?.canManage ?? false;
@@ -8497,29 +8775,57 @@ function RoomSettingsModal({
     );
   }
 
-  if (mode === "delete") {
+  if (mode === "leave") {
+    const deleteConfirmMatched = deleteConfirmName.trim() === room.name;
+
     return (
       <div className="modal-backdrop" role="presentation">
-        <section className="modal room-settings-modal" role="alertdialog" aria-modal="true" aria-labelledby="room-delete-title">
+        <section className="modal room-settings-modal" role="alertdialog" aria-modal="true" aria-labelledby="room-leave-title">
           <div className="modal-title-row">
             <div>
-              <h2 id="room-delete-title">방 삭제</h2>
+              <h2 id="room-leave-title">방 나가기</h2>
             </div>
             <button className="icon-button" type="button" aria-label="닫기" onClick={onClose}>
               <X size={18} />
             </button>
           </div>
-          <div className="delete-warning">
-            <strong>{room.name}</strong>
-            <span>이 방을 삭제하려면 방장 권한이 필요하다.</span>
-          </div>
+          {canManage ? (
+            <>
+              <div className="delete-warning">
+                <strong>{room.name}</strong>
+                <span>방장이 나가면 이 기록방이 삭제되고 모든 멤버가 더 이상 접근할 수 없습니다.</span>
+                <span>실수로 방 전체가 사라지는 일을 막기 위해 방 제목을 정확히 입력해야 합니다.</span>
+              </div>
+              <label className="field">
+                방 제목 확인
+                <input
+                  value={deleteConfirmName}
+                  onChange={(event) => onDeleteConfirmNameChange(event.target.value)}
+                  disabled={loading}
+                  placeholder={room.name}
+                />
+              </label>
+            </>
+          ) : (
+            <div className="delete-warning">
+              <strong>{room.name}</strong>
+              <span>이 방에서 나가면 사이드바와 방 목록에서 보이지 않습니다.</span>
+              <span>내가 남긴 기존 기록은 방 안에 그대로 보관됩니다.</span>
+            </div>
+          )}
           <div className="modal-actions">
             <button className="outline-button" type="button" onClick={() => onModeChange("menu")} disabled={loading}>
-              이전
+              취소
             </button>
-            <button className="danger-button" type="button" onClick={onDelete} disabled={!canManage || loading}>
-              {loading ? "삭제 중" : "삭제"}
-            </button>
+            {canManage ? (
+              <button className="danger-button" type="button" onClick={onDelete} disabled={loading || !deleteConfirmMatched}>
+                {loading ? "삭제 중" : "방 삭제"}
+              </button>
+            ) : (
+              <button className="danger-button" type="button" onClick={onLeave} disabled={loading}>
+                {loading ? "나가는 중" : "확인"}
+              </button>
+            )}
           </div>
         </section>
       </div>
@@ -8550,10 +8856,11 @@ function RoomSettingsModal({
               <strong>방 정보 수정</strong>
             </span>
           </button>
-          <button className="danger-action" type="button" onClick={() => onModeChange("delete")} disabled={!canManage}>
+          <button className="danger-action" type="button" onClick={() => onModeChange("leave")}>
             <ShieldAlert size={22} />
             <span>
-              <strong>방 삭제</strong>
+              <strong>방 나가기</strong>
+              <small>{canManage ? "방장은 제목 확인 후 방 전체가 삭제됩니다." : "내 참여만 종료하고 목록에서 제거합니다."}</small>
             </span>
           </button>
         </div>
@@ -9749,6 +10056,10 @@ function monthDateKey(day: number): string {
   return `${currentMonth}-${`${day}`.padStart(2, "0")}`;
 }
 
+function monthDateKeyFor(month: string, day: number): string {
+  return `${month}-${`${day}`.padStart(2, "0")}`;
+}
+
 function offsetDateKey(offsetDays: number): string {
   const date = new Date();
   date.setDate(date.getDate() + offsetDays);
@@ -9762,6 +10073,19 @@ function toDateKey(date: Date): string {
   const day = `${date.getDate()}`.padStart(2, "0");
 
   return `${year}-${month}-${day}`;
+}
+
+function shiftMonthKey(month: string, offsetMonths: number): string {
+  const [year, monthValue] = month.split("-").map(Number);
+  const date = new Date(year, monthValue - 1 + offsetMonths, 1);
+
+  return toDateKey(date).slice(0, 7);
+}
+
+function daysInMonth(month: string): number {
+  const [year, monthValue] = month.split("-").map(Number);
+
+  return new Date(year, monthValue, 0).getDate();
 }
 
 function buildCalendarCells(month: string): Array<{ date: string | null; dayNumber: number | null }> {
@@ -9856,7 +10180,7 @@ function buildBookPeriodCalendar(calendar: CalendarResponse | null, roomId: numb
     .filter((day) => day.totalCount > 0);
 
   if (days.length === 0 && calendar) {
-    return filterDemoCalendar(roomId);
+    return filterDemoCalendar(roomId, source.month);
   }
 
   return {
@@ -9866,12 +10190,35 @@ function buildBookPeriodCalendar(calendar: CalendarResponse | null, roomId: numb
   };
 }
 
-function filterDemoCalendar(roomId: number | null): CalendarResponse {
-  if (!roomId) {
+function demoCalendarForMonth(month: string): CalendarResponse {
+  if (month === demoCalendar.month) {
     return demoCalendar;
   }
 
+  const maxDay = daysInMonth(month);
   const days = demoCalendar.days
+    .map((day) => {
+      const dayNumber = Number(day.date.slice(8, 10));
+
+      return dayNumber <= maxDay ? { ...day, date: monthDateKeyFor(month, dayNumber) } : null;
+    })
+    .filter((day): day is CalendarDayActivity => Boolean(day));
+
+  return {
+    month,
+    selectedDate: days[0]?.date ?? null,
+    days,
+  };
+}
+
+function filterDemoCalendar(roomId: number | null, month = currentMonth): CalendarResponse {
+  const source = demoCalendarForMonth(month);
+
+  if (!roomId) {
+    return source;
+  }
+
+  const days = source.days
     .map((day) => {
       const rooms = day.rooms.filter((room) => room.roomId === roomId);
       const chatCount = sumCalendarRooms(rooms, "chatCount");
@@ -9892,7 +10239,7 @@ function filterDemoCalendar(roomId: number | null): CalendarResponse {
     .filter((day) => day.totalCount > 0);
 
   return {
-    month: demoCalendar.month,
+    month: source.month,
     selectedDate: days[0]?.date ?? null,
     days,
   };

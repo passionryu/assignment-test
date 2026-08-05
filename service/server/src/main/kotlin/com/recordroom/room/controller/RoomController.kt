@@ -6,6 +6,7 @@ import com.recordroom.room.model.CreateRoomInvitationResponse
 import com.recordroom.room.model.CreateRoomRequest
 import com.recordroom.room.model.CreateRoomResponse
 import com.recordroom.room.model.DeleteRoomResponse
+import com.recordroom.room.model.LeaveRoomResponse
 import com.recordroom.room.model.RoomDetailResponse
 import com.recordroom.room.model.RoomInviteeSearchResponse
 import com.recordroom.room.model.RoomsResponse
@@ -62,6 +63,13 @@ class RoomController(
         @PathVariable roomId: Long,
     ): DeleteRoomResponse =
         roomService.deleteRoom(currentMemberResolver.resolve(rawMemberId), roomId)
+
+    @DeleteMapping("/{roomId}/members/me")
+    fun leaveRoom(
+        @RequestHeader("X-Member-Id", required = false) rawMemberId: String?,
+        @PathVariable roomId: Long,
+    ): LeaveRoomResponse =
+        roomService.leaveRoom(currentMemberResolver.resolve(rawMemberId), roomId)
 
     @GetMapping("/{roomId}/invitation-candidates")
     fun searchInvitationCandidates(

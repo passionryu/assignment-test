@@ -133,7 +133,8 @@ class LocalSeedRunner(
                 (40, 40, 3, 'OWNER'),
                 (41, 41, 4, 'OWNER')
             on conflict (room_id, member_id) do update set
-                role = excluded.role
+                role = excluded.role,
+                left_at = null
             """.trimIndent(),
         )
     }
