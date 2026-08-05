@@ -67,7 +67,7 @@ docker compose -f service/infra/docker-compose.yml down
 | --- |--------|--------------------------------------------------------------------|
 | Lv1 | 완료     | 기록방, 채팅, 추억 게시판, 미션 인증, 편지, 전체 기록 캘린더                              |
 | Lv2 | 완료     | 템플릿 기반 책 만들기, 상품 선택, 미리보기/견적, 주문 생성, 주문 상태/내역, 운영자 주문 관리           |
-| Lv3 | 80% 완료 | 거시적 UI/UX 개선과 README 정리 진행. 최종 E2E, 최종 제출 문서 보강 - Mobile UI 대응 미완료 |
+| Lv3 | 80% 완료 | 거시적, 미시적 UI/UX 개선과 README 정리 진행. 최종 E2E Test, 최종 제출 문서 보강 - Mobile UI 대응 미완료 |
 
 
 ## 4. 사용자 경험(UI/UX) 설계
@@ -238,14 +238,14 @@ assignment-test
 │   │   │   └── evidence/ # 테스트 캡처/로그 등 증빙 파일 모음
 │   │   ├── ...
 │   │   └── issue-32/
-│   └── submission.md          # 제출용 보조 문서 초안
-├── service                    # 실제 애플리케이션 코드
-│   ├── client                 # React/Vite 프론트엔드
-│   │   ├── src                # 화면, 상태, API 클라이언트
+│   └── submission.md          
+├── service                    
+│   ├── client                 
+│   │   ├── src                
 │   │   ├── package.json
 │   │   └── vite.config.ts
-│   ├── server                 # Kotlin/Spring Boot 백엔드
-│   │   ├── src                # 도메인, API, 영속성, seed
+│   ├── server                 
+│   │   ├── src                
 │   │   ├── build.gradle.kts
 │   │   └── gradlew
 │   └── infra                  # Docker Compose와 로컬 실행 인프라
