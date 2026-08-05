@@ -3633,13 +3633,14 @@ function OperatorBookOrdersView({
             showActionFilter={false}
             resultCount={table.filteredOrders.length}
             selectedCount={table.selectedOrders.length}
-            csvDisabled={table.filteredOrders.length === 0}
+            allCsvDisabled={orders.length === 0}
+            filteredCsvDisabled={table.filteredOrders.length === 0}
             onFilterChange={changeFilter}
             onReset={() => {
               table.resetFilters("ALL");
               onStatusFilterChange("ALL");
             }}
-            onDownloadCurrent={() => downloadPrintOrdersCsv("operator-orders-current.csv", table.visibleOrders)}
+            onDownloadAll={() => downloadPrintOrdersCsv("operator-orders-all.csv", orders)}
             onDownloadFiltered={() => downloadPrintOrdersCsv("operator-orders-filtered.csv", table.filteredOrders)}
             onDownloadSelected={() => downloadPrintOrdersCsv("operator-orders-selected.csv", table.selectedOrders)}
           />
@@ -3656,7 +3657,7 @@ function OperatorBookOrdersView({
                 {processableSelectedIds.length}건 다음 상태로
               </button>
               <button className="outline-button" type="button" onClick={() => downloadPrintOrdersCsv("operator-orders-selected.csv", table.selectedOrders)}>
-                선택 항목 CSV
+                선택한 데이터 CSV
               </button>
               <button className="outline-button" type="button" onClick={() => table.setSelectedIds([])}>
                 선택 해제
@@ -7196,10 +7197,11 @@ function OrderTableToolbar({
   showActionFilter = true,
   resultCount,
   selectedCount,
-  csvDisabled,
+  allCsvDisabled,
+  filteredCsvDisabled,
   onFilterChange,
   onReset,
-  onDownloadCurrent,
+  onDownloadAll,
   onDownloadFiltered,
   onDownloadSelected,
 }: {
@@ -7208,27 +7210,28 @@ function OrderTableToolbar({
   showActionFilter?: boolean;
   resultCount: number;
   selectedCount: number;
-  csvDisabled: boolean;
+  allCsvDisabled: boolean;
+  filteredCsvDisabled: boolean;
   onFilterChange: <K extends keyof OrderTableFilters>(key: K, value: OrderTableFilters[K]) => void;
   onReset: () => void;
-  onDownloadCurrent: () => void;
+  onDownloadAll: () => void;
   onDownloadFiltered: () => void;
   onDownloadSelected: () => void;
 }) {
   return (
     <div className="order-table-toolbar">
       <div className="order-table-csv-row">
-        <button type="button" onClick={onDownloadCurrent} disabled={csvDisabled}>
+        <button type="button" onClick={onDownloadAll} disabled={allCsvDisabled}>
           <Download size={16} />
-          현재 화면 CSV
+          전체 데이터 CSV
         </button>
-        <button type="button" onClick={onDownloadFiltered} disabled={csvDisabled}>
+        <button type="button" onClick={onDownloadFiltered} disabled={filteredCsvDisabled}>
           <Download size={16} />
-          필터 전체 CSV
+          필터링 데이터 CSV
         </button>
         <button type="button" onClick={onDownloadSelected} disabled={selectedCount === 0}>
           <Download size={16} />
-          선택 항목 CSV
+          선택한 데이터 CSV
         </button>
       </div>
 
@@ -7616,10 +7619,11 @@ function BookOrdersView({
             showActionFilter={false}
             resultCount={table.filteredOrders.length}
             selectedCount={table.selectedOrders.length}
-            csvDisabled={table.filteredOrders.length === 0}
+            allCsvDisabled={orders.length === 0}
+            filteredCsvDisabled={table.filteredOrders.length === 0}
             onFilterChange={table.updateFilter}
             onReset={() => table.resetFilters()}
-            onDownloadCurrent={() => downloadPrintOrdersCsv(`${csvPrefix}-current.csv`, table.visibleOrders)}
+            onDownloadAll={() => downloadPrintOrdersCsv(`${csvPrefix}-all.csv`, orders)}
             onDownloadFiltered={() => downloadPrintOrdersCsv(`${csvPrefix}-filtered.csv`, table.filteredOrders)}
             onDownloadSelected={() => downloadPrintOrdersCsv(`${csvPrefix}-selected.csv`, table.selectedOrders)}
           />
