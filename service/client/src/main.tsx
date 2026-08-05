@@ -3962,7 +3962,7 @@ function Sidebar({
               <span className="nav-label">방 관리 대시보드</span>
             </button>
             {rooms.map((room) => {
-              const isSelected = room.id === selectedRoom?.id;
+              const isSelected = activeView !== "rooms" && room.id === selectedRoom?.id;
               const isExpanded = roomListExpanded && room.id === expandedRoomId && !collapsed;
 
               return (
