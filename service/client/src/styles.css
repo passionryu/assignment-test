@@ -5086,7 +5086,7 @@ dl {
 
 .book-content-library {
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-rows: auto auto minmax(0, 1fr);
   gap: 14px;
   min-height: 0;
 }
@@ -5239,6 +5239,42 @@ dl {
 
 .book-type-order-item button:disabled {
   opacity: 0.45;
+}
+
+.book-content-bulk-bar {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border: 1px solid #dfe7f2;
+  border-radius: 8px;
+  background: #fbfcff;
+  padding: 10px 12px;
+}
+
+.book-content-select-all {
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: #253248;
+  font-size: 13px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.book-content-select-all input {
+  width: 18px;
+  height: 18px;
+  accent-color: #f04f95;
+}
+
+.book-content-bulk-bar small {
+  color: #667085;
+  font-size: 12px;
+  font-weight: 850;
+  white-space: nowrap;
 }
 
 .book-content-list {
@@ -7709,6 +7745,11 @@ dl {
 
   .book-content-row {
     align-items: stretch;
+  }
+
+  .book-content-bulk-bar {
+    align-items: flex-start;
+    flex-direction: column;
   }
 
   .book-content-checkbox,

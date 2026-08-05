@@ -1961,6 +1961,17 @@ function App() {
     setBookPreview(null);
   }
 
+  function setBookContentsSelected(contents: BookContentCandidate[], selected: boolean) {
+    setSelectedBookContentKeys((current) => {
+      const next = { ...current };
+      contents.forEach((content) => {
+        next[bookContentKey(content)] = selected;
+      });
+      return next;
+    });
+    setBookPreview(null);
+  }
+
   function moveBookContentType(type: BookContentType, direction: "UP" | "DOWN") {
     setBookContentTypeOrder((current) => {
       const index = current.indexOf(type);
@@ -3441,6 +3452,7 @@ function App() {
             onMoveContentType={moveBookContentType}
             onLoadCandidates={loadBookContentCandidates}
             onToggleContent={toggleBookContent}
+            onSetContentsSelected={setBookContentsSelected}
             onOpenContentDetail={openBookContentDetail}
             onCreatePreview={createBookPreview}
             onOpenOrderConfirm={() => setBookOrderConfirmOpen(true)}
@@ -6128,6 +6140,7 @@ function BookCreateView({
   onMoveContentType,
   onLoadCandidates,
   onToggleContent,
+  onSetContentsSelected,
   onOpenContentDetail,
   onCreatePreview,
   onOpenOrderConfirm,
@@ -6167,6 +6180,7 @@ function BookCreateView({
   onMoveContentType: (type: BookContentType, direction: "UP" | "DOWN") => void;
   onLoadCandidates: () => void;
   onToggleContent: (content: BookContentCandidate) => void;
+  onSetContentsSelected: (contents: BookContentCandidate[], selected: boolean) => void;
   onOpenContentDetail: (content: BookContentCandidate) => void;
   onCreatePreview: () => void;
   onOpenOrderConfirm: () => void;
@@ -6406,6 +6420,7 @@ function BookCreateView({
                   onOrderModeChange={onContentOrderModeChange}
                   onMoveContentType={onMoveContentType}
                   onToggleContent={onToggleContent}
+                  onSetContentsSelected={onSetContentsSelected}
                   onOpenContentDetail={onOpenContentDetail}
                 />
               )}
@@ -6602,6 +6617,7 @@ function BookContentLibrary({
   onOrderModeChange,
   onMoveContentType,
   onToggleContent,
+  onSetContentsSelected,
   onOpenContentDetail,
 }: {
   contents: BookContentCandidate[];
@@ -6614,11 +6630,16 @@ function BookContentLibrary({
   onOrderModeChange: (mode: BookContentOrderMode) => void;
   onMoveContentType: (type: BookContentType, direction: "UP" | "DOWN") => void;
   onToggleContent: (content: BookContentCandidate) => void;
+  onSetContentsSelected: (contents: BookContentCandidate[], selected: boolean) => void;
   onOpenContentDetail: (content: BookContentCandidate) => void;
 }) {
   const orderControlsRef = useRef<HTMLDivElement | null>(null);
+  const selectVisibleCheckboxRef = useRef<HTMLInputElement | null>(null);
   const [typeOrderPopoverOpen, setTypeOrderPopoverOpen] = useState(false);
   const typeOrderPopoverId = "book-type-order-popover";
+  const visibleSelectedCount = contents.filter((content) => selectedContentKeys[bookContentKey(content)]).length;
+  const allVisibleSelected = contents.length > 0 && visibleSelectedCount === contents.length;
+  const partiallyVisibleSelected = visibleSelectedCount > 0 && visibleSelectedCount < contents.length;
 
   useEffect(() => {
     if (!typeOrderPopoverOpen) return;
@@ -6638,6 +6659,11 @@ function BookContentLibrary({
       setTypeOrderPopoverOpen(false);
     }
   }, [orderMode]);
+
+  useEffect(() => {
+    if (!selectVisibleCheckboxRef.current) return;
+    selectVisibleCheckboxRef.current.indeterminate = partiallyVisibleSelected;
+  }, [partiallyVisibleSelected]);
 
   return (
     <section className="book-content-library" aria-label="책 기록 라이브러리">
@@ -6724,27 +6750,41 @@ function BookContentLibrary({
       {contents.length === 0 ? (
         <div className="book-empty-state compact">표시할 기록이 없습니다.</div>
       ) : (
-        <div className="book-content-list">
-          {contents.map((content) => {
-            const selected = Boolean(selectedContentKeys[bookContentKey(content)]);
+        <>
+          <div className="book-content-bulk-bar">
+            <label className="book-content-select-all">
+              <input
+                ref={selectVisibleCheckboxRef}
+                type="checkbox"
+                checked={allVisibleSelected}
+                onChange={() => onSetContentsSelected(contents, !allVisibleSelected)}
+              />
+              <span>현재 목록 전체 선택</span>
+            </label>
+            <small>{visibleSelectedCount}개 선택됨 · 표시 중 {contents.length}개</small>
+          </div>
+          <div className="book-content-list">
+            {contents.map((content) => {
+              const selected = Boolean(selectedContentKeys[bookContentKey(content)]);
 
-            return (
-              <article className={`book-content-row ${selected ? "selected" : ""}`} key={bookContentKey(content)}>
-                <label className="book-content-checkbox" aria-label={`${content.title} 선택`}>
-                  <input type="checkbox" checked={selected} onChange={() => onToggleContent(content)} />
-                </label>
-                <button className="book-content-detail-button" type="button" onClick={() => onOpenContentDetail(content)}>
-                  <strong>{content.title}</strong>
-                  <small>{content.sourceLabel} · {formatDateLabel(content.occurredDate)} · {content.authorName}</small>
-                  <em>{content.description}</em>
-                </button>
-                <span className="book-page-allocation" title={bookPageAllocationTooltip()} aria-label={`예상 ${content.pageCount}페이지 할당. ${bookPageAllocationTooltip()}`}>
-                  {content.pageCount}p 할당
-                </span>
-              </article>
-            );
-          })}
-        </div>
+              return (
+                <article className={`book-content-row ${selected ? "selected" : ""}`} key={bookContentKey(content)}>
+                  <label className="book-content-checkbox" aria-label={`${content.title} 선택`}>
+                    <input type="checkbox" checked={selected} onChange={() => onToggleContent(content)} />
+                  </label>
+                  <button className="book-content-detail-button" type="button" onClick={() => onOpenContentDetail(content)}>
+                    <strong>{content.title}</strong>
+                    <small>{content.sourceLabel} · {formatDateLabel(content.occurredDate)} · {content.authorName}</small>
+                    <em>{content.description}</em>
+                  </button>
+                  <span className="book-page-allocation" title={bookPageAllocationTooltip()} aria-label={`예상 ${content.pageCount}페이지 할당. ${bookPageAllocationTooltip()}`}>
+                    {content.pageCount}p 할당
+                  </span>
+                </article>
+              );
+            })}
+          </div>
+        </>
       )}
     </section>
   );
