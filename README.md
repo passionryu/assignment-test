@@ -114,9 +114,9 @@ docker compose -f service/infra/docker-compose.yml down
 <details>
 <summary>홈/전체 기록 캘린더 화면 - 참여 기록방 요약과 날짜별 기록 흐름을 함께 확인하는 화면</summary>
 
-| 데스크톱 화면 캡처 |
-| --- |
-| <img src="docs/assets/readme/screenshots/home-calendar.png" alt="홈/전체 기록 캘린더 화면" width="430"> <img src="img.png" alt="추가 캡처" width="430"> |
+| 데스크톱 화면 캡처 | 추가 화면 캡처 |
+| --- | --- |
+| <img src="docs/assets/readme/screenshots/home-calendar.png" alt="홈/전체 기록 캘린더 화면" width="420"> | <img src="img.png" alt="홈 추가 캡처" width="420"> |
 
 </details>
 
@@ -168,9 +168,9 @@ docker compose -f service/infra/docker-compose.yml down
 <details>
 <summary>주문 상태/주문 상세 모달 화면 - 주문 목록에서 진행 단계와 상태 이력, 주문 상세를 확인하는 화면</summary>
 
-| 데스크톱 화면 캡처 |
-| --- |
-| <img src="docs/assets/readme/screenshots/order-detail-modal.png" alt="주문 상태/주문 상세 모달 화면" width="430"> <img src="img_1.png" alt="추가 캡처" width="430"> |
+| 데스크톱 화면 캡처 | 추가 화면 캡처 |
+| --- | --- |
+| <img src="docs/assets/readme/screenshots/order-detail-modal.png" alt="주문 상태/주문 상세 모달 화면" width="420"> | <img src="img_1.png" alt="주문 상세 추가 캡처" width="420"> |
 
 </details>
 
