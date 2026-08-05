@@ -7312,7 +7312,6 @@ function PrintOrderDataTable({
             <th scope="col">상품/페이지</th>
             <th scope="col">수량</th>
             <th scope="col">금액</th>
-            <th scope="col">상세</th>
           </tr>
         </thead>
         <tbody>
@@ -7342,7 +7341,6 @@ function PrintOrderDataTable({
               <td>{order.product.displayName} · {order.estimatedPageCount}p</td>
               <td>{order.quantity}권</td>
               <td><b>{formatCurrency(order.totalPrice)}</b></td>
-              <td><button type="button" onClick={() => onOpenOrder(order.id)}>보기</button></td>
             </tr>
           ))}
         </tbody>
