@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Issue 36 Final E2E QA Report</title>
+  <style>
+    body { margin: 0; padding: 40px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #253047; background: #f5f7fb; }
+    main { max-width: 1180px; margin: 0 auto; }
+    h1 { margin: 0 0 8px; font-size: 32px; }
+    .summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin: 24px 0; }
+    .card { padding: 18px; border: 1px solid #dfe7f3; border-radius: 10px; background: #fff; }
+    .card span { display: block; color: #66738a; font-size: 13px; }
+    .card strong { display: block; margin-top: 6px; font-size: 26px; }
+    table { width: 100%; border-collapse: collapse; overflow: hidden; border-radius: 10px; background: #fff; }
+    th, td { padding: 13px 14px; border-bottom: 1px solid #e7edf6; text-align: left; vertical-align: top; }
+    th { color: #56627a; background: #f9fbfe; font-size: 13px; }
+    tr.pass strong { color: #079b8f; }
+    tr.fail strong { color: #e64b88; }
+    pre { white-space: pre-wrap; margin: 0; max-width: 420px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
+    a { color: #0a9ca4; font-weight: 700; }
+    .note { line-height: 1.65; color: #526078; }
+  </style>
+</head>
+<body>
+  <main>
+    <p class="note">Issue 36 · 최종 E2E Test</p>
+    <h1>Roomory 해피패스 스모크 테스트 리포트</h1>
+    <p class="note">깊은 엣지 케이스 대신 로그인, 홈, 방 관리, 기록 기능, 책 제작, 주문 조회, 운영자 주문 관리까지 주요 사용자 흐름을 빠르게 훑었습니다. 생성 시각: 2026. 8. 5. 오후 11:26:52</p>
+    <section class="summary">
+      <div class="card"><span>대상 URL</span><strong>http://127.0.0.1:5173/</strong></div>
+      <div class="card"><span>총 시나리오</span><strong>13</strong></div>
+      <div class="card"><span>통과</span><strong>9</strong></div>
+      <div class="card"><span>실패</span><strong>4</strong></div>
+    </section>
+    <table>
+      <thead>
+        <tr><th>결과</th><th>검증 항목</th><th>소요</th><th>증적</th><th>비고</th></tr>
+      </thead>
+      <tbody>
+    <tr class="pass">
+      <td><strong>PASS</strong></td>
+      <td>일반 사용자 로그인과 메인 페이지</td>
+      <td>735ms</td>
+      <td><a href="evidence/01-일반-사용자-로그인과-메인-페이지.png">스크린샷</a></td>
+      <td><pre>-</pre></td>
+    </tr>
+  
+    <tr class="pass">
+      <td><strong>PASS</strong></td>
+      <td>홈 캘린더 월 이동</td>
+      <td>126ms</td>
+      <td><a href="evidence/02-홈-캘린더-월-이동.png">스크린샷</a></td>
+      <td><pre>-</pre></td>
+    </tr>
+  
+    <tr class="pass">
+      <td><strong>PASS</strong></td>
+      <td>방 관리 대시보드</td>
+      <td>283ms</td>
+      <td><a href="evidence/03-방-관리-대시보드.png">스크린샷</a></td>
+      <td><pre>-</pre></td>
+    </tr>
+  
+    <tr class="pass">
+      <td><strong>PASS</strong></td>
+      <td>방 홈과 주요 기능 카드</td>
+      <td>284ms</td>
+      <td><a href="evidence/04-방-홈과-주요-기능-카드.png">스크린샷</a></td>
+      <td><pre>-</pre></td>
+    </tr>
+  
+    <tr class="pass">
+      <td><strong>PASS</strong></td>
+      <td>채팅 해피패스</td>
+      <td>341ms</td>
+      <td><a href="evidence/05-채팅-해피패스.png">스크린샷</a></td>
+      <td><pre>-</pre></td>
+    </tr>
+  
+    <tr class="pass">
+      <td><strong>PASS</strong></td>
+      <td>추억 게시판 진입</td>
+      <td>280ms</td>
+      <td><a href="evidence/06-추억-게시판-진입.png">스크린샷</a></td>
+      <td><pre>-</pre></td>
+    </tr>
+  
+    <tr class="pass">
+      <td><strong>PASS</strong></td>
+      <td>미션 인증 진입과 집계</td>
+      <td>278ms</td>
+      <td><a href="evidence/07-미션-인증-진입과-집계.png">스크린샷</a></td>
+      <td><pre>-</pre></td>
+    </tr>
+  
+    <tr class="pass">
+      <td><strong>PASS</strong></td>
+      <td>편지 진입</td>
+      <td>264ms</td>
+      <td><a href="evidence/08-편지-진입.png">스크린샷</a></td>
+      <td><pre>-</pre></td>
+    </tr>
+  
+    <tr class="pass">
+      <td><strong>PASS</strong></td>
+      <td>상품 안내 페이지</td>
+      <td>288ms</td>
+      <td><a href="evidence/09-상품-안내-페이지.png">스크린샷</a></td>
+      <td><pre>-</pre></td>
+    </tr>
+  
+    <tr class="fail">
+      <td><strong>FAIL</strong></td>
+      <td>책 만들기 미리보기 생성</td>
+      <td>8412ms</td>
+      <td><a href="evidence/10-책-만들기-미리보기-생성.png">스크린샷</a></td>
+      <td><pre>locator.waitFor: Timeout 8000ms exceeded.
+Call log:
+[2m  - waiting for locator('main').getByText('인쇄 상품을 선택하세요').first() to be visible[22m
+</pre></td>
+    </tr>
+  
+    <tr class="fail">
+      <td><strong>FAIL</strong></td>
+      <td>주문 상태 테이블과 상세 모달</td>
+      <td>10388ms</td>
+      <td><a href="evidence/11-주문-상태-테이블과-상세-모달.png">스크린샷</a></td>
+      <td><pre>locator.waitFor: Timeout 10000ms exceeded.
+Call log:
+[2m  - waiting for locator('main .order-data-table tbody tr').first() to be visible[22m
+</pre></td>
+    </tr>
+  
+    <tr class="fail">
+      <td><strong>FAIL</strong></td>
+      <td>주문 내역 테이블과 상세 모달</td>
+      <td>10382ms</td>
+      <td><a href="evidence/12-주문-내역-테이블과-상세-모달.png">스크린샷</a></td>
+      <td><pre>locator.waitFor: Timeout 10000ms exceeded.
+Call log:
+[2m  - waiting for locator('main .order-data-table tbody tr').first() to be visible[22m
+</pre></td>
+    </tr>
+  
+    <tr class="fail">
+      <td><strong>FAIL</strong></td>
+      <td>운영자 로그인과 주문 관리</td>
+      <td>10563ms</td>
+      <td><a href="evidence/13-운영자-로그인과-주문-관리.png">스크린샷</a></td>
+      <td><pre>locator.waitFor: Timeout 10000ms exceeded.
+Call log:
+[2m  - waiting for locator('main .order-data-table tbody tr').first() to be visible[22m
+</pre></td>
+    </tr>
+  </tbody>
+    </table>
+  </main>
+</body>
+</html>
