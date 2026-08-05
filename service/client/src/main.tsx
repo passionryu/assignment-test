@@ -4799,7 +4799,10 @@ function RoomsView({
 
       <section className="room-hub-grid">
         <article className="hub-card room-create-card">
-          <span>새 방 만들기</span>
+          <div className="room-create-heading">
+            <span>새 방 만들기</span>
+            <p>방장이 되어 새로운 기록방을 만들어보세요</p>
+          </div>
           <div className="room-form-grid">
             <label className="field compact-field">
               방 이름

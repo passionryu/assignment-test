@@ -3667,6 +3667,20 @@ dl {
   min-height: 250px;
 }
 
+.room-create-card {
+  gap: 14px;
+}
+
+.room-create-heading {
+  display: grid;
+  gap: 4px;
+  margin-bottom: 4px;
+}
+
+.room-create-heading p {
+  margin: 0;
+}
+
 .room-form-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 150px;
