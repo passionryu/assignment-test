@@ -4860,14 +4860,6 @@ function RoomsView({
             <p>현재 처리할 초대가 없습니다.</p>
           )}
         </article>
-
-        <article className="hub-card">
-          <div className="hub-card-heading">
-            <span>참여 방</span>
-            <HelpButton title="참여 방" message="현재 선택한 사용자가 참여 중인 방입니다. 방장인 방에서는 사용자를 검색한 뒤 초대 대상을 선택할 수 있습니다." />
-          </div>
-          <strong>{rooms.length}개</strong>
-        </article>
       </section>
 
       <section className="joined-room-list">

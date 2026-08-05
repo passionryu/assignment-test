@@ -660,11 +660,12 @@ dl {
 }
 
 .room-dashboard-link {
-  min-height: 38px;
+  min-height: 42px;
   margin-left: 14px;
   padding: 0 12px;
   color: #dfe8f6;
-  font-size: 13px;
+  font-size: 15px;
+  font-weight: 800;
 }
 
 .room-dashboard-link svg {
@@ -685,6 +686,8 @@ dl {
   justify-content: flex-start;
   min-height: 42px;
   padding: 0 12px;
+  font-size: 13px;
+  font-weight: 700;
 }
 
 .room-list-item span {
@@ -3629,7 +3632,7 @@ dl {
 
 .room-hub-grid {
   display: grid;
-  grid-template-columns: 1.25fr 1.45fr 0.9fr;
+  grid-template-columns: minmax(360px, 0.9fr) minmax(0, 1.55fr);
   gap: 16px;
   margin-bottom: 18px;
 }
@@ -3701,8 +3704,9 @@ dl {
 }
 
 .pending-invitation-item {
-  display: flex;
-  align-items: center;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: stretch;
   justify-content: space-between;
   gap: 12px;
   border: 1px solid #e4ebf5;
@@ -3728,6 +3732,10 @@ dl {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+.pending-invitation-item .inline-actions {
+  align-items: stretch;
 }
 
 .invite-inline-form {
