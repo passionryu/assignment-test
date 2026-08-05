@@ -188,12 +188,8 @@ docker compose -f service/infra/docker-compose.yml down
 
 ### 기술 선택 근거
 
-작성 예정: 최종 제출 전 작성자 관점에서 프론트엔드, 백엔드, DB 선택 근거를 보강합니다.
-
-현재 1차 정리 기준:
-
 - React/Vite: 실무와 학부에서 반복 사용한 스택이라 UI 구현을 빠르게 진행할 수 있어 채택함
-- Kotlin/Spring Boot: 실무/학부 과제에서 REST API와 JPA 기반 서버를 많이 다뤄 과제 범위에 맞춰 안정적으로 구현하기 쉬워 채택함
+- Kotlin/Spring Boot: 실무에서 REST API와 JPA 기반 서버를 많이 다뤄 과제 범위에 맞춰 안정적으로 구현하기 쉬워 채택함
 - PostgreSQL/Flyway: 관계형 데이터 관리와 마이그레이션 경험이 있어 팀 협업처럼 유지보수 가능한 구조를 빠르게 구성할 수 있어 채택함
 - Docker Compose: 실무 운영/과제 실행 환경에서 동일 조건 재현이 쉬워 심사 환경에서 재현성이 높기 때문에 채택함
 
