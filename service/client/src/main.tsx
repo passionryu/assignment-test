@@ -1245,6 +1245,7 @@ function App() {
   const [allNotifications, setAllNotifications] = useState<NotificationItem[]>([]);
   const [pendingInvitations, setPendingInvitations] = useState<PendingRoomInvitation[]>([]);
   const [calendar, setCalendar] = useState<CalendarResponse | null>(null);
+  const [calendarMonth, setCalendarMonth] = useState(currentMonth);
   const [selectedCalendarDate, setSelectedCalendarDate] = useState<string | null>(null);
   const [calendarRoomId, setCalendarRoomId] = useState<number | null>(null);
   const [pendingInvitationCount, setPendingInvitationCount] = useState(0);
@@ -1478,6 +1479,7 @@ function App() {
     setAllNotifications([]);
     setPendingInvitations([]);
     setCalendar(null);
+    setCalendarMonth(currentMonth);
     setSelectedCalendarDate(null);
     setCalendarRoomId(null);
     setPendingInvitationCount(0);
@@ -1578,8 +1580,10 @@ function App() {
       setPendingInvitations(fallbackInvitations);
       setLatestNotifications(fallbackNotifications.filter(isHomeNotification).slice(0, 3));
       setAllNotifications(fallbackNotifications.filter(isHomeNotification));
-      setCalendar(demoCalendar);
-      setSelectedCalendarDate(demoCalendar.selectedDate ?? demoCalendar.days[0]?.date ?? null);
+      const fallbackCalendar = filterDemoCalendar(null, currentMonth);
+      setCalendarMonth(fallbackCalendar.month);
+      setCalendar(fallbackCalendar);
+      setSelectedCalendarDate(fallbackCalendar.selectedDate ?? fallbackCalendar.days[0]?.date ?? null);
       setPendingInvitationCount(fallbackInvitations.length);
       setProfileForm({
         displayName: fallbackProfile.displayName,
@@ -1667,11 +1671,12 @@ function App() {
     setPendingInvitations(response?.items ?? []);
   }
 
-  async function loadCalendarActivities(nextRoomId: number | null) {
+  async function loadCalendarActivities(nextRoomId: number | null, targetMonth = calendarMonth) {
     const roomQuery = nextRoomId ? `&roomId=${nextRoomId}` : "";
-    const calendarResponse = await safeApiGet<CalendarResponse>(`/calendar?month=${currentMonth}${roomQuery}`);
-    const nextCalendar = calendarResponse ?? filterDemoCalendar(nextRoomId);
+    const calendarResponse = await safeApiGet<CalendarResponse>(`/calendar?month=${targetMonth}${roomQuery}`);
+    const nextCalendar = calendarResponse ?? filterDemoCalendar(nextRoomId, targetMonth);
 
+    setCalendarMonth(nextCalendar.month);
     setCalendar(nextCalendar);
     setSelectedCalendarDate((currentDate) => {
       if (currentDate && nextCalendar.days.some((day) => day.date === currentDate)) {
@@ -2888,7 +2893,12 @@ function App() {
 
   function changeCalendarRoomFilter(nextRoomId: number | null) {
     setCalendarRoomId(nextRoomId);
-    void loadCalendarActivities(nextRoomId);
+    void loadCalendarActivities(nextRoomId, calendarMonth);
+  }
+
+  function changeCalendarMonth(nextMonth: string) {
+    setCalendarMonth(nextMonth);
+    void loadCalendarActivities(calendarRoomId, nextMonth);
   }
 
   function viewSelectedDateRecords(summaryRoomId?: number) {
@@ -3198,11 +3208,13 @@ function App() {
             rooms={rooms}
             latestNotifications={latestNotifications}
             calendar={calendar}
+            calendarMonth={calendarMonth}
             selectedCalendarDate={selectedCalendarDate}
             calendarRoomId={calendarRoomId}
             onOpenNotifications={openNotificationsModal}
             onNotificationClick={handleNotificationClick}
             onCalendarRoomFilter={changeCalendarRoomFilter}
+            onCalendarMonthChange={changeCalendarMonth}
             onCalendarDateSelect={setSelectedCalendarDate}
             onViewDateRecords={viewSelectedDateRecords}
             onOpenProfileEdit={() => setProfileEditOpen(true)}
@@ -4059,11 +4071,13 @@ function HomeView({
   rooms,
   latestNotifications,
   calendar,
+  calendarMonth,
   selectedCalendarDate,
   calendarRoomId,
   onOpenNotifications,
   onNotificationClick,
   onCalendarRoomFilter,
+  onCalendarMonthChange,
   onCalendarDateSelect,
   onViewDateRecords,
   onOpenProfileEdit,
@@ -4074,11 +4088,13 @@ function HomeView({
   rooms: RoomSummary[];
   latestNotifications: NotificationItem[];
   calendar: CalendarResponse | null;
+  calendarMonth: string;
   selectedCalendarDate: string | null;
   calendarRoomId: number | null;
   onOpenNotifications: () => void;
   onNotificationClick: (notification: NotificationItem) => void;
   onCalendarRoomFilter: (roomId: number | null) => void;
+  onCalendarMonthChange: (month: string) => void;
   onCalendarDateSelect: (date: string) => void;
   onViewDateRecords: (roomId?: number) => void;
   onOpenProfileEdit: () => void;
@@ -4157,10 +4173,12 @@ function HomeView({
           </div>
           <RecordCalendar
             calendar={calendar}
+            calendarMonth={calendarMonth}
             rooms={rooms}
             selectedDate={selectedCalendarDate}
             selectedRoomId={calendarRoomId}
             onRoomFilter={onCalendarRoomFilter}
+            onMonthChange={onCalendarMonthChange}
             onDateSelect={onCalendarDateSelect}
             onViewRecords={onViewDateRecords}
           />
@@ -4172,23 +4190,27 @@ function HomeView({
 
 function RecordCalendar({
   calendar,
+  calendarMonth,
   rooms,
   selectedDate,
   selectedRoomId,
   onRoomFilter,
+  onMonthChange,
   onDateSelect,
   onViewRecords,
 }: {
   calendar: CalendarResponse | null;
+  calendarMonth: string;
   rooms: RoomSummary[];
   selectedDate: string | null;
   selectedRoomId: number | null;
   onRoomFilter: (roomId: number | null) => void;
+  onMonthChange: (month: string) => void;
   onDateSelect: (date: string) => void;
   onViewRecords: (roomId?: number) => void;
 }) {
   const [selectedSummaryRoomId, setSelectedSummaryRoomId] = useState<number | null>(null);
-  const month = calendar?.month ?? currentMonth;
+  const month = calendar?.month ?? calendarMonth;
   const days = useMemo(() => buildCalendarCells(month), [month]);
   const activityByDate = useMemo(() => new Map((calendar?.days ?? []).map((day) => [day.date, day])), [calendar]);
   const selectedDay = selectedDate ? activityByDate.get(selectedDate) ?? null : null;
@@ -4225,7 +4247,35 @@ function RecordCalendar({
       <div className="calendar-content">
         <div className="calendar-month">
           <div className="calendar-month-header">
-            <strong>{formatMonthLabel(month)}</strong>
+            <div className="calendar-month-title">
+              <strong>{formatMonthLabel(month)}</strong>
+              <span>월을 이동해 이전·다음 기록 흐름을 확인하세요.</span>
+            </div>
+            <div className="calendar-month-controls" aria-label="캘린더 월 이동">
+              <button type="button" onClick={() => onMonthChange(shiftMonthKey(month, -1))}>
+                <ChevronLeft size={16} />
+                이전
+              </button>
+              <label className="calendar-month-picker">
+                <span>연월</span>
+                <input
+                  type="month"
+                  value={month}
+                  onChange={(event) => {
+                    if (event.target.value) {
+                      onMonthChange(event.target.value);
+                    }
+                  }}
+                />
+              </label>
+              <button type="button" onClick={() => onMonthChange(currentMonth)}>
+                오늘
+              </button>
+              <button type="button" onClick={() => onMonthChange(shiftMonthKey(month, 1))}>
+                다음
+                <ChevronRight size={16} />
+              </button>
+            </div>
           </div>
           <div className="calendar-weekdays" aria-hidden="true">
             {["일", "월", "화", "수", "목", "금", "토"].map((weekday) => (
@@ -9786,6 +9836,10 @@ function monthDateKey(day: number): string {
   return `${currentMonth}-${`${day}`.padStart(2, "0")}`;
 }
 
+function monthDateKeyFor(month: string, day: number): string {
+  return `${month}-${`${day}`.padStart(2, "0")}`;
+}
+
 function offsetDateKey(offsetDays: number): string {
   const date = new Date();
   date.setDate(date.getDate() + offsetDays);
@@ -9799,6 +9853,19 @@ function toDateKey(date: Date): string {
   const day = `${date.getDate()}`.padStart(2, "0");
 
   return `${year}-${month}-${day}`;
+}
+
+function shiftMonthKey(month: string, offsetMonths: number): string {
+  const [year, monthValue] = month.split("-").map(Number);
+  const date = new Date(year, monthValue - 1 + offsetMonths, 1);
+
+  return toDateKey(date).slice(0, 7);
+}
+
+function daysInMonth(month: string): number {
+  const [year, monthValue] = month.split("-").map(Number);
+
+  return new Date(year, monthValue, 0).getDate();
 }
 
 function buildCalendarCells(month: string): Array<{ date: string | null; dayNumber: number | null }> {
@@ -9893,7 +9960,7 @@ function buildBookPeriodCalendar(calendar: CalendarResponse | null, roomId: numb
     .filter((day) => day.totalCount > 0);
 
   if (days.length === 0 && calendar) {
-    return filterDemoCalendar(roomId);
+    return filterDemoCalendar(roomId, source.month);
   }
 
   return {
@@ -9903,12 +9970,35 @@ function buildBookPeriodCalendar(calendar: CalendarResponse | null, roomId: numb
   };
 }
 
-function filterDemoCalendar(roomId: number | null): CalendarResponse {
-  if (!roomId) {
+function demoCalendarForMonth(month: string): CalendarResponse {
+  if (month === demoCalendar.month) {
     return demoCalendar;
   }
 
+  const maxDay = daysInMonth(month);
   const days = demoCalendar.days
+    .map((day) => {
+      const dayNumber = Number(day.date.slice(8, 10));
+
+      return dayNumber <= maxDay ? { ...day, date: monthDateKeyFor(month, dayNumber) } : null;
+    })
+    .filter((day): day is CalendarDayActivity => Boolean(day));
+
+  return {
+    month,
+    selectedDate: days[0]?.date ?? null,
+    days,
+  };
+}
+
+function filterDemoCalendar(roomId: number | null, month = currentMonth): CalendarResponse {
+  const source = demoCalendarForMonth(month);
+
+  if (!roomId) {
+    return source;
+  }
+
+  const days = source.days
     .map((day) => {
       const rooms = day.rooms.filter((room) => room.roomId === roomId);
       const chatCount = sumCalendarRooms(rooms, "chatCount");
@@ -9929,7 +10019,7 @@ function filterDemoCalendar(roomId: number | null): CalendarResponse {
     .filter((day) => day.totalCount > 0);
 
   return {
-    month: demoCalendar.month,
+    month: source.month,
     selectedDate: days[0]?.date ?? null,
     days,
   };
