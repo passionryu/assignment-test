@@ -3138,6 +3138,7 @@ function App() {
           onAdvanceStatus={advanceOperatorOrderStatus}
           onAdvanceSelectedStatuses={advanceSelectedOperatorOrderStatuses}
           onOpenCancel={() => setOperatorCancelOrderOpen(true)}
+          onCloseOrderDetail={() => setOperatorSelectedOrder(null)}
           onLogout={logoutToMemberSelection}
         />
 
@@ -3558,6 +3559,7 @@ function OperatorBookOrdersView({
   onAdvanceStatus,
   onAdvanceSelectedStatuses,
   onOpenCancel,
+  onCloseOrderDetail,
   onLogout,
 }: {
   operator: DemoMemberOption;
@@ -3574,6 +3576,7 @@ function OperatorBookOrdersView({
   onAdvanceStatus: () => void;
   onAdvanceSelectedStatuses: (orderIds: number[]) => void;
   onOpenCancel: () => void;
+  onCloseOrderDetail: () => void;
   onLogout: () => void;
 }) {
   const table = useOrderTableState(orders, statusFilter, operatorOrderActionFilter);
@@ -3623,6 +3626,7 @@ function OperatorBookOrdersView({
           <OrderTableToolbar
             filters={table.filters}
             actionFilterLabel={table.actionFilterLabel}
+            showActionFilter={false}
             resultCount={table.filteredOrders.length}
             selectedCount={table.selectedOrders.length}
             csvDisabled={table.filteredOrders.length === 0}
@@ -3667,126 +3671,147 @@ function OperatorBookOrdersView({
             onOpenOrder={onOpenOrder}
           />
         </aside>
+      </section>
 
-        <OperatorOrderDetailPanel
+      {detailLoading || selectedOrder ? (
+        <OperatorOrderDetailModal
           order={selectedOrder}
           detailLoading={detailLoading}
           actionLoading={actionLoading}
           onAdvanceStatus={onAdvanceStatus}
           onOpenCancel={onOpenCancel}
+          onClose={onCloseOrderDetail}
         />
-      </section>
+      ) : null}
     </main>
   );
 }
 
-function OperatorOrderDetailPanel({
+function OperatorOrderDetailModal({
   order,
   detailLoading,
   actionLoading,
   onAdvanceStatus,
   onOpenCancel,
+  onClose,
 }: {
   order: PrintOrderDetail | null;
   detailLoading: boolean;
   actionLoading: boolean;
   onAdvanceStatus: () => void;
   onOpenCancel: () => void;
+  onClose: () => void;
 }) {
   if (detailLoading) {
     return (
-      <aside className="operator-order-detail-panel">
-        <div className="book-empty-state">주문 상세를 불러오는 중입니다.</div>
-      </aside>
+      <div className="modal-backdrop" role="presentation">
+        <section className="modal operator-order-detail-modal" role="dialog" aria-modal="true" aria-labelledby="operator-order-detail-title">
+          <div className="modal-title-row">
+            <div>
+              <h2 id="operator-order-detail-title">주문 상세</h2>
+              <p>주문 상세를 불러오는 중입니다.</p>
+            </div>
+            <button className="icon-button" type="button" onClick={onClose} aria-label="닫기">
+              <X size={18} />
+            </button>
+          </div>
+          <div className="book-empty-state">주문 상세를 불러오는 중입니다.</div>
+        </section>
+      </div>
     );
   }
 
   if (!order) {
-    return (
-      <aside className="operator-order-detail-panel">
-        <div className="book-empty-state">주문을 선택하면 상세 스냅샷과 상태 변경 버튼이 표시됩니다.</div>
-      </aside>
-    );
+    return null;
   }
 
   const nextStatus = nextPrintOrderStatus(order.status);
 
   return (
-    <aside className="operator-order-detail-panel">
-      <div className="book-order-detail-header">
-        <span className={`book-order-status-badge ${printOrderStatusTone(order.status)}`}>{order.statusLabel}</span>
-        <h2>{order.title}</h2>
-        <p>{order.orderNo}</p>
-      </div>
+    <div className="modal-backdrop" role="presentation">
+      <section className="modal operator-order-detail-modal" role="dialog" aria-modal="true" aria-labelledby="operator-order-detail-title">
+        <div className="modal-title-row">
+          <div>
+            <span className={`book-order-status-badge ${printOrderStatusTone(order.status)}`}>{order.statusLabel}</span>
+            <h2 id="operator-order-detail-title">{order.title}</h2>
+            <p>{order.orderNo}</p>
+          </div>
+          <button className="icon-button" type="button" onClick={onClose} aria-label="닫기" disabled={actionLoading}>
+            <X size={18} />
+          </button>
+        </div>
 
-      <dl className="book-order-detail-list">
-        <div>
-          <dt>주문자</dt>
-          <dd>{order.memberName}</dd>
-        </div>
-        <div>
-          <dt>방</dt>
-          <dd>{order.roomName}</dd>
-        </div>
-        <div>
-          <dt>상품</dt>
-          <dd>{order.product.displayName}</dd>
-        </div>
-        <div>
-          <dt>기간</dt>
-          <dd>{formatDateLabel(order.period.startDate)} ~ {formatDateLabel(order.period.endDate)}</dd>
-        </div>
-        <div>
-          <dt>페이지/수량</dt>
-          <dd>{order.estimatedPageCount}p · {order.quantity}권</dd>
-        </div>
-        <div className="total">
-          <dt>총액</dt>
-          <dd>{formatCurrency(order.totalPrice)}</dd>
-        </div>
-      </dl>
-
-      <div className="operator-order-actions">
-        <button className="primary-button" type="button" onClick={onAdvanceStatus} disabled={!nextStatus || actionLoading}>
-          {nextStatus ? `다음 상태: ${printOrderStatusLabel(nextStatus)}` : "다음 상태 없음"}
-        </button>
-        <button className="danger-button" type="button" onClick={onOpenCancel} disabled={!canCancelPrintOrder(order.status) || actionLoading}>
-          주문 취소
-        </button>
-      </div>
-
-      {order.cancelReason ? (
-        <div className="book-order-cancel-reason">
-          <strong>취소 사유</strong>
-          <p>{order.cancelReason}</p>
-        </div>
-      ) : null}
-
-      <div className="book-order-subsection">
-        <h3>담긴 콘텐츠</h3>
-        <div className="book-order-content-list">
-          {order.contents.map((content) => (
-            <div key={`${content.type}-${content.sourceId}-${content.sortOrder}`}>
-              <strong>{content.title}</strong>
-              <small>{bookContentTypeLabel(content.type)} · {formatDateLabel(content.occurredDate)} · {content.pageCount}p</small>
+        <div className="operator-order-detail-body">
+          <dl className="book-order-detail-list">
+            <div>
+              <dt>주문자</dt>
+              <dd>{order.memberName}</dd>
             </div>
-          ))}
-        </div>
-      </div>
-
-      <div className="book-order-subsection">
-        <h3>상태 이력</h3>
-        <div className="book-order-history-list">
-          {order.statusHistories.map((history) => (
-            <div key={history.id}>
-              <strong>{history.nextStatusLabel}</strong>
-              <small>{formatDateTimeLabel(history.changedAt)}</small>
-              {history.memo ? <p>{history.memo}</p> : null}
+            <div>
+              <dt>방</dt>
+              <dd>{order.roomName}</dd>
             </div>
-          ))}
+            <div>
+              <dt>상품</dt>
+              <dd>{order.product.displayName}</dd>
+            </div>
+            <div>
+              <dt>기간</dt>
+              <dd>{formatDateLabel(order.period.startDate)} ~ {formatDateLabel(order.period.endDate)}</dd>
+            </div>
+            <div>
+              <dt>페이지/수량</dt>
+              <dd>{order.estimatedPageCount}p · {order.quantity}권</dd>
+            </div>
+            <div className="total">
+              <dt>총액</dt>
+              <dd>{formatCurrency(order.totalPrice)}</dd>
+            </div>
+          </dl>
+
+          <div className="operator-order-actions">
+            <button className="primary-button" type="button" onClick={onAdvanceStatus} disabled={!nextStatus || actionLoading}>
+              {nextStatus ? `다음 상태: ${printOrderStatusLabel(nextStatus)}` : "다음 상태 없음"}
+            </button>
+            <button className="danger-button" type="button" onClick={onOpenCancel} disabled={!canCancelPrintOrder(order.status) || actionLoading}>
+              주문 취소
+            </button>
+          </div>
+
+          {order.cancelReason ? (
+            <div className="book-order-cancel-reason">
+              <strong>취소 사유</strong>
+              <p>{order.cancelReason}</p>
+            </div>
+          ) : null}
+
+          <div className="book-order-subsection">
+            <h3>담긴 콘텐츠</h3>
+            <div className="book-order-content-list">
+              {order.contents.map((content) => (
+                <div key={`${content.type}-${content.sourceId}-${content.sortOrder}`}>
+                  <strong>{content.title}</strong>
+                  <small>{bookContentTypeLabel(content.type)} · {formatDateLabel(content.occurredDate)} · {content.pageCount}p</small>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="book-order-subsection">
+            <h3>상태 이력</h3>
+            <div className="book-order-history-list">
+              {order.statusHistories.map((history) => (
+                <div key={history.id}>
+                  <strong>{history.nextStatusLabel}</strong>
+                  <small>{formatDateTimeLabel(history.changedAt)}</small>
+                  {history.memo ? <p>{history.memo}</p> : null}
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
-      </div>
-    </aside>
+      </section>
+    </div>
   );
 }
 
@@ -6980,6 +7005,7 @@ function filterAndSortPrintOrders(
 function OrderTableToolbar({
   filters,
   actionFilterLabel,
+  showActionFilter = true,
   resultCount,
   selectedCount,
   csvDisabled,
@@ -6991,6 +7017,7 @@ function OrderTableToolbar({
 }: {
   filters: OrderTableFilters;
   actionFilterLabel: string;
+  showActionFilter?: boolean;
   resultCount: number;
   selectedCount: number;
   csvDisabled: boolean;
@@ -7063,15 +7090,17 @@ function OrderTableToolbar({
             ))}
           </select>
         </label>
-        <label className="order-toggle-field">
-          <input
-            type="checkbox"
-            checked={filters.onlyCancelable}
-            onChange={(event) => onFilterChange("onlyCancelable", event.target.checked)}
-          />
-          {actionFilterLabel}
-        </label>
-        <button className="outline-button" type="button" onClick={onReset}>
+        {showActionFilter ? (
+          <label className="order-toggle-field">
+            <input
+              type="checkbox"
+              checked={filters.onlyCancelable}
+              onChange={(event) => onFilterChange("onlyCancelable", event.target.checked)}
+            />
+            {actionFilterLabel}
+          </label>
+        ) : null}
+        <button className="outline-button order-filter-reset-button" type="button" onClick={onReset}>
           필터 초기화
         </button>
       </div>

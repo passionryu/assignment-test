@@ -190,7 +190,7 @@ dl {
   max-width: 1280px;
   margin: 0 auto;
   display: grid;
-  grid-template-columns: minmax(0, 1.4fr) minmax(340px, 0.8fr);
+  grid-template-columns: 1fr;
   gap: 18px;
   align-items: stretch;
 }
@@ -213,6 +213,10 @@ dl {
 .operator-order-detail-panel {
   max-height: min(760px, calc(100vh - 220px));
   overflow-y: auto;
+}
+
+.operator-order-list-panel {
+  max-height: none;
 }
 
 .operator-filter-field {
@@ -5611,6 +5615,14 @@ dl {
   align-self: end;
 }
 
+.order-table-filter-grid > .order-filter-reset-button {
+  width: fit-content;
+  min-height: 38px;
+  align-self: end;
+  padding: 0 14px;
+  font-size: 13px;
+}
+
 .order-table-result-row {
   display: flex;
   align-items: center;
@@ -5710,6 +5722,44 @@ dl {
 .order-data-table td button:focus-visible {
   border-color: #0c9fa8;
   outline: none;
+}
+
+.operator-order-detail-modal {
+  width: min(760px, 100%);
+  max-height: min(820px, calc(100vh - 40px));
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  overflow: hidden;
+}
+
+.operator-order-detail-modal .modal-title-row {
+  margin-bottom: 16px;
+}
+
+.operator-order-detail-modal .modal-title-row > div {
+  display: grid;
+  gap: 8px;
+}
+
+.operator-order-detail-modal .modal-title-row h2 {
+  color: #253248;
+  font-size: 26px;
+  line-height: 1.25;
+}
+
+.operator-order-detail-modal .modal-title-row p {
+  margin: 0;
+  color: #667085;
+  font-size: 14px;
+  font-weight: 850;
+}
+
+.operator-order-detail-body {
+  min-height: 0;
+  display: grid;
+  gap: 18px;
+  overflow-y: auto;
+  padding-right: 4px;
 }
 
 .book-order-card {
