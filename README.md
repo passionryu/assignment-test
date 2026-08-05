@@ -74,9 +74,9 @@ docker compose -f service/infra/docker-compose.yml down
 
 ### 타깃 사용자
 
-- 가입 절차 없이 서비스를 바로 확인해야 하는 과제 심사자
-- 방 단위로 여러 사람의 기록을 모으고 싶은 일반 사용자
-- 책 주문 요청과 상태 관리를 확인해야 하는 운영자 역할 사용자
+- 커플
+- 가족
+- 학급/동아리
 
 ### 핵심 화면/흐름
 
@@ -254,12 +254,11 @@ assignment-test
 │   │   └── gradlew
 │   └── infra                  # Docker Compose와 로컬 실행 인프라
 │       └── docker-compose.yml
-├── test-results               # Playwright 등 자동 검증 산출물
-│   └── playwright
-└── tmp                        # 로컬 임시 파일. 제출 판단 근거에는 사용하지 않음
 ```
 ## 6. AI 도구 사용 내역
 
+다음 설계도와 같이 6개의 AI Agent들을 사전 정의하고, Github Kanban 보드에 정의된 Work-Flow를 강제로 따르게 하였습니다.   
+이 중 PM/PO 에이전트는 오케스트레이터 에이전트로, 개발자와 상호작용하며 모든 에이전트들을 통제합니다.   
 
 ![AI Agent System](docs/agents/assets/agent-system-architecture.png)
 
