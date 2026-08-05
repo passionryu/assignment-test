@@ -659,6 +659,18 @@ dl {
   transform: translateY(0);
 }
 
+.room-dashboard-link {
+  min-height: 38px;
+  margin-left: 14px;
+  padding: 0 12px;
+  color: #dfe8f6;
+  font-size: 13px;
+}
+
+.room-dashboard-link svg {
+  color: #94a6bd;
+}
+
 .room-entry {
   display: grid;
   gap: 4px;
@@ -1064,6 +1076,84 @@ dl {
 
 .latest-notification-card {
   min-height: 310px;
+}
+
+.home-rooms-card {
+  display: grid;
+  gap: 18px;
+}
+
+.home-room-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.home-room-card {
+  min-height: 132px;
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  padding: 16px;
+  border: 1px solid #e4ebf5;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #253248;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color 0.16s ease,
+    box-shadow 0.16s ease,
+    transform 0.16s ease;
+}
+
+.home-room-card:hover {
+  border-color: #0ea5ad;
+  box-shadow: 0 14px 28px rgba(37, 50, 72, 0.08);
+  transform: translateY(-1px);
+}
+
+.home-room-type {
+  color: #f04f95;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.home-room-card strong {
+  overflow: hidden;
+  color: #253248;
+  font-size: 18px;
+  font-weight: 900;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.home-room-card > span:not(.home-room-type) {
+  min-height: 34px;
+  color: #667085;
+  font-size: 13px;
+  font-weight: 750;
+  line-height: 1.45;
+}
+
+.home-room-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.home-room-meta span {
+  min-height: 28px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 10px;
+  border-radius: 8px;
+  background: #f7f9fc;
+  color: #667085;
+  font-size: 12px;
+  font-weight: 900;
 }
 
 .compact-heading {
@@ -7273,6 +7363,7 @@ dl {
   .password-fields,
   .notification-grid,
   .metric-grid,
+  .home-room-grid,
   .room-hub-grid,
   .book-product-grid,
   .book-preview-grid,
@@ -7423,6 +7514,7 @@ dl {
   .notification-grid,
   .password-fields,
   .metric-grid,
+  .home-room-grid,
   .room-hub-grid,
   .book-stepper,
   .book-product-grid,

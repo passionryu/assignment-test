@@ -3047,7 +3047,7 @@ function App() {
         setExpandedRoomId(response.roomId);
         setRoomFeedbackModal({
           title: "초대 수락 완료",
-          message: "초대를 수락했습니다. 방 리스트에 새 방이 추가되었습니다.",
+          message: "초대를 수락했습니다. 기록방 목록에 새 방이 추가되었습니다.",
         });
       } else {
         setRoomFeedbackModal({ title: "초대 거절 완료", message: "초대를 거절했습니다." });
@@ -3217,6 +3217,7 @@ function App() {
             onCalendarMonthChange={changeCalendarMonth}
             onCalendarDateSelect={setSelectedCalendarDate}
             onViewDateRecords={viewSelectedDateRecords}
+            onOpenRoom={(roomId) => openRoomHome(roomId)}
             onOpenProfileEdit={() => setProfileEditOpen(true)}
             onLogout={() => setLogoutOpen(true)}
           />
@@ -3941,21 +3942,25 @@ function Sidebar({
             <span className="nav-label">홈</span>
           </button>
           <div className={`nav-item-combo ${activeView === "rooms" ? "active" : ""} ${roomListExpanded ? "is-expanded" : ""}`}>
-            <button className="nav-item room-list-nav" type="button" aria-label="방 리스트" onClick={onOpenRoomList}>
+            <button className="nav-item room-list-nav" type="button" aria-label={roomListExpanded ? "기록방 목록 접기" : "기록방 목록 펼치기"} aria-expanded={roomListExpanded} onClick={onToggleRoomList}>
               <List size={18} />
-              <span className="nav-label">방 리스트</span>
+              <span className="nav-label">기록방</span>
               {pendingInvitationCount > 0 ? (
                 <span className="count-badge" aria-label={`대기 중인 초대 ${pendingInvitationCount}개`}>
                   {pendingInvitationCount}
                 </span>
               ) : null}
             </button>
-            <button className="nav-icon-toggle" type="button" aria-label={roomListExpanded ? "방 목록 접기" : "방 목록 펼치기"} aria-expanded={roomListExpanded} onClick={onToggleRoomList}>
+            <button className="nav-icon-toggle" type="button" aria-label={roomListExpanded ? "기록방 목록 접기" : "기록방 목록 펼치기"} aria-expanded={roomListExpanded} onClick={onToggleRoomList}>
               <ChevronDown size={16} />
             </button>
           </div>
 
           <div className={`room-list-tree ${roomListExpanded ? "is-open" : ""}`} aria-hidden={!roomListExpanded}>
+            <button className={`nav-item room-dashboard-link ${activeView === "rooms" ? "active" : ""}`} type="button" tabIndex={roomListExpanded ? 0 : -1} onClick={onOpenRoomList}>
+              <List size={16} />
+              <span className="nav-label">방 관리 대시보드</span>
+            </button>
             {rooms.map((room) => {
               const isSelected = room.id === selectedRoom?.id;
               const isExpanded = roomListExpanded && room.id === expandedRoomId && !collapsed;
@@ -4080,6 +4085,7 @@ function HomeView({
   onCalendarMonthChange,
   onCalendarDateSelect,
   onViewDateRecords,
+  onOpenRoom,
   onOpenProfileEdit,
   onLogout,
 }: {
@@ -4097,6 +4103,7 @@ function HomeView({
   onCalendarMonthChange: (month: string) => void;
   onCalendarDateSelect: (date: string) => void;
   onViewDateRecords: (roomId?: number) => void;
+  onOpenRoom: (roomId: number) => void;
   onOpenProfileEdit: () => void;
   onLogout: () => void;
 }) {
@@ -4161,6 +4168,29 @@ function HomeView({
           </div>
 
           <NotificationList notifications={latestNotifications.slice(0, 3)} onNotificationClick={onNotificationClick} />
+        </article>
+
+        <article className="dashboard-card wide-card home-rooms-card">
+          <div className="panel-heading compact-heading">
+            <div>
+              <span>내 기록방</span>
+              <h2>참여 중인 기록방</h2>
+            </div>
+            <UsersRound size={24} />
+          </div>
+          <div className="home-room-grid">
+            {rooms.map((room) => (
+              <button className="home-room-card" type="button" key={room.id} onClick={() => onOpenRoom(room.id)}>
+                <span className="home-room-type">{roomTypeLabel(room.type)}</span>
+                <strong>{room.name}</strong>
+                <span>{room.description ?? "함께 쓰는 기록방"}</span>
+                <div className="home-room-meta">
+                  <span>구성원 {room.memberCount}명</span>
+                  <span>알림 {room.unreadChatCount + room.unreadMemoryCount + room.unreadLetterCount + room.pendingMissionCount}개</span>
+                </div>
+              </button>
+            ))}
+          </div>
         </article>
 
         <article className="dashboard-card wide-card">
@@ -4582,7 +4612,7 @@ function RoomHomeView({
               </div>
               <UsersRound size={24} />
             </div>
-            <p>방 리스트에서 참여 방을 만들거나 초대를 수락해 주세요.</p>
+            <p>방 관리 대시보드에서 참여 방을 만들거나 초대를 수락해 주세요.</p>
           </article>
         </section>
       </>
@@ -4753,7 +4783,7 @@ function RoomsView({
     <>
       <header className="page-header">
         <div>
-          <h1>방 리스트</h1>
+          <h1>방 관리 대시보드</h1>
         </div>
       </header>
 
