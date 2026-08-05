@@ -3804,6 +3804,8 @@ function PrintOrderDetailModal({
 
           <OrderStatusProgress order={order} />
 
+          <OrderStatusEventList histories={order.statusHistories} />
+
           <div className="book-order-subsection">
             <div className="order-detail-section-heading">
               <h3>담긴 콘텐츠 미리보기</h3>
@@ -3811,8 +3813,6 @@ function PrintOrderDetailModal({
             </div>
             <BookTemplatePreviewViewer preview={preview} className="print-order-preview-viewer" />
           </div>
-
-          <OrderStatusEventList histories={order.statusHistories} />
         </div>
       </section>
     </div>
