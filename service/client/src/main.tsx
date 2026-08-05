@@ -4778,7 +4778,6 @@ function RoomHomeView({
                   <ul className="room-feature-points">
                     <li>사진과 글로 추억 업로드</li>
                     <li>댓글로 함께 회상</li>
-                    <li>책 제작 후보로 활용</li>
                   </ul>
                 </span>
                 <span aria-hidden="true">›</span>
@@ -4802,7 +4801,6 @@ function RoomHomeView({
                   <ul className="room-feature-points">
                     <li>한 명에게 보내는 비공개 글</li>
                     <li>받은 편지와 보낸 편지 구분</li>
-                    <li>책에 담을 편지 선택</li>
                   </ul>
                 </span>
                 <span aria-hidden="true">›</span>
