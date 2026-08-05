@@ -5714,8 +5714,12 @@ function MissionBoardView({
   const selectedMission = missions.find((mission) => mission.id === submissionForm.missionId) ?? missions[0] ?? null;
   const uploadInputId = `mission-image-upload-${selectedRoom?.id ?? "none"}`;
   const requiredApprovalCount = selectedRoom ? requiredMissionApprovals(selectedRoom.type, selectedRoom.memberCount) : 0;
-  const inProgressMissionCount = missions.filter((mission) => mission.latestSubmission && mission.status !== "COMPLETED").length;
-  const waitingApprovalMissionCount = missions.filter((mission) => mission.status === "WAITING_APPROVAL").length;
+  const inProgressMissionCount = missions.filter(
+    (mission) => mission.latestSubmission && missionDisplayStatus(mission) === "IN_PROGRESS",
+  ).length;
+  const waitingApprovalMissionCount = missions.filter(
+    (mission) => mission.latestSubmission && missionDisplayStatus(mission) === "WAITING_APPROVAL",
+  ).length;
 
   useEffect(() => {
     if (!selectedMission || submissionForm.missionId === selectedMission.id) return;
@@ -5782,7 +5786,7 @@ function MissionBoardView({
               <div className="mission-card-grid">
                 {!loading && missions.length === 0 ? <p className="empty-state">아직 미션이 없습니다.</p> : null}
                 {missions.map((mission) => {
-                  const visibleStatus = mission.latestSubmission ? mission.status : null;
+                  const visibleStatus = mission.latestSubmission ? missionDisplayStatus(mission) : null;
 
                   return (
                     <button
@@ -5836,8 +5840,8 @@ function MissionBoardView({
                 {selectedMission.latestSubmission ? (
                   <section className="mission-proof-card">
                     <div className="mission-proof-heading">
-                      <span className={`mission-status ${selectedMission.status.toLowerCase().replace("_", "-")}`}>
-                        {missionStatusLabel(selectedMission.status)}
+                      <span className={`mission-status ${missionDisplayStatus(selectedMission).toLowerCase().replace("_", "-")}`}>
+                        {missionStatusLabel(missionDisplayStatus(selectedMission))}
                       </span>
                       <small>{formatDateLabel(selectedMission.latestSubmission.occurredDate)}</small>
                     </div>
@@ -9844,6 +9848,14 @@ function missionStatusLabel(status: MissionStatus): string {
   if (status === "COMPLETED") return "완료";
   if (status === "WAITING_APPROVAL") return "승인 대기";
   return "진행 중";
+}
+
+function missionDisplayStatus(mission: MissionSummary): MissionStatus {
+  if (mission.status !== "COMPLETED" && mission.latestSubmission?.canApprove) {
+    return "WAITING_APPROVAL";
+  }
+
+  return mission.status;
 }
 
 function missionProgressRate(roomType: RoomSummary["type"], approvedCount: number, totalMemberCount: number): number {
