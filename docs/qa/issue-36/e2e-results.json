@@ -1,0 +1,97 @@
+{
+  "generatedAt": "2026. 8. 5. 오후 11:26:52",
+  "baseUrl": "http://127.0.0.1:5173/",
+  "results": [
+    {
+      "name": "일반 사용자 로그인과 메인 페이지",
+      "status": "PASS",
+      "durationMs": 735,
+      "screenshot": "evidence/01-일반-사용자-로그인과-메인-페이지.png",
+      "error": ""
+    },
+    {
+      "name": "홈 캘린더 월 이동",
+      "status": "PASS",
+      "durationMs": 126,
+      "screenshot": "evidence/02-홈-캘린더-월-이동.png",
+      "error": ""
+    },
+    {
+      "name": "방 관리 대시보드",
+      "status": "PASS",
+      "durationMs": 283,
+      "screenshot": "evidence/03-방-관리-대시보드.png",
+      "error": ""
+    },
+    {
+      "name": "방 홈과 주요 기능 카드",
+      "status": "PASS",
+      "durationMs": 284,
+      "screenshot": "evidence/04-방-홈과-주요-기능-카드.png",
+      "error": ""
+    },
+    {
+      "name": "채팅 해피패스",
+      "status": "PASS",
+      "durationMs": 341,
+      "screenshot": "evidence/05-채팅-해피패스.png",
+      "error": ""
+    },
+    {
+      "name": "추억 게시판 진입",
+      "status": "PASS",
+      "durationMs": 280,
+      "screenshot": "evidence/06-추억-게시판-진입.png",
+      "error": ""
+    },
+    {
+      "name": "미션 인증 진입과 집계",
+      "status": "PASS",
+      "durationMs": 278,
+      "screenshot": "evidence/07-미션-인증-진입과-집계.png",
+      "error": ""
+    },
+    {
+      "name": "편지 진입",
+      "status": "PASS",
+      "durationMs": 264,
+      "screenshot": "evidence/08-편지-진입.png",
+      "error": ""
+    },
+    {
+      "name": "상품 안내 페이지",
+      "status": "PASS",
+      "durationMs": 288,
+      "screenshot": "evidence/09-상품-안내-페이지.png",
+      "error": ""
+    },
+    {
+      "name": "책 만들기 미리보기 생성",
+      "status": "FAIL",
+      "durationMs": 8412,
+      "screenshot": "evidence/10-책-만들기-미리보기-생성.png",
+      "error": "locator.waitFor: Timeout 8000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('main').getByText('인쇄 상품을 선택하세요').first() to be visible\u001b[22m\n"
+    },
+    {
+      "name": "주문 상태 테이블과 상세 모달",
+      "status": "FAIL",
+      "durationMs": 10388,
+      "screenshot": "evidence/11-주문-상태-테이블과-상세-모달.png",
+      "error": "locator.waitFor: Timeout 10000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('main .order-data-table tbody tr').first() to be visible\u001b[22m\n"
+    },
+    {
+      "name": "주문 내역 테이블과 상세 모달",
+      "status": "FAIL",
+      "durationMs": 10382,
+      "screenshot": "evidence/12-주문-내역-테이블과-상세-모달.png",
+      "error": "locator.waitFor: Timeout 10000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('main .order-data-table tbody tr').first() to be visible\u001b[22m\n"
+    },
+    {
+      "name": "운영자 로그인과 주문 관리",
+      "status": "FAIL",
+      "durationMs": 10563,
+      "screenshot": "evidence/13-운영자-로그인과-주문-관리.png",
+      "error": "locator.waitFor: Timeout 10000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('main .order-data-table tbody tr').first() to be visible\u001b[22m\n"
+    }
+  ]
+}

@@ -2136,21 +2136,14 @@ dl {
 .chat-page {
   height: min(720px, calc(100vh - 185px));
   min-height: 520px;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 360px;
-  gap: 22px;
-  align-items: stretch;
+  display: block;
 }
 
-.chat-window,
-.chat-search-panel {
+.chat-window {
   border: 1px solid #dfe7f2;
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.96);
   box-shadow: 0 18px 48px rgba(49, 70, 107, 0.1);
-}
-
-.chat-window {
   height: 100%;
   min-height: 0;
   display: grid;
@@ -2180,6 +2173,42 @@ dl {
 
 .chat-window-header svg {
   color: #f04f95;
+}
+
+.chat-header-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.chat-search-trigger {
+  display: inline-flex;
+  min-height: 38px;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid #dfe7f2;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #253248;
+  padding: 0 12px;
+  font-size: 13px;
+  font-weight: 900;
+  transition:
+    border-color 0.18s ease,
+    box-shadow 0.18s ease,
+    transform 0.18s ease;
+}
+
+.chat-search-trigger svg {
+  color: #0c9fa8;
+}
+
+.chat-search-trigger:hover,
+.chat-search-trigger:focus-visible {
+  border-color: #0c9fa8;
+  box-shadow: 0 0 0 3px rgba(12, 159, 168, 0.12);
+  outline: none;
+  transform: translateY(-1px);
 }
 
 .chat-message-area {
@@ -2316,14 +2345,6 @@ dl {
   box-shadow: 0 0 0 3px rgba(240, 79, 149, 0.13);
 }
 
-.chat-search-panel {
-  height: 100%;
-  min-height: 0;
-  display: grid;
-  grid-template-rows: auto auto minmax(0, 1fr);
-  padding: 24px;
-}
-
 .chat-search-form {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 86px;
@@ -2385,6 +2406,26 @@ dl {
   font-size: 13px;
   font-weight: 800;
   line-height: 1.45;
+}
+
+.chat-search-modal {
+  width: min(620px, 100%);
+  max-height: min(680px, calc(100vh - 40px));
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  overflow: hidden;
+}
+
+.chat-search-modal .chat-search-form {
+  margin-bottom: 16px;
+}
+
+.modal-kicker {
+  display: block;
+  margin-bottom: 6px;
+  color: #0c9fa8;
+  font-size: 13px;
+  font-weight: 950;
 }
 
 .memory-page {
@@ -3744,7 +3785,7 @@ dl {
 .room-hub-grid {
   display: grid;
   grid-template-columns: minmax(360px, 0.9fr) minmax(0, 1.55fr);
-  align-items: start;
+  align-items: stretch;
   gap: 16px;
   margin-bottom: 18px;
 }
@@ -3776,6 +3817,7 @@ dl {
 
 .room-create-card,
 .invitation-card {
+  height: 100%;
   min-height: 0;
   padding: 18px 20px;
 }
@@ -4006,6 +4048,44 @@ dl {
 .invite-inline-form.is-disabled button {
   cursor: not-allowed;
   opacity: 0.58;
+}
+
+.invite-action-tooltip-wrap {
+  position: relative;
+  display: inline-flex;
+  flex: 0 0 auto;
+}
+
+.invite-action-tooltip {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 8px);
+  width: max-content;
+  max-width: 240px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #253248;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 850;
+  line-height: 1.4;
+  box-shadow: 0 12px 30px rgba(37, 50, 72, 0.22);
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(4px);
+  transition:
+    opacity 0.16s ease,
+    transform 0.16s ease,
+    visibility 0.16s ease;
+  pointer-events: none;
+  z-index: 20;
+}
+
+.invite-action-tooltip-wrap:hover .invite-action-tooltip,
+.invite-action-tooltip-wrap:focus-within .invite-action-tooltip {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
 }
 
 .invitee-card {
