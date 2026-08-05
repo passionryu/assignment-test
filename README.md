@@ -192,10 +192,10 @@ docker compose -f service/infra/docker-compose.yml down
 
 현재 1차 정리 기준:
 
-- React/Vite: 빠른 화면 개발과 로컬 검증에 적합
-- Kotlin/Spring Boot: REST API, 트랜잭션, JPA 기반 도메인 구현에 적합
-- PostgreSQL/Flyway: 관계형 데이터와 마이그레이션 이력 관리에 적합
-- Docker Compose: 심사자가 동일한 방식으로 실행하기 쉽게 구성
+- React/Vite: 실무와 학부에서 반복 사용한 스택이라 UI 구현을 빠르게 진행할 수 있어 채택함
+- Kotlin/Spring Boot: 실무/학부 과제에서 REST API와 JPA 기반 서버를 많이 다뤄 과제 범위에 맞춰 안정적으로 구현하기 쉬워 채택함
+- PostgreSQL/Flyway: 관계형 데이터 관리와 마이그레이션 경험이 있어 팀 협업처럼 유지보수 가능한 구조를 빠르게 구성할 수 있어 채택함
+- Docker Compose: 실무 운영/과제 실행 환경에서 동일 조건 재현이 쉬워 심사 환경에서 재현성이 높기 때문에 채택함
 
 ### 디렉터리 구조
 
@@ -281,9 +281,9 @@ assignment-test
 ![AI Agent System](docs/agents/assets/agent-system-architecture.png)
 
 | AI 도구 | 활용 내용 |
-|  | --- |
+| --- | --- |
 | Codex | Multi-Agent 시스템 가동, 개발 |
-| Perflexity | 자료 조사, 기존 서비스 벤치마킹 |
+| Perplexity | 자료 조사, 기존 서비스 벤치마킹 |
 | GPT | 기타 AI 작업 |
 
 작성 예정: AI가 만든 결과를 그대로 사용하지 않고 어떤 부분을 검토/수정했는지 보강합니다.
