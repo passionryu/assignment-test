@@ -5728,6 +5728,61 @@ dl {
   outline: none;
 }
 
+.order-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border: 1px solid #e4ebf5;
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 10px 12px;
+  color: #667085;
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.order-pagination > div {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.order-pagination button {
+  min-width: 34px;
+  min-height: 34px;
+  border: 1px solid #dfe7f2;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #536176;
+  padding: 0 10px;
+  font-size: 13px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.order-pagination button:hover:not(:disabled),
+.order-pagination button:focus-visible {
+  border-color: #0c9fa8;
+  color: #0b7780;
+  box-shadow: 0 0 0 3px rgba(12, 159, 168, 0.12);
+  outline: none;
+}
+
+.order-pagination button.active {
+  border-color: #0c9fa8;
+  background: #0c9fa8;
+  color: #ffffff;
+}
+
+.order-pagination button:disabled {
+  background: #f6f8fb;
+  color: #a9b4c4;
+  cursor: not-allowed;
+}
+
 .print-order-detail-modal {
   width: min(1180px, 100%);
   max-height: min(880px, calc(100vh - 40px));
@@ -7009,6 +7064,15 @@ dl {
 
   .order-table-filter-grid label.wide {
     grid-column: 1 / -1;
+  }
+
+  .order-pagination {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .order-pagination > div {
+    justify-content: flex-start;
   }
 
   .order-status-event-list div {

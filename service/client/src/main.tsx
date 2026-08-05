@@ -652,6 +652,19 @@ type OrderTableFilters = {
   onlyCancelable: boolean;
 };
 
+type OrderTablePagination = {
+  page: number;
+  totalPages: number;
+  startItem: number;
+  endItem: number;
+  totalItems: number;
+  canPrevious: boolean;
+  canNext: boolean;
+  onPrevious: () => void;
+  onNext: () => void;
+  onPageChange: (page: number) => void;
+};
+
 type OrderActionFilter = {
   label: string;
   predicate: (order: PrintOrderSummary) => boolean;
@@ -3669,6 +3682,7 @@ function OperatorBookOrdersView({
             orders={table.visibleOrders}
             selectedOrderId={selectedOrder?.id ?? null}
             selectedIds={table.selectedIds}
+            pagination={table.pagination}
             loading={loading}
             emptyMessage="조건에 맞는 주문이 없습니다."
             onToggleOrder={table.toggleOrder}
@@ -7114,20 +7128,31 @@ function useOrderTableState(
 ) {
   const [filters, setFilters] = useState<OrderTableFilters>(() => defaultOrderTableFilters(initialStatus));
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [page, setPage] = useState(1);
   const filteredOrders = useMemo(() => filterAndSortPrintOrders(orders, filters, actionFilter.predicate), [orders, filters, actionFilter]);
-  const visibleOrders = useMemo(() => filteredOrders.slice(0, filters.limit), [filteredOrders, filters.limit]);
+  const totalPages = Math.max(1, Math.ceil(filteredOrders.length / filters.limit));
+  const safePage = Math.min(page, totalPages);
+  const startIndex = filteredOrders.length === 0 ? 0 : (safePage - 1) * filters.limit;
+  const endIndex = Math.min(startIndex + filters.limit, filteredOrders.length);
+  const visibleOrders = useMemo(() => filteredOrders.slice(startIndex, endIndex), [filteredOrders, startIndex, endIndex]);
   const selectedOrders = useMemo(() => filteredOrders.filter((order) => selectedIds.includes(order.id)), [filteredOrders, selectedIds]);
 
   useEffect(() => {
     setSelectedIds((current) => current.filter((orderId) => orders.some((order) => order.id === orderId)));
   }, [orders]);
 
+  useEffect(() => {
+    setPage((current) => Math.min(current, totalPages));
+  }, [totalPages]);
+
   const updateFilter = <K extends keyof OrderTableFilters>(key: K, value: OrderTableFilters[K]) => {
     setFilters((current) => ({ ...current, [key]: value }));
+    setPage(1);
   };
   const resetFilters = (status: PrintOrderStatus | "ALL" = initialStatus) => {
     setFilters(defaultOrderTableFilters(status));
     setSelectedIds([]);
+    setPage(1);
   };
   const toggleOrder = (orderId: number) => {
     setSelectedIds((current) => current.includes(orderId)
@@ -7141,6 +7166,21 @@ function useOrderTableState(
       ? current.filter((orderId) => !visibleIds.includes(orderId))
       : Array.from(new Set([...current, ...visibleIds])));
   };
+  const goToPage = (nextPage: number) => {
+    setPage(Math.min(Math.max(nextPage, 1), totalPages));
+  };
+  const pagination: OrderTablePagination = {
+    page: safePage,
+    totalPages,
+    startItem: filteredOrders.length === 0 ? 0 : startIndex + 1,
+    endItem: endIndex,
+    totalItems: filteredOrders.length,
+    canPrevious: safePage > 1,
+    canNext: safePage < totalPages,
+    onPrevious: () => goToPage(safePage - 1),
+    onNext: () => goToPage(safePage + 1),
+    onPageChange: goToPage,
+  };
 
   return {
     filters,
@@ -7153,6 +7193,7 @@ function useOrderTableState(
     selectedOrders,
     filteredOrders,
     visibleOrders,
+    pagination,
     toggleOrder,
     toggleVisibleOrders,
   };
@@ -7308,6 +7349,7 @@ function PrintOrderDataTable({
   orders,
   selectedOrderId,
   selectedIds,
+  pagination,
   loading,
   emptyMessage,
   onToggleOrder,
@@ -7317,6 +7359,7 @@ function PrintOrderDataTable({
   orders: PrintOrderSummary[];
   selectedOrderId: number | null;
   selectedIds: number[];
+  pagination: OrderTablePagination;
   loading: boolean;
   emptyMessage: string;
   onToggleOrder: (orderId: number) => void;
@@ -7324,6 +7367,7 @@ function PrintOrderDataTable({
   onOpenOrder: (orderId: number) => void;
 }) {
   const allVisibleSelected = orders.length > 0 && orders.every((order) => selectedIds.includes(order.id));
+  const pageNumbers = Array.from({ length: pagination.totalPages }, (_, index) => index + 1);
 
   if (loading) {
     return <div className="book-empty-state compact">주문을 불러오는 중입니다.</div>;
@@ -7334,56 +7378,80 @@ function PrintOrderDataTable({
   }
 
   return (
-    <div className="order-table-scroll" tabIndex={0} aria-label="주문 테이블 가로 스크롤 영역">
-      <table className="order-data-table">
-        <thead>
-          <tr>
-            <th scope="col">
-              <input type="checkbox" checked={allVisibleSelected} onChange={onToggleVisibleOrders} aria-label="현재 화면 주문 전체 선택" />
-            </th>
-            <th scope="col">주문일시</th>
-            <th scope="col">최근 변경</th>
-            <th scope="col">주문번호</th>
-            <th scope="col">상태</th>
-            <th scope="col">주문자</th>
-            <th scope="col">방</th>
-            <th scope="col">상품/페이지</th>
-            <th scope="col">수량</th>
-            <th scope="col">금액</th>
-          </tr>
-        </thead>
-        <tbody>
-          {orders.map((order) => (
-            <tr
-              className={selectedOrderId === order.id ? "selected" : ""}
-              key={order.id}
-              onClick={(event) => {
-                if (isInteractiveTarget(event.target)) return;
-                onOpenOrder(order.id);
-              }}
-            >
-              <td>
-                <input
-                  type="checkbox"
-                  checked={selectedIds.includes(order.id)}
-                  onChange={() => onToggleOrder(order.id)}
-                  aria-label={`${order.orderNo} 선택`}
-                />
-              </td>
-              <td>{formatDateTimeLabel(order.requestedAt)}</td>
-              <td>{formatDateTimeLabel(order.updatedAt)}</td>
-              <td><strong>{order.orderNo}</strong></td>
-              <td><span className={`book-order-status-badge ${printOrderStatusTone(order.status)}`}>{order.statusLabel}</span></td>
-              <td>{order.memberName}</td>
-              <td>{order.roomName}</td>
-              <td>{order.product.displayName} · {order.estimatedPageCount}p</td>
-              <td>{order.quantity}권</td>
-              <td><b>{formatCurrency(order.totalPrice)}</b></td>
+    <>
+      <div className="order-table-scroll" tabIndex={0} aria-label="주문 테이블 가로 스크롤 영역">
+        <table className="order-data-table">
+          <thead>
+            <tr>
+              <th scope="col">
+                <input type="checkbox" checked={allVisibleSelected} onChange={onToggleVisibleOrders} aria-label="현재 화면 주문 전체 선택" />
+              </th>
+              <th scope="col">주문일시</th>
+              <th scope="col">최근 변경</th>
+              <th scope="col">주문번호</th>
+              <th scope="col">상태</th>
+              <th scope="col">주문자</th>
+              <th scope="col">방</th>
+              <th scope="col">상품/페이지</th>
+              <th scope="col">수량</th>
+              <th scope="col">금액</th>
             </tr>
+          </thead>
+          <tbody>
+            {orders.map((order) => (
+              <tr
+                className={selectedOrderId === order.id ? "selected" : ""}
+                key={order.id}
+                onClick={(event) => {
+                  if (isInteractiveTarget(event.target)) return;
+                  onOpenOrder(order.id);
+                }}
+              >
+                <td>
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.includes(order.id)}
+                    onChange={() => onToggleOrder(order.id)}
+                    aria-label={`${order.orderNo} 선택`}
+                  />
+                </td>
+                <td>{formatDateTimeLabel(order.requestedAt)}</td>
+                <td>{formatDateTimeLabel(order.updatedAt)}</td>
+                <td><strong>{order.orderNo}</strong></td>
+                <td><span className={`book-order-status-badge ${printOrderStatusTone(order.status)}`}>{order.statusLabel}</span></td>
+                <td>{order.memberName}</td>
+                <td>{order.roomName}</td>
+                <td>{order.product.displayName} · {order.estimatedPageCount}p</td>
+                <td>{order.quantity}권</td>
+                <td><b>{formatCurrency(order.totalPrice)}</b></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <nav className="order-pagination" aria-label="주문 목록 페이지">
+        <span>{pagination.startItem}-{pagination.endItem} / {pagination.totalItems}건</span>
+        <div>
+          <button type="button" onClick={pagination.onPrevious} disabled={!pagination.canPrevious}>
+            이전
+          </button>
+          {pageNumbers.map((pageNumber) => (
+            <button
+              className={pageNumber === pagination.page ? "active" : ""}
+              type="button"
+              key={pageNumber}
+              onClick={() => pagination.onPageChange(pageNumber)}
+              aria-current={pageNumber === pagination.page ? "page" : undefined}
+            >
+              {pageNumber}
+            </button>
           ))}
-        </tbody>
-      </table>
-    </div>
+          <button type="button" onClick={pagination.onNext} disabled={!pagination.canNext}>
+            다음
+          </button>
+        </div>
+      </nav>
+    </>
   );
 }
 
@@ -7632,6 +7700,7 @@ function BookOrdersView({
             orders={table.visibleOrders}
             selectedOrderId={selectedOrder?.id ?? null}
             selectedIds={table.selectedIds}
+            pagination={table.pagination}
             loading={loading}
             emptyMessage={isStatusMode ? "조건에 맞는 진행 주문이 없습니다." : "조건에 맞는 지난 주문이 없습니다."}
             onToggleOrder={table.toggleOrder}
