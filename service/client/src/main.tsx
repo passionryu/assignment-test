@@ -6329,6 +6329,29 @@ function BookContentLibrary({
   onToggleContent: (content: BookContentCandidate) => void;
   onOpenContentDetail: (content: BookContentCandidate) => void;
 }) {
+  const orderControlsRef = useRef<HTMLDivElement | null>(null);
+  const [typeOrderPopoverOpen, setTypeOrderPopoverOpen] = useState(false);
+  const typeOrderPopoverId = "book-type-order-popover";
+
+  useEffect(() => {
+    if (!typeOrderPopoverOpen) return;
+
+    const handlePointerDown = (event: PointerEvent) => {
+      const target = event.target;
+      if (target instanceof Node && orderControlsRef.current?.contains(target)) return;
+      setTypeOrderPopoverOpen(false);
+    };
+
+    document.addEventListener("pointerdown", handlePointerDown);
+    return () => document.removeEventListener("pointerdown", handlePointerDown);
+  }, [typeOrderPopoverOpen]);
+
+  useEffect(() => {
+    if (orderMode !== "TYPE") {
+      setTypeOrderPopoverOpen(false);
+    }
+  }, [orderMode]);
+
   return (
     <section className="book-content-library" aria-label="책 기록 라이브러리">
       <div className="book-content-toolbar">
@@ -6357,7 +6380,7 @@ function BookContentLibrary({
           </div>
         </div>
 
-        <div className="book-order-controls" aria-label="책 구성 순서">
+        <div className="book-order-controls" ref={orderControlsRef} aria-label="책 구성 순서">
           <span>책 구성 순서</span>
           <div className="segmented-control">
             <button
@@ -6365,6 +6388,7 @@ function BookContentLibrary({
               type="button"
               onClick={() => {
                 onOrderModeChange("DATE");
+                setTypeOrderPopoverOpen(false);
               }}
             >
               날짜 순
@@ -6372,13 +6396,24 @@ function BookContentLibrary({
             <button
               className={orderMode === "TYPE" ? "active" : ""}
               type="button"
-              onClick={() => onOrderModeChange("TYPE")}
+              aria-controls={typeOrderPopoverId}
+              aria-expanded={orderMode === "TYPE" && typeOrderPopoverOpen}
+              aria-haspopup="true"
+              onClick={() => {
+                if (orderMode !== "TYPE") {
+                  onOrderModeChange("TYPE");
+                  setTypeOrderPopoverOpen(true);
+                  return;
+                }
+
+                setTypeOrderPopoverOpen((open) => !open);
+              }}
             >
               콘텐츠 순
             </button>
           </div>
-          {orderMode === "TYPE" ? (
-            <div className="book-type-order-inline" aria-label="콘텐츠 타입 순서 설정">
+          {orderMode === "TYPE" && typeOrderPopoverOpen ? (
+            <div className="book-type-order-inline" id={typeOrderPopoverId} aria-label="콘텐츠 타입 순서 설정">
               <div className="book-type-order-list">
                 {contentTypeOrder.map((type, index) => (
                   <div className="book-type-order-item" key={type}>

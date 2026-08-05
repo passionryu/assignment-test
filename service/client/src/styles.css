@@ -4689,7 +4689,7 @@ dl {
   position: absolute;
   top: calc(100% + 10px);
   right: 12px;
-  z-index: 10;
+  z-index: 6;
   width: calc(100% - 24px);
   border: 1px solid #dfe7f2;
   border-radius: 8px;
